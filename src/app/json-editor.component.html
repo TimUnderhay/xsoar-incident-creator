@@ -1,0 +1,23 @@
+<div *ngIf="stringValue" class="editJsonWindow">
+
+  <div style="margin-bottom: .5em; flex-shrink: 1;">
+    <p-button type="button" label="Reset Values" (onClick)="resetValues()" [disabled]="readOnly"></p-button>
+  </div>
+
+  <div style="width: 100%; flex-grow: 1;">
+    <textarea pInputTextarea [(ngModel)]="stringValue" (ngModelChange)="onValueChanged($event)" class="jsonTextAreaDisplay" [class.disabled]="readOnly" [disabled]="readOnly"></textarea>
+  </div>
+
+  <div class="editJsonButtonGroup">
+    <div class="verticalCenter">
+      <div></div>
+      <div [class.failure]="!canSubmit">{{canSubmit ? 'Valid' : 'Invalid'}} JSON</div>
+      <div></div>
+    </div>
+    <div>
+      <p-button *ngIf="!readOnly" type="button" label="Accept" (onClick)="onAccept()" [disabled]="!canSubmit"></p-button>
+      <p-button type="button" [label]="readOnly ? 'Close' : 'Cancel'" (onClick)="onCancel()"></p-button>
+    </div>
+  </div>
+
+</div>
