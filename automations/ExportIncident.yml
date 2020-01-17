@@ -1,0 +1,139 @@
+commonfields:
+  id: ExportIncident
+  version: -1
+name: ExportIncident
+script: |
+  import json
+  from pprint import pformat
+
+
+  def whitelist_fields(incident, fields):
+      new_incident = {}
+      for field in fields:
+          if field in incident:
+              new_incident[field] = incident[field]
+          elif 'CustomFields' in incident and incident['CustomFields'] is not None and field in incident['CustomFields']:
+              if 'CustomFields' not in new_incident:
+                  new_incident['CustomFields'] = {}
+              new_incident['CustomFields'][field] = incident['CustomFields'][field]
+      return new_incident
+
+
+  def build_search_string(incident_ids):
+      new_incident_ids = []
+      for incident_id in incident_ids:
+          new_incident_ids.append('id:' + str(incident_id))
+      return ' or '.join(new_incident_ids)
+
+
+  def main():
+
+      args = demisto.args()
+
+      incidents = []
+
+      if 'ids' in args:
+          incident_ids = argToList(args['ids'])
+          if len(incident_ids) != 0:
+              search_string = build_search_string(incident_ids)
+              incidents = demisto.executeCommand('SearchIncidents', { 'query': search_string, 'size': len(incident_ids) })[0]['Contents']
+      else:
+          incidents.append(demisto.incident())
+
+      valid_json = argToBoolean(args['valid_json'])
+
+      make_importable = argToBoolean(args['make_importable'])
+
+      create_investigation = argToBoolean(args['create_investigation'])
+
+      fields_to_include = []
+      if 'include_fields' in args:
+          fields_to_include = argToList(args['include_fields'])
+
+      fields_to_whitelist = ['labels', 'name', 'type', 'sourcebrand', 'sourceinstance'] + fields_to_include
+
+      incidents_to_output = []
+      for incident in incidents:
+          if make_importable:
+              incident = whitelist_fields(incident, fields_to_whitelist)
+
+          if create_investigation:
+              incident['createInvestigation'] = True
+
+          incidents_to_output.append(incident)
+
+      if valid_json:
+          if len(incidents_to_output) == 1:
+              output = incidents_to_output[0]
+          else:
+              output = incidents_to_output
+          demisto.results(json.dumps(output))
+
+      else:
+          if len(incidents_to_output) == 1:
+              output = incidents_to_output[0]
+          else:
+              output = incidents_to_output
+          demisto.results(pformat(output))
+
+
+  if __name__ in ["__builtin__", "builtins"]:
+      main()
+type: python
+tags: []
+comment: |-
+  Exports an incident in a format which might be suitable for creating a new incident via the Demisto RESTful API's POST "/incident" call, with the ultimate goal of re-running a playbook based on a sample incident .  It specifically exports incident fields, but not incident context.
+
+  Note that "make_importable" does not guarantee success when importing the incident JSON into Demisto.  There are many factors which influence import and playbook success:
+
+  * The presence of any custom fields on the target system
+  * Field mappings
+  * Permissions
+  * Integrations and their configurations
+  * Whether any custom fields were defined when the exported incident was created via field mapping
+  * Whether custom fields were defined by the source playbook
+  * Whether the original integration which created the incident had attached any files to the incident, which would need to be uploaded to the target incident separately
+enabled: true
+args:
+- name: valid_json
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  description: If true, output will be valid, parseable JSON.  If false, output will
+    be pretty-printed, but it will not be valid, parseable JSON.
+  defaultValue: "true"
+- name: make_importable
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  description: If true, a minimum set of incident fields (labels, name, type, sourcebrand,
+    sourceinstance) will be output, to make creating an incident easier.  The importer
+    will be responsible for mapping any needed fields.  If false, all incident fields
+    will be output.
+  defaultValue: "true"
+- name: create_investigation
+  auto: PREDEFINED
+  predefined:
+  - "true"
+  - "false"
+  description: If true, the imported incident will have an associated investigation,
+    which will cause a playbook to run if the incident type's playbook is set to run
+    automatically.
+  defaultValue: "true"
+- name: include_fields
+  description: A list, either CSV or an actual array, containing additional incident
+    fields (either custom or OOTB) to include in the output.  Only applies if "make_importable"
+    is true.
+  isArray: true
+- name: ids
+  description: The incident ID or ID's to fetch.  If not present, returns current
+    incident.  Accepts either a CSV or an actual array.  If multiple ID's are specified,
+    the output will be in array format.
+  isArray: true
+scripttarget: 0
+subtype: python3
+runonce: false
+dockerimage: demisto/python3:3.7.5.4583
+runas: DBotWeakRole

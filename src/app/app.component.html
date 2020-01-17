@@ -68,7 +68,7 @@
 
 
     <!-- Create Investigation -->
-    <p-card *ngIf="fileData" header="Create Investigation" subheader="If enabled, this option will cause an investigation to be created along with this incident.  This essentially means that any playbook associated with the case type will be automatically executed.">
+    <p-card *ngIf="fileData" header="Create Investigation" subheader="If enabled, this option will cause an investigation to be created along with this incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so.">
   
       <div style="margin-top: 1em;">
         <p-selectButton name="createInvestigation" [options]="createInvestigationButtonOptions" [(ngModel)]="createInvestigation"></p-selectButton>
