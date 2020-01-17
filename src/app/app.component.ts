@@ -73,52 +73,11 @@ export class AppComponent implements OnInit {
     }
 
     // API Init
-    try {
-      let res: ApiStatus = await this.fetcherService.getApiStatus();
-      this.serverApiInit = res.initialised;
-      if (this.serverApiInit) {
-        this.messages = [{ severity: 'success', summary: 'Success', detail: 'Demisto API communication is initialised'}];
-      }
-      else {
-        this.messages = [{ severity: 'error', summary: 'Failure', detail: 'Demisto API communication is not initialised!'}];
-      }
-      this.testTimeout = setTimeout( () => {
-        this.messages = [];
-        this.testTimeout = null;
-      } , 5000 );
-      if (this.serverApiInit) {
-        this.demistoProperties.url = res.url;
-        this.demistoProperties.trustAny = res.trust;
-      }
-      console.log('Demisto Server API:', res);
-    }
-    catch (err) {
-      console.log('Caught error fetching Demisto server API status:', err);
-    }
+    await this.demistoApiInit();
 
     // Demisto Incident Fields
-    try {
-      let demistoIncidentFields: DemistoIncidentField[] = await this.fetcherService.getIncidentFields();
-      let tmpFields: DemistoIncidentFields = {};
-      demistoIncidentFields.forEach( (field: DemistoIncidentField) => {
-        let shortName = field.cliName;
-        tmpFields[shortName] = field;
-      });
-      this.demistoIncidentFields = tmpFields;
-      console.log('demistoIncidentFields:', this.demistoIncidentFields);
-
-
-      // for identification purposes, output all the field types
-      let fieldTypes = demistoIncidentFields.reduce( (result: string[], field: DemistoIncidentField) => {
-        if (!result.includes(field.type)) {
-          result.push(field.type);
-        }
-        return result;
-      }, []);
-      console.log('fieldTypes:', fieldTypes);
-    }
-    catch (err) {
-      console.log('Caught error fetching Demisto incident fields:', err);
+    if (this.serverApiInit) {
+      await this.getDemistoIncidentFields();
     }
 
     // Fetch Sample Incident -- Uncomment for testing
@@ -128,7 +87,64 @@ export class AppComponent implements OnInit {
 
 
 
+  async demistoApiInit() {
+    console.log('demistoApiInit()');
+    try {
+      let res: ApiStatus = await this.fetcherService.getApiStatus(); // checks whether the server has already initialised Demisto communication.  This is does not actually perform a new test.
+      this.serverApiInit = res.initialised;
+      if (this.serverApiInit) {
+        this.messages = [{ severity: 'success', summary: 'Success', detail: 'Demisto API communication is initialised'}];
+        this.demistoProperties.url = res.url;
+        this.demistoProperties.trustAny = res.trust;
+      }
+      else {
+        this.messages = [{ severity: 'error', summary: 'Failure', detail: 'Demisto API communication is not initialised!'}];
+      }
+      this.testTimeout = setTimeout( () => {
+        this.messages = [];
+        this.testTimeout = null;
+      } , 5000 );
+      console.log('Demisto Server API:', res);
+    }
+    catch (err) {
+      console.log('Caught error fetching Demisto server API status:', err);
+    }
+  }
+
+
+
+  async getDemistoIncidentFields(): Promise<boolean> {
+    console.log('getDemistoIncidentFields()');
+    try {
+      let demistoIncidentFields: DemistoIncidentField[] = await this.fetcherService.getIncidentFields();
+      let tmpFields: DemistoIncidentFields = {};
+      demistoIncidentFields.forEach( (field: DemistoIncidentField) => {
+        let shortName = field.cliName;
+        tmpFields[shortName] = field;
+      });
+      this.demistoIncidentFields = tmpFields;
+      console.log('demistoIncidentFields:', this.demistoIncidentFields);
+      return true;
+
+      // for identification purposes, output all the field types
+      /*let fieldTypes = demistoIncidentFields.reduce( (result: string[], field: DemistoIncidentField) => {
+        if (!result.includes(field.type)) {
+          result.push(field.type);
+        }
+        return result;
+      }, []);
+      console.log('fieldTypes:', fieldTypes);*/
+    }
+    catch (err) {
+      console.log('Caught error fetching Demisto incident fields:', err);
+      return false;
+    }
+  }
+
+
+
   async testAPI(): Promise<any> {
+    console.log('testAPI()');
     try {
       let result = await this.fetcherService.testDemisto(this.demistoProperties);
       if (this.testTimeout) {
@@ -146,6 +162,7 @@ export class AppComponent implements OnInit {
           this.messages = [];
           this.testTimeout = null;
         } , 5000 );
+        await this.onReloadFieldDefinitions();
       }
       else if ( 'success' in result && !result.success ) {
         // unsuccessful
@@ -370,15 +387,15 @@ export class AppComponent implements OnInit {
     // Reload Demisto Incident Fields and Merge
     console.log('onReloadFieldDefinitions()');
     try {
-      let demistoIncidentFields: DemistoIncidentField[] = await this.fetcherService.getIncidentFields();
-      let tmpFields = {};
-      demistoIncidentFields.forEach(field => {
-        let shortName = field.cliName;
-        tmpFields[shortName] = field;
-      });
-      this.demistoIncidentFields = tmpFields;
-      console.log('onReloadFieldDefinitions(): demistoIncidentFields:', this.demistoIncidentFields);
+      let success = await this.getDemistoIncidentFields();
+      if (!success) {
+        console.log('onReloadFieldDefinitions(): incident fields fetch was unsuccessful.  Aborting.');
+        return;
+      }
 
+      if (!this.customFields) {
+        return;
+      }
       Object.values(this.customFields).forEach(field => {
         // re-evaluate fields based on new defs
 
@@ -431,7 +448,6 @@ export class AppComponent implements OnInit {
           field.lockedReason = 'This field type is not supported for import';
         }
       });
-
 
     }
     catch (err) {
