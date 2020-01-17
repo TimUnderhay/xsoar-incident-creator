@@ -6,6 +6,7 @@ import { ApiStatus } from './types/api-status';
 import { SelectItem } from 'primeng/api';
 import { IncidentFields, CustomFields, CustomField, IncidentField } from './types/incident-fields';
 import { FieldDisplayComponent } from './field-display.component';
+import { DemistoIncidentField, DemistoIncidentFields } from './types/demisto-incident-field';
 
 
 @Component({
@@ -51,7 +52,7 @@ export class AppComponent implements OnInit {
   ];
   createInvestigation = true;
 
-  demistoIncidentFields: any; // the fields taken from Demisto
+  demistoIncidentFields: DemistoIncidentFields; // the fields taken from Demisto
   incidentFields: IncidentFields; // the fields of our imported JSON
   customFields: CustomFields;
   displayIncidentFieldShortNames = true;
@@ -97,20 +98,20 @@ export class AppComponent implements OnInit {
 
     // Demisto Incident Fields
     try {
-      let demistoIncidentFields = await this.fetcherService.getIncidentFields();
-      let tmpFields = {};
-      demistoIncidentFields.incident_fields.forEach(value => {
-        let shortName = value.cliName;
-        tmpFields[shortName] = value;
+      let demistoIncidentFields: DemistoIncidentField[] = await this.fetcherService.getIncidentFields();
+      let tmpFields: DemistoIncidentFields = {};
+      demistoIncidentFields.forEach( (field: DemistoIncidentField) => {
+        let shortName = field.cliName;
+        tmpFields[shortName] = field;
       });
       this.demistoIncidentFields = tmpFields;
       console.log('demistoIncidentFields:', this.demistoIncidentFields);
 
 
       // for identification purposes, output all the field types
-      let fieldTypes = demistoIncidentFields.incident_fields.reduce( (result, value) => {
-        if (!result.includes(value.type)) {
-          result.push(value.type);
+      let fieldTypes = demistoIncidentFields.reduce( (result: string[], field: DemistoIncidentField) => {
+        if (!result.includes(field.type)) {
+          result.push(field.type);
         }
         return result;
       }, []);
@@ -369,9 +370,9 @@ export class AppComponent implements OnInit {
     // Reload Demisto Incident Fields and Merge
     console.log('onReloadFieldDefinitions()');
     try {
-      let demistoIncidentFields = await this.fetcherService.getIncidentFields();
+      let demistoIncidentFields: DemistoIncidentField[] = await this.fetcherService.getIncidentFields();
       let tmpFields = {};
-      demistoIncidentFields.incident_fields.forEach(field => {
+      demistoIncidentFields.forEach(field => {
         let shortName = field.cliName;
         tmpFields[shortName] = field;
       });

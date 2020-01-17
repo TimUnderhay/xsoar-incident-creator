@@ -4,6 +4,7 @@ import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http
 import { DemistoProperties } from './types/demisto-properties';
 import { User } from './types/user';
 import { ApiStatus } from './types/api-status';
+import { DemistoIncidentField } from './types/demisto-incident-field';
 
 @Injectable()
 
@@ -77,10 +78,11 @@ export class FetcherService {
 
 
 
-  getIncidentFields(): Promise<any> {
+  getIncidentFields(): Promise<DemistoIncidentField[]> {
     let headers = this.buildHeaders();
     return this.http.get(this.apiPath + '/incidentfields', { headers } )
-                    .toPromise();
+                    .toPromise()
+                    .then( (res: any) => res.incident_fields );
   }
 
 
