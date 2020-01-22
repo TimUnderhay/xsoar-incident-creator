@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
-import { IncidentField, CustomField } from './types/incident-fields';
+import { IncidentField } from './types/incident-fields';
 import { SelectItem } from 'primeng/api';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor.component';
@@ -16,7 +16,7 @@ export class FieldDisplayComponent implements OnInit, OnDestroy {
 
   constructor(public dialogService: DialogService) {}
 
-  @Input() field: IncidentField | CustomField;
+  @Input() field: IncidentField;
   @Input() displayShortNames: boolean;
   @Output() fieldChange = new EventEmitter();
 

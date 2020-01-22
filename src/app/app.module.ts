@@ -30,6 +30,9 @@ import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { TooltipModule } from 'primeng/tooltip';
 import { DynamicDialogModule } from 'primeng/dynamicdialog';
+import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService } from 'primeng/api';
 
 @NgModule({
   declarations: [
@@ -58,12 +61,14 @@ import { DynamicDialogModule } from 'primeng/dynamicdialog';
     InputTextareaModule,
     ToggleButtonModule,
     TooltipModule,
-    DynamicDialogModule
+    DynamicDialogModule,
+    DialogModule,
+    ConfirmDialogModule
   ],
   entryComponents: [
     JsonEditorComponent
   ],
-  providers: [ FetcherService ],
+  providers: [ FetcherService, ConfirmationService ],
   bootstrap: [ AppComponent ]
 })
 export class AppModule { }

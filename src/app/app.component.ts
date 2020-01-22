@@ -4,10 +4,12 @@ import { DemistoProperties } from './types/demisto-properties';
 import { User } from './types/user';
 import { ApiStatus } from './types/api-status';
 import { SelectItem } from 'primeng/api';
-import { IncidentFields, CustomFields, CustomField, IncidentField } from './types/incident-fields';
+import { IncidentField, IncidentFields } from './types/incident-fields';
 import { FieldDisplayComponent } from './field-display.component';
 import { DemistoIncidentField, DemistoIncidentFields } from './types/demisto-incident-field';
-
+import { FieldConfig, FieldsConfig, IncidentFieldsConfig } from './types/fields-config';
+import { ConfirmationService } from 'primeng/api';
+import { PMessageOption } from './types/message-options';
 
 @Component({
   selector: 'app-root',
@@ -18,7 +20,7 @@ import { DemistoIncidentField, DemistoIncidentFields } from './types/demisto-inc
 
 export class AppComponent implements OnInit {
 
-  constructor( private fetcherService: FetcherService ) {} // import our URL fetcher
+  constructor( private fetcherService: FetcherService, private confirmationService: ConfirmationService ) {} // import our URL fetcher
 
   @ViewChildren(FieldDisplayComponent) fieldDisplayComponents: FieldDisplayComponent[];
 
@@ -28,23 +30,20 @@ export class AppComponent implements OnInit {
     trustAny: true
   };
 
-  testResult = 'initial';
-  testResultClass = '';
   loggedInUser: User;
   serverApiInit = false;
   resultMessage: string;
   resultSuccess: boolean;
-  shortNamesLabel = 'Short Names';
-  longNamesLabel = 'Long Names';
+  longNamesLabel = 'Short Names';
+  shortNamesLabel = 'Long Names';
 
   // for p-messages
-  messages = [];
+  messages: PMessageOption[] = [];
 
   // Options for PrimeNG Components
-  testTimeout: ReturnType<typeof setTimeout> = null;
+  messagesClearTimeout: ReturnType<typeof setTimeout> = null;
 
-  file: File;
-  fileData: any;
+  fileData: any; // parsed json
 
   createInvestigationButtonOptions: SelectItem[] = [
     { value: true, label: 'Enabled' },
@@ -54,11 +53,42 @@ export class AppComponent implements OnInit {
 
   demistoIncidentFields: DemistoIncidentFields; // the fields taken from Demisto
   incidentFields: IncidentFields; // the fields of our imported JSON
-  customFields: CustomFields;
+  customFields: IncidentFields;
   displayIncidentFieldShortNames = true;
   displayCustomFieldShortNames = true;
 
-  investigationFields = ['id', 'account', 'created', 'modified', 'ShardID', 'account', 'activated', 'autime', 'canvases', 'closeNotes', 'closeReason', 'closed', 'closingUserId', 'created', 'droppedCount', 'dueDate', 'hasRole', 'id', 'investigationId', 'isPlayground', 'lastOpen', 'linkedCount', 'linkedIncidents', 'modified', 'notifyTime', 'openDuration', 'parent', 'playbookId', 'previousRoles', 'rawCategory', 'rawCloseReason', 'rawJSON', 'rawName', 'rawPhase', 'rawType', 'reason', 'runStatus', 'sla', 'sortValues', 'sourceBrand', 'sourceInstance', 'status', 'version' ]; // it may become necessary to permit some of these fields in the future
+  private investigationFields = ['id', 'account', 'created', 'modified', 'ShardID', 'account', 'activated', 'autime', 'canvases', 'closeNotes', 'closeReason', 'closed', 'closingUserId', 'created', 'droppedCount', 'dueDate', 'hasRole', 'id', 'investigationId', 'isPlayground', 'lastOpen', 'linkedCount', 'linkedIncidents', 'modified', 'notifyTime', 'openDuration', 'parent', 'playbookId', 'previousRoles', 'rawCategory', 'rawCloseReason', 'rawJSON', 'rawName', 'rawPhase', 'rawType', 'reason', 'runStatus', 'sla', 'sortValues', 'sourceBrand', 'sourceInstance', 'status', 'version' ]; // it may become necessary to permit some of these fields in the future
+
+  loadedConfigName: string; // must clear when loaded from json or when current config is deleted
+  loadedConfigId: string; // must clear when loaded from json or when current config is deleted
+
+  fieldsConfigurations: FieldsConfig = {};
+  get fieldsConfigurationsLen(): number {
+    return Object.keys(this.fieldsConfigurations).length;
+  }
+
+  fieldsConfigOptions: SelectItem[] = []; // for dropdown
+  selectedFieldConfig: string;
+
+  // save as dialog
+  showSaveAsDialog = false;
+  canSubmitSaveAs = false;
+  saveAsConfigName = ''; // for text label
+
+  // delete dialog
+  showDeleteDialog = false;
+  confirmDialogHeader = '';
+
+  // open dialog
+  showOpenDialog = false;
+
+
+
+
+  get saveAsDisabled(): boolean {
+    return this.saveAsConfigName in this.fieldsConfigurations;
+  }
+
 
 
 
@@ -66,23 +96,57 @@ export class AppComponent implements OnInit {
     // Get Logged In User
     try {
       this.loggedInUser = await this.fetcherService.getLoggedInUser();
-      console.log('LoggedInUser:', this.loggedInUser);
+      console.log('AppComponent: ngOnInit(): LoggedInUser:', this.loggedInUser);
     }
     catch (err) {
-      console.log('Caught error fetching logged in user:', err);
+      console.log('AppComponent: ngOnInit(): Caught error fetching logged in user:', err);
     }
 
     // API Init
     await this.demistoApiInit();
 
-    // Demisto Incident Fields
     if (this.serverApiInit) {
-      await this.getDemistoIncidentFields();
+      // Demisto Incident Fields
+      try {
+        await this.getDemistoIncidentFields();
+      }
+      catch (error) {
+        console.error('AppComponent: ngOnInit(): Caught error fetching Demisto incident fields:', error);
+      }
+
+      // Fields Configurations
+      try {
+        this.fieldsConfigurations = await this.getAllFieldConfigurations();
+        console.log('AppComponent: ngOnInit(): fieldsConfigurations:', this.fieldsConfigurations);
+        this.fieldsConfigOptions = this.buildFieldsConfigOptions(this.fieldsConfigurations);
+        if (this.fieldsConfigOptions.length !== 0) {
+          this.selectedFieldConfig = this.fieldsConfigOptions[0].value;
+        }
+      }
+      catch (error) {
+        console.error('AppComponent: ngOnInit(): Caught error fetching fields configuration:', error);
+      }
     }
+
+
 
     // Fetch Sample Incident -- Uncomment for testing
     // await this.getSampleIncident();
 
+  }
+
+  async getAllFieldConfigurations() {
+    return this.fetcherService.getAllFieldConfigurations();
+  }
+
+
+
+  messageWithAutoClear(message: PMessageOption) {
+    this.messages = [message];
+    this.messagesClearTimeout = setTimeout( () => {
+      this.messages = [];
+      this.messagesClearTimeout = null;
+    } , 5000 );
   }
 
 
@@ -93,17 +157,14 @@ export class AppComponent implements OnInit {
       let res: ApiStatus = await this.fetcherService.getApiStatus(); // checks whether the server has already initialised Demisto communication.  This is does not actually perform a new test.
       this.serverApiInit = res.initialised;
       if (this.serverApiInit) {
-        this.messages = [{ severity: 'success', summary: 'Success', detail: 'Demisto API communication is initialised'}];
+        this.messageWithAutoClear( { severity: 'success', summary: 'Success', detail: 'Demisto API communication is initialised'});
+
         this.demistoProperties.url = res.url;
         this.demistoProperties.trustAny = res.trust;
       }
       else {
-        this.messages = [{ severity: 'error', summary: 'Failure', detail: 'Demisto API communication is not initialised!'}];
+        this.messageWithAutoClear( { severity: 'error', summary: 'Failure', detail: 'Demisto API communication is not initialised!'} );
       }
-      this.testTimeout = setTimeout( () => {
-        this.messages = [];
-        this.testTimeout = null;
-      } , 5000 );
       console.log('Demisto Server API:', res);
     }
     catch (err) {
@@ -145,56 +206,50 @@ export class AppComponent implements OnInit {
 
   async testAPI(): Promise<any> {
     console.log('testAPI()');
+    let testResult: string;
     try {
       let result = await this.fetcherService.testDemisto(this.demistoProperties);
-      if (this.testTimeout) {
-        clearTimeout(this.testTimeout);
-        this.testTimeout = null;
+      if (this.messagesClearTimeout) {
+        clearTimeout(this.messagesClearTimeout);
+        this.messagesClearTimeout = null;
       }
       console.log('testCredentials() result:', result);
       if ( 'success' in result && result.success ) {
         // successful
-        this.testResultClass = 'success';
-        this.testResult = 'Test successful';
+        testResult = 'Test successful';
         this.serverApiInit = true;
-        this.messages = [{ severity: 'success', summary: 'Success', detail: 'Demisto API communication is initialised'}];
-        this.testTimeout = setTimeout( () => {
-          this.messages = [];
-          this.testTimeout = null;
-        } , 5000 );
+        this.messageWithAutoClear({ severity: 'success', summary: 'Success', detail: 'Demisto API communication is initialised'});
         await this.onReloadFieldDefinitions();
       }
       else if ( 'success' in result && !result.success ) {
         // unsuccessful
         let err = 'statusMessage' in result ? result.statusMessage : result.error;
         if ('statusCode' in result) {
-          this.testResult = `Test failed with code ${result.statusCode}: "${err}"`;
+          testResult = `Test failed with code ${result.statusCode}: "${err}"`;
           this.messages = [{
             severity: 'error',
             summary: 'Failure',
-            detail: `Demisto API communication is not initialised. ${this.testResult}`
+            detail: `Demisto API communication is not initialised. ${testResult}`
           }];
         }
         else {
-          this.testResult = `Test failed with error: "${err}"`;
+          testResult = `Test failed with error: "${err}"`;
           this.messages = [{
             severity: 'error',
             summary: 'Failure',
-            detail: `Demisto API communication is not initialised. ${this.testResult}`
+            detail: `Demisto API communication is not initialised. ${testResult}`
           }];
         }
-        this.testResultClass = 'failure';
         this.serverApiInit = false;
       }
     }
     catch (error) {
-      this.testResult = `Test failed with error: ${error.message || error}`;
+      testResult = `Test failed with error: ${error.message || error}`;
       this.messages = [{
         severity: 'error',
         summary: 'Failure',
-        detail: `Demisto API communication is not initialised. ${this.testResult}`
+        detail: `Demisto API communication is not initialised. ${testResult}`
       }];
-      this.testResultClass = 'failure';
       this.serverApiInit = false;
     }
   }
@@ -244,10 +299,10 @@ export class AppComponent implements OnInit {
 
   buildCustomFields(customFields) {
     // console.log('buildCustomFields(): customFields:', customFields);
-    let tmpCustomFields: CustomFields = {};
+    let tmpCustomFields: IncidentFields = {};
     Object.keys(customFields).forEach( shortName => {
       let value = customFields[shortName];
-      let tmpField: CustomField = {
+      let tmpField: IncidentField = {
         shortName,
         value,
         originalValue: value,
@@ -277,7 +332,7 @@ export class AppComponent implements OnInit {
 
 
 
-  buildIncidentFields(incident) {
+  buildIncidentFields(incident) { // incident = parsed json
     let incidentFields: IncidentFields = {};
     Object.keys(incident).forEach( shortName => {
       // console.log('shortName:', shortName);
@@ -317,9 +372,68 @@ export class AppComponent implements OnInit {
 
 
 
+  loadIncidentFields(config: FieldConfig) {
+    let incident = config.incident;
+    let incidentFields: IncidentFields = {};
+    Object.keys(incident).forEach( shortName => {
+      // console.log('shortName:', shortName);
+      let value = incident[shortName];
+
+      if (this.investigationFields.includes(shortName)) {
+        console.log(`Skipping field '${shortName}' as it is an investigation field`);
+        return;
+      }
+
+      if (shortName === 'CustomFields') {
+        this.buildCustomFields(incident.CustomFields);
+        return;
+      }
+
+      if (!(shortName in this.demistoIncidentFields)) {
+        console.error('Field not found:', shortName);
+        return;
+      }
+
+      incidentFields[shortName] = {
+        shortName,
+        longName: this.demistoIncidentFields[shortName].name,
+        enabled: false,
+        locked: false,
+        value,
+        originalValue: value,
+        fieldType: this.demistoIncidentFields[shortName].type,
+        custom: false
+      };
+    });
+
+    this.incidentFields = incidentFields;
+
+    Object.values(config.incidentFieldsConfig).forEach( field => {
+      const shortName = field.shortName;
+      if (!this.incidentFields[shortName].locked) {
+        this.incidentFields[shortName].enabled = field.enabled;
+      }
+      this.incidentFields[shortName].value = field.value;
+      this.incidentFields[shortName].originalValue = field.value;
+    } );
+
+    Object.values(config.customFieldsConfig).forEach( field => {
+      const shortName = field.shortName;
+      if (!this.customFields[shortName].locked) {
+        this.customFields[shortName].enabled = field.enabled;
+      }
+      this.customFields[shortName].value = field.value;
+      this.customFields[shortName].originalValue = field.value;
+    } );
+
+    console.log('loadIncidentFields(): incidentFields:', this.incidentFields);
+  }
+
+
+
   onFileUpload(data: { files: File }, uploadRef) {
-    this.file = data.files[0];
-    console.log('onFileUpload(): file:', this.file);
+    let file = data.files[0];
+    console.log('onFileUpload(): file:', file);
     try {
       let reader = new FileReader();
       reader.onloadend = (error: any) => {
@@ -327,7 +441,9 @@ export class AppComponent implements OnInit {
         this.fileData = JSON.parse(reader.result as string);
         console.log('onFileUpload(): fileData:', this.fileData);
         this.buildIncidentFields(this.fileData);
-        uploadRef.clear();
+        uploadRef.clear(); // allow future uploads
+        this.loadedConfigName = undefined;
+        this.loadedConfigId = undefined;
       };
       reader.readAsText(data.files[0]);
     }
@@ -340,7 +456,7 @@ export class AppComponent implements OnInit {
 
   async getSampleIncident() {
     let res = await this.fetcherService.getSampleIncident();
-    this.fileData = JSON.parse(res);
+    this.fileData = res;
     console.log('getSampleIncident(): fileData:', this.fileData);
     this.buildIncidentFields(this.fileData);
   }
@@ -497,6 +613,212 @@ export class AppComponent implements OnInit {
       }
     } );
     return enabledFields;
+  }
+
+
+
+  onSaveAsClicked() {
+    console.log('onSaveAsClicked()');
+    this.showSaveAsDialog = true;
+  }
+
+
+
+  buildFieldConfig(fields: IncidentFields): IncidentFieldsConfig {
+    let res: IncidentFieldsConfig = {};
+    Object.values(fields).forEach( field => {
+      const name = field.shortName;
+      res[name] = {
+        shortName: field.shortName,
+        enabled: field.enabled,
+        value: field.value
+      };
+    });
+    return res;
+  }
+
+
+
+  buildFieldsConfigOptions(configs: FieldsConfig): SelectItem[] {
+    let items: SelectItem[] = Object.values(configs).map( (config: FieldConfig) =>
+      ({ label: config.name, value: config.name })
+    );
+    return items;
+  }
+
+
+
+  async onSaveAsAccepted() {
+    console.log('onSaveAsAccepted()');
+    let config: FieldConfig = {
+      name: this.saveAsConfigName,
+      incident: this.fileData,
+      incidentFieldsConfig: this.buildFieldConfig(this.incidentFields),
+      customFieldsConfig: this.buildFieldConfig(this.customFields),
+      createInvestigation: this.createInvestigation
+    };
+    try {
+      let res = await this.fetcherService.saveNewFieldConfiguration(config);
+      this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration '${this.saveAsConfigName}' has been saved`});
+      this.loadedConfigName = this.saveAsConfigName;
+      this.saveAsConfigName = '';
+    }
+    catch (error) {
+      console.error('onSaveAsAccepted(): caught error saving field config:', error);
+      return;
+    }
+
+    // Fields Configurations
+    try {
+      this.fieldsConfigurations = await this.getAllFieldConfigurations();
+      console.log('AppComponent: onSaveAsAccepted(): fieldsConfigurations:', this.fieldsConfigurations);
+      this.fieldsConfigOptions = this.buildFieldsConfigOptions(this.fieldsConfigurations);
+      if (this.fieldsConfigOptions.length !== 0) {
+        this.selectedFieldConfig = this.fieldsConfigOptions[0].value;
+      }
+      this.loadedConfigId = this.fieldsConfigurations[this.loadedConfigName].id;
+    }
+    catch (error) {
+      console.error('AppComponent: onSaveAsAccepted(): Caught error fetching fields configuration:', error);
+    }
+    this.showSaveAsDialog = false;
+  }
+
+
+
+  onSaveAsCanceled() {
+    console.log('onSaveAsCanceled()');
+    this.showSaveAsDialog = false;
+    this.saveAsConfigName = '';
+  }
+
+
+
+  onDeleteClicked() {
+    console.log('onDeleteClicked()');
+    this.showDeleteDialog = true;
+  }
+
+
+
+  onDeleteCanceled() {
+    console.log('onDeleteCanceled()');
+    this.showDeleteDialog = false;
+    if (this.fieldsConfigOptions.length !== 0) {
+      this.selectedFieldConfig = this.fieldsConfigOptions[0].value;
+    }
+  }
+
+
+
+  onDeleteAccepted() {
+    console.log('onDeleteAccepted()');
+    this.showDeleteDialog = false;
+    this.confirmDialogHeader = 'Confirm Deletion';
+    let message = `Are you sure that you would like to delete configuration '${this.selectedFieldConfig}'?`;
+    if (this.selectedFieldConfig === this.loadedConfigName ) {
+      message = `Are you sure you want to delete the active configuration ${this.selectedFieldConfig}?`;
+    }
+    this.confirmationService.confirm( {
+      message,
+      accept: () => this.onDeleteConfirmed()
+    });
+  }
+
+
+
+  async onDeleteConfirmed() {
+    console.log('onDeleteConfirmed()');
+    try {
+      await this.fetcherService.deleteFieldConfiguration(this.selectedFieldConfig);
+    }
+    catch (error) {
+      console.error(`onDeleteConfirmed(): caught error whilst deleting configuration ${this.selectedFieldConfig}`);
+      return;
+    }
+
+    // fetch fields config
+    try {
+      this.fieldsConfigurations = await this.getAllFieldConfigurations();
+      console.log('AppComponent: onDeleteConfirmed(): fieldsConfigurations:', this.fieldsConfigurations);
+      this.fieldsConfigOptions = this.buildFieldsConfigOptions(this.fieldsConfigurations);
+      this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration ${this.selectedFieldConfig} was successfully deleted`});
+      if (this.fieldsConfigOptions.length !== 0) {
+        this.selectedFieldConfig = this.fieldsConfigOptions[0].value;
+      }
+      else {
+        // handle when we delete the selected config
+      }
+    }
+    catch (error) {
+      console.error('AppComponent: onDeleteConfirmed(): Caught error fetching fields configuration:', error);
+    }
+  }
+
+
+
+  async onSaveClicked() {
+    console.log('onSaveClicked()');
+    let config: FieldConfig = {
+      name: this.loadedConfigName,
+      incident: this.fileData,
+      incidentFieldsConfig: this.buildFieldConfig(this.incidentFields),
+      customFieldsConfig: this.buildFieldConfig(this.customFields),
+      createInvestigation: this.createInvestigation,
+      id: this.loadedConfigId
+    };
+    try {
+      let res = await this.fetcherService.saveFieldConfiguration(config);
+      this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration '${this.selectedFieldConfig}' has been saved`});
+    }
+    catch (error) {
+      console.error('onSaveClicked(): caught error saving field config:', error);
+      return;
+    }
+
+    // Fields Configurations
+    try {
+      this.fieldsConfigurations = await this.getAllFieldConfigurations();
+      console.log('AppComponent: onSaveClicked(): fieldsConfigurations:', this.fieldsConfigurations);
+      this.fieldsConfigOptions = this.buildFieldsConfigOptions(this.fieldsConfigurations);
+      if (this.fieldsConfigOptions.length !== 0) {
+        this.selectedFieldConfig = this.fieldsConfigOptions[0].value;
+      }
+    }
+    catch (error) {
+      console.error('AppComponent: onSaveClicked(): Caught error fetching fields configuration:', error);
+    }
+  }
+
+
+
+  onBulkCreateClicked() {}
+
+
+
+  onOpenClicked() {
+    console.log('onOpenClicked()');
+    this.showOpenDialog = true;
+  }
+
+
+
+  onConfigOpened() {
+    console.log('onConfigOpened()');
+    this.showOpenDialog = false;
+    let selectedConfig = this.fieldsConfigurations[this.selectedFieldConfig];
+    this.fileData = selectedConfig.incident;
+    this.loadIncidentFields(selectedConfig);
+    this.loadedConfigName = selectedConfig.name;
+    this.loadedConfigId = selectedConfig.id;
+    this.createInvestigation = selectedConfig.createInvestigation;
+  }
+
+
+
+  onOpenCanceled() {
+    console.log('onOpenCancelled()');
+    this.showOpenDialog = false;
   }
 
 }

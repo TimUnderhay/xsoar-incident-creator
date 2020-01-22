@@ -5,6 +5,7 @@ import { DemistoProperties } from './types/demisto-properties';
 import { User } from './types/user';
 import { ApiStatus } from './types/api-status';
 import { DemistoIncidentField } from './types/demisto-incident-field';
+import { FieldConfig, FieldsConfig } from './types/fields-config';
 
 @Injectable()
 
@@ -90,6 +91,39 @@ export class FetcherService {
   getSampleIncident(): Promise<any> {
     let headers = this.buildHeaders();
     return this.http.get(this.apiPath + '/sampleincident', { headers } )
+                    .toPromise();
+  }
+
+
+
+  getAllFieldConfigurations(): Promise<FieldsConfig> {
+    let headers = this.buildHeaders();
+    return this.http.get(this.apiPath + '/fieldConfig/all', { headers } )
+                    .toPromise()
+                    .then(value => value as FieldsConfig);
+  }
+
+
+
+  saveNewFieldConfiguration(config: FieldConfig): Promise<any> {
+    let headers = this.buildHeaders();
+    return this.http.post(this.apiPath + '/fieldConfig', config, { headers } )
+                    .toPromise();
+  }
+
+
+
+  saveFieldConfiguration(config: FieldConfig): Promise<any> {
+    let headers = this.buildHeaders();
+    return this.http.post(this.apiPath + '/fieldConfig/update', config, { headers } )
+                    .toPromise();
+  }
+
+
+
+  deleteFieldConfiguration(name: string): Promise<any> {
+    let headers = this.buildHeaders();
+    return this.http.delete(this.apiPath + `/fieldConfig/${name}`, { headers } )
                     .toPromise();
   }
 

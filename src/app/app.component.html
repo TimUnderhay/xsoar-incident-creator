@@ -53,18 +53,45 @@
 
 
     <!-- Upload Incident -->
-    <p-card header="Upload Incident JSON" subheader="Upload an incident JSON file in this section.  Create such a file through use of the command '!ExportIncident make_importable=false create_investigation=false'">
-  
+    <p-card header="Incident Data" subheader="Either upload an incident JSON file, or perform other file and playback operations.  Create such an incident file through use of the Demisto command '!ExportIncident make_importable=false create_investigation=false'">
+
       <div style="margin-top: 1em;">
         
         <!-- File Upload -->
-        <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Select file" [customUpload]="true" (uploadHandler)="onFileUpload($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true"></p-fileUpload>
+        <span>aaa 
+          <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Upload JSON" [customUpload]="true" (uploadHandler)="onFileUpload($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true"></p-fileUpload>
+           aaa
+        </span>
 
-        <span *ngIf="file">&nbsp;&nbsp;{{file.name}} ({{file.size}} bytes)</span>
+        <span *ngIf="fieldsConfigurations">aaa
+          <p-button label="Open" (onClick)="onOpenClicked()" styleClass="alignButton" [disabled]="fieldsConfigurationsLen === 0"></p-button>
+
+          <p-button label="Save" (onClick)="onSaveClicked()" [disabled]="!fileData"></p-button>
+
+          <p-button label="Save As" (onClick)="onSaveAsClicked()" [disabled]="!fileData"></p-button>
+
+          <p-button label="Delete" (onClick)="onDeleteClicked()" [disabled]="fieldsConfigurationsLen === 0"></p-button>
+
+          <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="fieldsConfigurationsLen === 0"></p-button>
+
+          <!--<span *ngIf="file">&nbsp;&nbsp;{{file.name}} ({{file.size}} bytes)</span>-->
+           aaa
+        </span>
 
       </div>
 
     </p-card>
+
+
+
+    <!-- Loaded Configuration -->
+    <p-card *ngIf="loadedConfigName && loadedConfigId" header="Loaded Configuration">
+      <div style="margin-top: 1em;">
+        <span class="formLabel" style="font-size: 18px;">Current Configuration Name:&nbsp;&nbsp;</span>
+        <span class="formLabel" style="font-size: 18px;">{{loadedConfigName}}</span>
+      </div>
+    </p-card>
+
 
 
     <!-- Create Investigation -->
@@ -75,6 +102,7 @@
       </div>
 
     </p-card>
+
 
 
 
@@ -166,10 +194,50 @@
     <p-messages [(value)]="messages"></p-messages>
   </div>
 
+  <!-- Save As Dialog -->
+  <p-dialog header="Save Configuration As" [(visible)]="showSaveAsDialog" [modal]="true" [style]="{width: '300px'}">
+    <div style="margin-bottom: .5em;" class="formLabel">Configuration Name</div>
+    <input type="text" pInputText [(ngModel)]="saveAsConfigName" class="inputDisplay"/>
+    <div style="margin-top: .5em;">{{saveAsDisabled ? 'This name is already taken' : '&nbsp;'}}</div>
+    <div style="margin-top: .5em; float: right;">
+      <p-button label="Save" (onClick)="onSaveAsAccepted()" [disabled]="saveAsDisabled"></p-button>
+      <p-button label="Cancel" (onClick)="onSaveAsCanceled()"></p-button>
+    </div>
+  </p-dialog>
+
+
+
+  <!-- Delete Dialog -->
+  <p-dialog header="Delete Configuration" [(visible)]="showDeleteDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}">
+    <div class="formLabel">Configuration to delete</div>
+    <p-dropdown [options]="fieldsConfigOptions" [(ngModel)]="selectedFieldConfig" [style]="{'width':'100%'}"></p-dropdown>
+    <div style="margin-top: .5em;">
+      <p-button label="Delete" (onClick)="onDeleteAccepted()"></p-button>
+      <p-button label="Cancel" (onClick)="onDeleteCanceled()"></p-button>
+    </div>
+  </p-dialog>
+
+
+
+  <!-- Open Dialog -->
+  <p-dialog header="Open Configuration" [(visible)]="showOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}">
+    <div class="formLabel">Configuration to open</div>
+    <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedFieldConfig" [style]="{'width':'100%'}" (onDblClick)="onConfigOpened()"></p-listbox>
+    <div style="margin-top: .5em;">
+      <p-button label="Open" (onClick)="onConfigOpened()"></p-button>
+      <p-button label="Cancel" (onClick)="onOpenCanceled()"></p-button>
+    </div>
+  </p-dialog>
+
+
+
+  <!-- Confirmation Dialog -->
+  <p-confirmDialog [header]="confirmDialogHeader" icon="pi pi-exclamation-triangle" [style]="{width: '50vw'}"></p-confirmDialog>
+
 </ng-container>
 
 <ng-container *ngIf="!loggedInUser">
   <div>
-    Could not obtain logged in user from API
+    Have not obtained logged in user from API
   </div>
 </ng-container>

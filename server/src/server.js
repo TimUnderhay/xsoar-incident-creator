@@ -21,6 +21,16 @@ const foundDist = fs.existsSync(staticDir); // check for presence of pre-built a
 const configDir = '../config';
 const apiCfgFile = configDir + '/api.json';
 const foundApiConfig = fs.existsSync(apiCfgFile); // check for presence of API configuration file
+const fieldsConfigFile = configDir + '/fields-config.json';
+const foundFieldsConfigFile = fs.existsSync(fieldsConfigFile);
+
+// UUID
+var uuidv4 = require('uuid/v4');
+
+// Field Configs
+var fieldsConfig;
+
+
 
 // Load Sample Users
 const users = require(defsDir + '/users');
@@ -100,7 +110,7 @@ function saveApiConfig(url, key, trust) {
     apiKey: key,
     trustAny: trust
   }
-  fs.writeFileSync(apiCfgFile, JSON.stringify(apiCfg))
+  return fs.promises.writeFile(apiCfgFile, JSON.stringify(apiCfg)), { encoding: 'utf8', mode: 0o660};
 }
 
 
@@ -200,7 +210,7 @@ app.post(apiPath + '/testConnect', async (req, res) => {
   demistoUrl = req.body.url;
   demistoApiKey = req.body.apiKey;
   trustAny = req.body.trustAny;
-  saveApiConfig(demistoUrl, demistoApiKey, trustAny);
+  await saveApiConfig(demistoUrl, demistoApiKey, trustAny);
   res.json( { success: true, statusCode: 200 } );
   console.log(`Demisto API URL set to: ${demistoUrl}`);
 });
@@ -317,11 +327,31 @@ async function getIncidentFields() {
 
 
 app.get(apiPath + '/sampleincident', async (req, res) => {
-  // fs.readFile(incidentsDir + '/sample.json', {encoding: 'utf8'}, (err, data) => {
-  fs.readFile(incidentsDir + '/testIncidentFields.json', {encoding: 'utf8'}, (err, data) => {
-    let parsedData = JSON.parse(data);
-    res.json(data);
-  });
+  let data;
+  const fileName = 'testIncidentFields.json';
+  const filePath = `${incidentsDir}/${fileName}`;
+  try {
+    // read file
+    data = await fs.promises.readFile(filePath, { encoding: 'utf8' });
+  }
+  catch (error) {
+    console.error(`Error whilst parsing file ${fileName}:`, error);
+    res.status(500).json({error})
+    return;
+  }
+
+  try {
+    // parse file contents
+    const parsedData = JSON.parse(data);
+    res.json(parsedData);
+    return;
+  }
+  catch (error) {
+    console.log(`Caught error parsing ${filePath}:`, error);
+    res.status(500).json({error})
+    return;
+  }
+  
 });
 
 
@@ -334,7 +364,7 @@ app.get(apiPath + '/incidentfields', async (req, res) => {
 
 
 app.post(apiPath + '/createDemistoIncident', async (req, res) => {
-  // This method will create a Demisto incident to facilitate the provisioning of our new employee
+  // This method will create a Demisto incident, per the body supplied by the client
 
   let currentUser = req.headers.authorization;
 
@@ -386,6 +416,133 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
 
 
 
+function saveFieldsConfig() {
+  return fs.promises.writeFile(fieldsConfigFile, JSON.stringify(fieldsConfig), { encoding: 'utf8', mode: 0o660});
+}
+
+
+
+app.post(apiPath + '/fieldConfig', async (req, res) => {
+  // save a new field config
+  let body = req.body;
+  const requiredFields = ['name', 'incident', 'customFieldsConfig', 'incidentFieldsConfig', 'createInvestigation'];
+  for (let i = 0; i < requiredFields.length; i++) {
+    // check for valid request
+    let fieldName = requiredFields[i];
+    if (!(fieldName in body)) {
+      const error = `Invalid request: Key '${fieldName}' missing`;
+      res.status(400).json({error});
+      return;
+    }
+  }
+
+  // check for existing config name
+  if ('name' in fieldsConfig) {
+    const error = `Invalid request: Name '${body.name}' is already defined`;
+    res.status(400).json({error});
+    return;
+  }
+
+  const id = uuidv4();
+
+  // remove any invalid fields
+  const newBody = {
+    name: body.name,
+    id,
+    incident: body.incident,
+    customFieldsConfig: body.customFieldsConfig,
+    incidentFieldsConfig: body.incidentFieldsConfig,
+    createInvestigation: body.createInvestigation
+  };
+
+  fieldsConfig[newBody.name] = newBody;
+  await saveFieldsConfig();
+
+  res.status(201).json({success: true}); // send 'created'
+} );
+
+
+
+app.post(apiPath + '/fieldConfig/update', async (req, res) => {
+  // update an existing field config
+  const body = req.body;
+  const requiredFields = ['name', 'id', 'incident', 'customFieldsConfig', 'incidentFieldsConfig', 'createInvestigation'];
+
+  for (let i = 0; i < requiredFields.length; i++) {
+    // check for valid request
+    let fieldName = requiredFields[i];
+    if (!(fieldName in body)) {
+      const error = `Invalid request: Key '${fieldName}' is missing`;
+      res.status(400).json({error});
+      return;
+    }
+  }
+
+  if (body.id === '') {
+    const error = `Invalid request: 'id' key may not be empty`;
+    res.status(400).json({error});
+    return;
+  }
+
+  // remove any invalid fields
+  const updatedField = {
+    name: body.name,
+    id: body.id,
+    incident: body.incident,
+    customFieldsConfig: body.customFieldsConfig,
+    incidentFieldsConfig: body.incidentFieldsConfig,
+    createInvestigation: body.createInvestigation
+  };
+
+  fieldsConfig[body.name] = updatedField;
+  await saveFieldsConfig();
+
+  res.status(200).json({success: true});; // send 'OK'
+} );
+
+
+
+app.get(apiPath + '/fieldConfig/all', async (req, res) => {
+  // retrieve all field configs -- must come before /fieldConfig/:name
+  res.status(200).json(fieldsConfig);
+} );
+
+
+
+app.get(apiPath + '/fieldConfig/:name', async (req, res) => {
+  // get a particular field config
+  const name = req.params.name;
+  if (name in fieldsConfig) {
+    res.status(200).json(fieldsConfig[name]);
+    return;
+  }
+  else {
+    const error = `Config ${'name'} was not found`;
+    res.status(400).json({error});
+    return;
+  }
+} );
+
+
+
+app.delete(apiPath + '/fieldConfig/:name', async (req, res) => {
+  // delete a field config
+  const name = req.params.name;
+  if (name in fieldsConfig) {
+      delete fieldsConfig[name];
+      await saveFieldsConfig();
+      res.status(200).json({name, success: true});
+      return;
+    }
+    else {
+      const error = 'Resource not found';
+      res.status(400).json({error, name, success: false});
+      return;
+    }
+} );
+
+
+
 
 
 ///// FINISH STARTUP //////
@@ -416,6 +573,21 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
     }
   }
 
+  // Read Field Configs
+  if (!foundFieldsConfigFile) {
+    console.log('Fields configuration file was not found');
+    fieldsConfig = {};
+  }
+  else {
+    try {
+      fieldsConfig = JSON.parse(fs.readFileSync(fieldsConfigFile, 'utf8'));
+    }
+    catch (error) {
+      console.error(`Error parsing ${fieldsConfigFile}:`, error);
+      fieldsConfig = {};
+    }
+  }
+
 
   if (foundDist && !devMode) {
     // Serve compiled Angular files statically
@@ -438,5 +610,5 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
     });
   }
 
-  server.listen(listenPort, () => console.log(`Listening on port ${listenPort}`)); // listen for client connections
+  server.listen(listenPort, () => console.log(`Listening for client connections at http://*:${listenPort}`)); // listen for client connections
 })();
