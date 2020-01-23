@@ -66,7 +66,7 @@
         <span *ngIf="fieldsConfigurations">aaa
           <p-button label="Open" (onClick)="onOpenClicked()" styleClass="alignButton" [disabled]="fieldsConfigurationsLen === 0"></p-button>
 
-          <p-button label="Save" (onClick)="onSaveClicked()" [disabled]="!fileData"></p-button>
+          <p-button label="Save" (onClick)="onSaveClicked()" [disabled]="!(loadedConfigId && loadedConfigName)"></p-button>
 
           <p-button label="Save As" (onClick)="onSaveAsClicked()" [disabled]="!fileData"></p-button>
 
@@ -87,8 +87,7 @@
     <!-- Loaded Configuration -->
     <p-card *ngIf="loadedConfigName && loadedConfigId" header="Loaded Configuration">
       <div style="margin-top: 1em;">
-        <span class="formLabel" style="font-size: 18px;">Current Configuration Name:&nbsp;&nbsp;</span>
-        <span class="formLabel" style="font-size: 18px;">{{loadedConfigName}}</span>
+        <span class="formLabel" style="font-size: 18px;">"{{loadedConfigName}}"</span>
       </div>
     </p-card>
 
@@ -196,37 +195,111 @@
 
   <!-- Save As Dialog -->
   <p-dialog header="Save Configuration As" [(visible)]="showSaveAsDialog" [modal]="true" [style]="{width: '300px'}">
+
     <div style="margin-bottom: .5em;" class="formLabel">Configuration Name</div>
+
     <input type="text" pInputText [(ngModel)]="saveAsConfigName" class="inputDisplay"/>
+
     <div style="margin-top: .5em;">{{saveAsDisabled ? 'This name is already taken' : '&nbsp;'}}</div>
+
     <div style="margin-top: .5em; float: right;">
+
       <p-button label="Save" (onClick)="onSaveAsAccepted()" [disabled]="saveAsDisabled"></p-button>
+
       <p-button label="Cancel" (onClick)="onSaveAsCanceled()"></p-button>
+
     </div>
+
   </p-dialog>
 
 
 
   <!-- Delete Dialog -->
   <p-dialog header="Delete Configuration" [(visible)]="showDeleteDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}">
-    <div class="formLabel">Configuration to delete</div>
-    <p-dropdown [options]="fieldsConfigOptions" [(ngModel)]="selectedFieldConfig" [style]="{'width':'100%'}"></p-dropdown>
+    
+    <div class="formLabel">Configurations to delete</div>
+    
+    <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedDeleteConfigs" [multiple]="true" [filter]="true" [checkbox]="true" [style]="{'width':'100%'}"></p-listbox>
+    
     <div style="margin-top: .5em;">
+
       <p-button label="Delete" (onClick)="onDeleteAccepted()"></p-button>
+
       <p-button label="Cancel" (onClick)="onDeleteCanceled()"></p-button>
+
     </div>
+
   </p-dialog>
 
 
 
   <!-- Open Dialog -->
   <p-dialog header="Open Configuration" [(visible)]="showOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}">
+
     <div class="formLabel">Configuration to open</div>
+
     <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedFieldConfig" [style]="{'width':'100%'}" (onDblClick)="onConfigOpened()"></p-listbox>
+
     <div style="margin-top: .5em;">
+
       <p-button label="Open" (onClick)="onConfigOpened()"></p-button>
+
       <p-button label="Cancel" (onClick)="onOpenCanceled()"></p-button>
+
     </div>
+
+  </p-dialog>
+
+
+
+  <!-- Bulk Create Dialog -->
+  <p-dialog header="Bulk Incident Creation" [(visible)]="showBulkCreateDialog" [modal]="true" [style]="{width: '400px'}" [contentStyle]="{'overflow':'visible'}">
+
+    <div class="formLabel">Select configurations to push to Demisto</div>
+
+    <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedBulkCreateConfigs" [style]="{'width':'100%'}" (onDblClick)="onConfigOpened()" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
+    
+    <div style="margin-top: .5em;">
+    
+      <p-button label="Create Incidents" (onClick)="onBulkCreateSubmit()" [disabled]="selectedBulkCreateConfigs.length === 0"></p-button>
+    
+      <p-button label="Cancel" (onClick)="onBulkCreateCanceled()"></p-button>
+  
+    </div>
+  
+  </p-dialog>
+
+
+
+  <!-- Bulk Create Results Dialog -->
+  <p-dialog header="Bulk Create Incident Results" [(visible)]="showBulkResultsDialog" [modal]="true" [style]="{width: '75%'}">
+
+    <div class="bulkCreateResults">
+      <div class="bulkCreateResultsGridHeader">Config Name</div>
+      <div class="bulkCreateResultsGridHeader">Result</div>
+      <div class="bulkCreateResultsGridHeader">Incident ID</div>
+      <div class="bulkCreateResultsGridHeader">Comments</div>
+      <ng-container *ngFor="let result of bulkCreateResults">
+        
+        <div>{{result.configName}}</div>
+        
+        <div>{{result.success ? 'Success' : 'Failure'}}</div>
+        
+        <div *ngIf="result.hasOwnProperty('incidentId')"><a href="javascript:void(0)" (click)="onClickDemistoInvestigateUrl(result.incidentId)">{{result.incidentId}}</a></div>
+        
+        <div *ngIf="!result.hasOwnProperty('incidentId')"></div>
+
+        <div>
+          <span *ngIf="result.hasOwnProperty('skippedFields') && result.skippedFields.length !== 0" class="pi pi-info-circle bulkCreateResultsInfoIcon" [pTooltip]="'Fields were skipped: ' + result.skippedFields.join(', ')">
+          </span>
+        </div>
+      </ng-container>
+    </div>
+
+    <div style="margin-top: 1em; float: right;">
+      <p-button label="OK" (onClick)="showBulkResultsDialog = false"></p-button>
+    </div>
+
   </p-dialog>
 
 
@@ -238,6 +311,6 @@
 
 <ng-container *ngIf="!loggedInUser">
   <div>
-    Have not obtained logged in user from API
+    Logged in user not yet obtained from API
   </div>
 </ng-container>

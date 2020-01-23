@@ -127,4 +127,13 @@ export class FetcherService {
                     .toPromise();
   }
 
+
+
+  createInvestigation(id): Promise<boolean> {
+    let headers = this.buildHeaders();
+    return this.http.get(this.apiPath + '/createInvestigation/' + id, { headers } )
+                    .toPromise()
+                    .then( (value: any) => value.success);
+  }
+
 }

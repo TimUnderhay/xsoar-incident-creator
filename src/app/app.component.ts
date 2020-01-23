@@ -10,6 +10,7 @@ import { DemistoIncidentField, DemistoIncidentFields } from './types/demisto-inc
 import { FieldConfig, FieldsConfig, IncidentFieldsConfig } from './types/fields-config';
 import { ConfirmationService } from 'primeng/api';
 import { PMessageOption } from './types/message-options';
+import { BulkCreateResult } from './types/bulk-create-result';
 
 @Component({
   selector: 'app-root',
@@ -78,9 +79,18 @@ export class AppComponent implements OnInit {
   // delete dialog
   showDeleteDialog = false;
   confirmDialogHeader = '';
+  selectedDeleteConfigs: string[] = [];
 
   // open dialog
   showOpenDialog = false;
+
+  // bulk create dialog
+  showBulkCreateDialog = false;
+  selectedBulkCreateConfigs: string[] = [];
+
+  // bulk results
+  showBulkResultsDialog = false;
+  bulkCreateResults: BulkCreateResult[] = [];
 
 
 
@@ -88,7 +98,6 @@ export class AppComponent implements OnInit {
   get saveAsDisabled(): boolean {
     return this.saveAsConfigName in this.fieldsConfigurations;
   }
-
 
 
 
@@ -135,8 +144,22 @@ export class AppComponent implements OnInit {
 
   }
 
+
+
   async getAllFieldConfigurations() {
     return this.fetcherService.getAllFieldConfigurations();
+  }
+
+
+
+  messageAdd(message: PMessageOption) {
+    this.messages.push();
+  }
+
+
+
+  messagesReplace(messages: PMessageOption[]) {
+    this.messages = messages;
   }
 
 
@@ -715,9 +738,9 @@ export class AppComponent implements OnInit {
     console.log('onDeleteAccepted()');
     this.showDeleteDialog = false;
     this.confirmDialogHeader = 'Confirm Deletion';
-    let message = `Are you sure that you would like to delete configuration '${this.selectedFieldConfig}'?`;
+    let message = `Are you sure that you would like to delete the configurations: ${this.selectedDeleteConfigs.join(', ')} ?`;
     if (this.selectedFieldConfig === this.loadedConfigName ) {
-      message = `Are you sure you want to delete the active configuration ${this.selectedFieldConfig}?`;
+      message = `Are you sure you want to delete the active configurations ${this.selectedDeleteConfigs.join(', ')} ?`;
     }
     this.confirmationService.confirm( {
       message,
@@ -729,13 +752,16 @@ export class AppComponent implements OnInit {
 
   async onDeleteConfirmed() {
     console.log('onDeleteConfirmed()');
-    try {
-      await this.fetcherService.deleteFieldConfiguration(this.selectedFieldConfig);
-    }
-    catch (error) {
-      console.error(`onDeleteConfirmed(): caught error whilst deleting configuration ${this.selectedFieldConfig}`);
-      return;
-    }
+
+    this.selectedDeleteConfigs.forEach( async configName => {
+      try {
+        await this.fetcherService.deleteFieldConfiguration(configName);
+      }
+      catch (error) {
+        console.error(`onDeleteConfirmed(): caught error whilst deleting configuration ${configName}`);
+        return;
+      }
+    });
 
     // fetch fields config
     try {
@@ -743,16 +769,19 @@ export class AppComponent implements OnInit {
       console.log('AppComponent: onDeleteConfirmed(): fieldsConfigurations:', this.fieldsConfigurations);
       this.fieldsConfigOptions = this.buildFieldsConfigOptions(this.fieldsConfigurations);
       this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration ${this.selectedFieldConfig} was successfully deleted`});
-      if (this.fieldsConfigOptions.length !== 0) {
-        this.selectedFieldConfig = this.fieldsConfigOptions[0].value;
-      }
-      else {
-        // handle when we delete the selected config
+
+      // handle when we've deleted the loaded config
+      if (this.selectedDeleteConfigs.includes(this.loadedConfigName)) {
+        this.loadedConfigName = undefined;
+        this.loadedConfigId = undefined;
       }
     }
     catch (error) {
       console.error('AppComponent: onDeleteConfirmed(): Caught error fetching fields configuration:', error);
     }
+
+    this.selectedDeleteConfigs = [];
+
   }
 
 
@@ -792,10 +821,6 @@ export class AppComponent implements OnInit {
 
 
 
-  onBulkCreateClicked() {}
-
-
-
   onOpenClicked() {
     console.log('onOpenClicked()');
     this.showOpenDialog = true;
@@ -819,6 +844,108 @@ export class AppComponent implements OnInit {
   onOpenCanceled() {
     console.log('onOpenCancelled()');
     this.showOpenDialog = false;
+  }
+
+
+
+  onBulkCreateClicked() {
+    console.log('onBulkCreateClicked()');
+    this.showBulkCreateDialog = true;
+  }
+
+
+
+  onBulkCreateCanceled() {
+    console.log('onBulkCreateCanceled()');
+    this.showBulkCreateDialog = false;
+  }
+
+
+
+  async onBulkCreateSubmit() {
+    console.log('onBulkCreateSubmit()');
+    await this.onReloadFieldDefinitions();
+    this.showBulkCreateDialog = false;
+    this.showBulkResultsDialog = true;
+    setTimeout( () => {} ); // trigger change detection
+
+    this.bulkCreateResults = [];
+    this.selectedBulkCreateConfigs.forEach( async (configName) => {
+      /*
+      Steps to complete:
+
+      1.  Load config
+      2.  Check for keys that can't be pushed
+      3.  Display them in a column
+      4.  Push case with all other fields
+      5.  Display results in a column
+      */
+      console.log('onBulkCreateSubmit(): configName:', configName);
+      let selectedConfig = this.fieldsConfigurations[configName];
+      let skippedFields: string[] = [];
+
+      let newIncident = {
+        createInvestigation: selectedConfig.createInvestigation
+      };
+
+      Object.values(selectedConfig.incidentFieldsConfig).forEach( incidentFieldConfig => {
+        const fieldName = incidentFieldConfig.shortName;
+        if (!incidentFieldConfig.enabled) {
+          // silently skip non-enabled fields
+          return;
+        }
+        if (!(fieldName in this.demistoIncidentFields)) {
+          // skip fields which don't exist in Demisto config
+          skippedFields.push(fieldName);
+          return;
+        }
+        newIncident[fieldName] = incidentFieldConfig.value;
+      });
+
+      Object.values(selectedConfig.customFieldsConfig).forEach( incidentFieldConfig => {
+        const fieldName = incidentFieldConfig.shortName;
+        if (!('CustomFields' in newIncident)) {
+          newIncident['CustomFields'] = {};
+        }
+        if (!incidentFieldConfig.enabled) {
+          // silently skip non-enabled fields
+          return;
+        }
+        if (!(fieldName in this.demistoIncidentFields)) {
+          // skip fields which don't exist in Demisto config
+          skippedFields.push(fieldName);
+          return;
+        }
+        newIncident['CustomFields'][fieldName] = incidentFieldConfig.value;
+      });
+
+      console.log('onBulkCreateSubmit(): newIncident:', newIncident);
+
+      // now submit the incident
+      let res = await this.fetcherService.createDemistoIncident(newIncident);
+      if (!res.success) {
+        const error = res.statusMessage;
+        this.bulkCreateResults.push({configName, success: false, error});
+      }
+      else {
+        this.bulkCreateResults.push({configName, success: true, skippedFields, incidentId: res.id});
+      }
+
+
+    });
+
+    console.log('onBulkCreateSubmit(): bulkCreateResults:', this.bulkCreateResults);
+
+    this.selectedBulkCreateConfigs = []; // reset selection
+  }
+
+
+
+  async onClickDemistoInvestigateUrl(id: number) {
+    console.log('onClickDemistoInvestigateUrl(): id:', id);
+    await this.fetcherService.createInvestigation(id);
+    const url = `${this.demistoProperties.url}/#/incident/${id}`;
+    window.open(url, '_blank');
   }
 
 }

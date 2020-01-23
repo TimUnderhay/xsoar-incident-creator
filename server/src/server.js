@@ -385,7 +385,7 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
     resolveWithFullResponse: true,
     json: true,
     body: body
-  }
+  };
 
   try {
     // send request to Demisto
@@ -539,6 +539,43 @@ app.delete(apiPath + '/fieldConfig/:name', async (req, res) => {
       res.status(400).json({error, name, success: false});
       return;
     }
+} );
+
+
+
+app.get(apiPath + '/createInvestigation/:id', async (req, res) => {
+  const id = `${req.params.id}`; // coerce id into a string
+  const body = {
+    id,
+    version: 1
+  };
+
+  let result;
+  let options = {
+    url: demistoUrl + '/incident/investigate',
+    method: 'POST',
+    headers: {
+      Authorization: demistoApiKey,
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    },
+    rejectUnauthorized: !trustAny,
+    resolveWithFullResponse: true,
+    json: true,
+    body: body
+  };
+  try {
+    // send request to Demisto
+    result = await request( options );
+    res.json({success: true});
+  }
+  catch (error) {
+    if ('error' in error && error.error.error.startsWith('Investigation already exists for incident')) {
+      res.json({success: true});
+      return;
+    }
+    res.json({success: false});
+  }
 } );
 
 
