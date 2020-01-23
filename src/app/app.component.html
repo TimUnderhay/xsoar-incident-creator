@@ -58,12 +58,14 @@
       <div style="margin-top: 1em;">
         
         <!-- File Upload -->
-        <span>aaa 
+        <span>
           <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Upload JSON" [customUpload]="true" (uploadHandler)="onFileUpload($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true"></p-fileUpload>
-           aaa
         </span>
 
-        <span *ngIf="fieldsConfigurations">aaa
+        <span *ngIf="fieldsConfigurations">
+          
+          <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span>
+
           <p-button label="Open" (onClick)="onOpenClicked()" styleClass="alignButton" [disabled]="fieldsConfigurationsLen === 0"></p-button>
 
           <p-button label="Save" (onClick)="onSaveClicked()" [disabled]="!(loadedConfigId && loadedConfigName)"></p-button>
@@ -73,9 +75,7 @@
           <p-button label="Delete" (onClick)="onDeleteClicked()" [disabled]="fieldsConfigurationsLen === 0"></p-button>
 
           <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="fieldsConfigurationsLen === 0"></p-button>
-
-          <!--<span *ngIf="file">&nbsp;&nbsp;{{file.name}} ({{file.size}} bytes)</span>-->
-           aaa
+           
         </span>
 
       </div>
@@ -181,8 +181,7 @@
 
       <!-- Submit Button -->
       <div style="margin-top: 1em;">
-        &nbsp;&nbsp;<button pButton type="button" label="Create Incident" [disabled]="!serverApiInit" (click)="onIncidentSubmit()" [disabled]="countEnabledFields() === 0"></button>
-        <button pButton type="button" (click)="resetForm()" label="Reset Selection"></button>
+        &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onIncidentSubmit()" [disabled]="!fileData || countEnabledFields() === 0"></button>
       </div>
 
     <div>&nbsp;</div>
@@ -193,12 +192,14 @@
     <p-messages [(value)]="messages"></p-messages>
   </div>
 
+
+
   <!-- Save As Dialog -->
-  <p-dialog header="Save Configuration As" [(visible)]="showSaveAsDialog" [modal]="true" [style]="{width: '300px'}">
+  <p-dialog header="Save Configuration As" [(visible)]="showSaveAsDialog" [modal]="true" [style]="{width: '300px'}" styleClass="saveAsDialog">
 
     <div style="margin-bottom: .5em;" class="formLabel">Configuration Name</div>
 
-    <input type="text" pInputText [(ngModel)]="saveAsConfigName" class="inputDisplay"/>
+    <input pInputText #saveAsInput type="text" [(ngModel)]="saveAsConfigName" class="inputDisplay"/>
 
     <div style="margin-top: .5em;">{{saveAsDisabled ? 'This name is already taken' : '&nbsp;'}}</div>
 
@@ -215,7 +216,7 @@
 
 
   <!-- Delete Dialog -->
-  <p-dialog header="Delete Configuration" [(visible)]="showDeleteDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}">
+  <p-dialog header="Delete Configuration" [(visible)]="showDeleteDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="deleteConfigDialog">
     
     <div class="formLabel">Configurations to delete</div>
     
@@ -234,11 +235,11 @@
 
 
   <!-- Open Dialog -->
-  <p-dialog header="Open Configuration" [(visible)]="showOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}">
+  <p-dialog header="Open Configuration" [(visible)]="showOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="openDialog">
 
     <div class="formLabel">Configuration to open</div>
 
-    <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedFieldConfig" [style]="{'width':'100%'}" (onDblClick)="onConfigOpened()"></p-listbox>
+    <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedOpenConfig" [style]="{'width':'100%'}" (onDblClick)="onConfigOpened()" [filter]="true"></p-listbox>
 
     <div style="margin-top: .5em;">
 
@@ -253,7 +254,7 @@
 
 
   <!-- Bulk Create Dialog -->
-  <p-dialog header="Bulk Incident Creation" [(visible)]="showBulkCreateDialog" [modal]="true" [style]="{width: '400px'}" [contentStyle]="{'overflow':'visible'}">
+  <p-dialog header="Bulk Incident Creation" [(visible)]="showBulkCreateDialog" [modal]="true" [style]="{width: '400px'}" [contentStyle]="{'overflow':'visible'}" styleClass="bulkCreateDialog">
 
     <div class="formLabel">Select configurations to push to Demisto</div>
 

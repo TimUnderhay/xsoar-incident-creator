@@ -25,6 +25,8 @@ export class AppComponent implements OnInit {
 
   @ViewChildren(FieldDisplayComponent) fieldDisplayComponents: FieldDisplayComponent[];
 
+  private investigationFields = ['id', 'account', 'created', 'modified', 'ShardID', 'account', 'activated', 'autime', 'canvases', 'closeNotes', 'closeReason', 'closed', 'closingUserId', 'created', 'droppedCount', 'dueDate', 'hasRole', 'id', 'investigationId', 'isPlayground', 'lastOpen', 'linkedCount', 'linkedIncidents', 'modified', 'notifyTime', 'openDuration', 'parent', 'playbookId', 'previousRoles', 'rawCategory', 'rawCloseReason', 'rawJSON', 'rawName', 'rawPhase', 'rawType', 'reason', 'runStatus', 'sla', 'sortValues', 'sourceBrand', 'sourceInstance', 'status', 'version' ]; // it may become necessary to permit some of these fields in the future
+
   demistoProperties: DemistoProperties = {
     url: '',
     apiKey: '',
@@ -40,36 +42,32 @@ export class AppComponent implements OnInit {
 
   // for p-messages
   messages: PMessageOption[] = [];
-
-  // Options for PrimeNG Components
   messagesClearTimeout: ReturnType<typeof setTimeout> = null;
 
   fileData: any; // parsed json
 
+  createInvestigation = true;
   createInvestigationButtonOptions: SelectItem[] = [
     { value: true, label: 'Enabled' },
     { value: false, label: 'Disabled' }
   ];
-  createInvestigation = true;
 
   demistoIncidentFields: DemistoIncidentFields; // the fields taken from Demisto
   incidentFields: IncidentFields; // the fields of our imported JSON
-  customFields: IncidentFields;
+  customFields: IncidentFields; // the custom fields of our imported json
   displayIncidentFieldShortNames = true;
   displayCustomFieldShortNames = true;
-
-  private investigationFields = ['id', 'account', 'created', 'modified', 'ShardID', 'account', 'activated', 'autime', 'canvases', 'closeNotes', 'closeReason', 'closed', 'closingUserId', 'created', 'droppedCount', 'dueDate', 'hasRole', 'id', 'investigationId', 'isPlayground', 'lastOpen', 'linkedCount', 'linkedIncidents', 'modified', 'notifyTime', 'openDuration', 'parent', 'playbookId', 'previousRoles', 'rawCategory', 'rawCloseReason', 'rawJSON', 'rawName', 'rawPhase', 'rawType', 'reason', 'runStatus', 'sla', 'sortValues', 'sourceBrand', 'sourceInstance', 'status', 'version' ]; // it may become necessary to permit some of these fields in the future
 
   loadedConfigName: string; // must clear when loaded from json or when current config is deleted
   loadedConfigId: string; // must clear when loaded from json or when current config is deleted
 
   fieldsConfigurations: FieldsConfig = {};
   get fieldsConfigurationsLen(): number {
+    // returns the number of saved field configs
     return Object.keys(this.fieldsConfigurations).length;
   }
 
-  fieldsConfigOptions: SelectItem[] = []; // for dropdown
-  selectedFieldConfig: string;
+  fieldsConfigOptions: SelectItem[] = []; // dropdown/listbox options object for all field configs
 
   // save as dialog
   showSaveAsDialog = false;
@@ -78,11 +76,12 @@ export class AppComponent implements OnInit {
 
   // delete dialog
   showDeleteDialog = false;
-  confirmDialogHeader = '';
   selectedDeleteConfigs: string[] = [];
+  confirmDialogHeader = '';
 
   // open dialog
   showOpenDialog = false;
+  selectedOpenConfig = '';
 
   // bulk create dialog
   showBulkCreateDialog = false;
@@ -128,16 +127,11 @@ export class AppComponent implements OnInit {
         this.fieldsConfigurations = await this.getAllFieldConfigurations();
         console.log('AppComponent: ngOnInit(): fieldsConfigurations:', this.fieldsConfigurations);
         this.fieldsConfigOptions = this.buildFieldsConfigOptions(this.fieldsConfigurations);
-        if (this.fieldsConfigOptions.length !== 0) {
-          this.selectedFieldConfig = this.fieldsConfigOptions[0].value;
-        }
       }
       catch (error) {
         console.error('AppComponent: ngOnInit(): Caught error fetching fields configuration:', error);
       }
     }
-
-
 
     // Fetch Sample Incident -- Uncomment for testing
     // await this.getSampleIncident();
@@ -643,6 +637,11 @@ export class AppComponent implements OnInit {
   onSaveAsClicked() {
     console.log('onSaveAsClicked()');
     this.showSaveAsDialog = true;
+    setTimeout( () => {
+      // focus input element
+      // cannot use ViewChild due to way modal is inserted into the DOM
+      document.getElementsByClassName('saveAsDialog')[0].getElementsByTagName('input')[0].focus();
+    }, 100);
   }
 
 
@@ -696,9 +695,6 @@ export class AppComponent implements OnInit {
       this.fieldsConfigurations = await this.getAllFieldConfigurations();
       console.log('AppComponent: onSaveAsAccepted(): fieldsConfigurations:', this.fieldsConfigurations);
       this.fieldsConfigOptions = this.buildFieldsConfigOptions(this.fieldsConfigurations);
-      if (this.fieldsConfigOptions.length !== 0) {
-        this.selectedFieldConfig = this.fieldsConfigOptions[0].value;
-      }
       this.loadedConfigId = this.fieldsConfigurations[this.loadedConfigName].id;
     }
     catch (error) {
@@ -720,6 +716,11 @@ export class AppComponent implements OnInit {
   onDeleteClicked() {
     console.log('onDeleteClicked()');
     this.showDeleteDialog = true;
+    setTimeout( () => {
+      // focus input element
+      // cannot use ViewChild due to way modal is inserted into the DOM
+      (document.getElementsByClassName('deleteConfigDialog')[0].getElementsByClassName('ui-inputtext')[1] as HTMLInputElement).focus();
+    }, 200);
   }
 
 
@@ -727,9 +728,6 @@ export class AppComponent implements OnInit {
   onDeleteCanceled() {
     console.log('onDeleteCanceled()');
     this.showDeleteDialog = false;
-    if (this.fieldsConfigOptions.length !== 0) {
-      this.selectedFieldConfig = this.fieldsConfigOptions[0].value;
-    }
   }
 
 
@@ -739,8 +737,8 @@ export class AppComponent implements OnInit {
     this.showDeleteDialog = false;
     this.confirmDialogHeader = 'Confirm Deletion';
     let message = `Are you sure that you would like to delete the configurations: ${this.selectedDeleteConfigs.join(', ')} ?`;
-    if (this.selectedFieldConfig === this.loadedConfigName ) {
-      message = `Are you sure you want to delete the active configurations ${this.selectedDeleteConfigs.join(', ')} ?`;
+    if (this.selectedDeleteConfigs.includes(this.loadedConfigName) ) {
+      message = `Are you sure you want to delete the active configuration '${this.loadedConfigName}' ?`;
     }
     this.confirmationService.confirm( {
       message,
@@ -768,7 +766,7 @@ export class AppComponent implements OnInit {
       this.fieldsConfigurations = await this.getAllFieldConfigurations();
       console.log('AppComponent: onDeleteConfirmed(): fieldsConfigurations:', this.fieldsConfigurations);
       this.fieldsConfigOptions = this.buildFieldsConfigOptions(this.fieldsConfigurations);
-      this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration ${this.selectedFieldConfig} was successfully deleted`});
+      this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration ${this.selectedOpenConfig} was successfully deleted`});
 
       // handle when we've deleted the loaded config
       if (this.selectedDeleteConfigs.includes(this.loadedConfigName)) {
@@ -780,8 +778,7 @@ export class AppComponent implements OnInit {
       console.error('AppComponent: onDeleteConfirmed(): Caught error fetching fields configuration:', error);
     }
 
-    this.selectedDeleteConfigs = [];
-
+    this.selectedDeleteConfigs = []; // reset selection
   }
 
 
@@ -798,7 +795,7 @@ export class AppComponent implements OnInit {
     };
     try {
       let res = await this.fetcherService.saveFieldConfiguration(config);
-      this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration '${this.selectedFieldConfig}' has been saved`});
+      this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration '${this.selectedOpenConfig}' has been saved`});
     }
     catch (error) {
       console.error('onSaveClicked(): caught error saving field config:', error);
@@ -810,9 +807,6 @@ export class AppComponent implements OnInit {
       this.fieldsConfigurations = await this.getAllFieldConfigurations();
       console.log('AppComponent: onSaveClicked(): fieldsConfigurations:', this.fieldsConfigurations);
       this.fieldsConfigOptions = this.buildFieldsConfigOptions(this.fieldsConfigurations);
-      if (this.fieldsConfigOptions.length !== 0) {
-        this.selectedFieldConfig = this.fieldsConfigOptions[0].value;
-      }
     }
     catch (error) {
       console.error('AppComponent: onSaveClicked(): Caught error fetching fields configuration:', error);
@@ -824,6 +818,11 @@ export class AppComponent implements OnInit {
   onOpenClicked() {
     console.log('onOpenClicked()');
     this.showOpenDialog = true;
+    setTimeout( () => {
+      // focus input element
+      // cannot use ViewChild due to way modal is inserted into the DOM
+      (document.getElementsByClassName('openDialog')[0].getElementsByClassName('ui-inputtext')[1] as HTMLInputElement).focus();
+    }, 200);
   }
 
 
@@ -831,12 +830,13 @@ export class AppComponent implements OnInit {
   onConfigOpened() {
     console.log('onConfigOpened()');
     this.showOpenDialog = false;
-    let selectedConfig = this.fieldsConfigurations[this.selectedFieldConfig];
+    let selectedConfig = this.fieldsConfigurations[this.selectedOpenConfig];
     this.fileData = selectedConfig.incident;
     this.loadIncidentFields(selectedConfig);
     this.loadedConfigName = selectedConfig.name;
     this.loadedConfigId = selectedConfig.id;
     this.createInvestigation = selectedConfig.createInvestigation;
+    this.selectedOpenConfig = ''; // reset selection
   }
 
 
@@ -851,6 +851,11 @@ export class AppComponent implements OnInit {
   onBulkCreateClicked() {
     console.log('onBulkCreateClicked()');
     this.showBulkCreateDialog = true;
+    setTimeout( () => {
+      // focus input element
+      // cannot use ViewChild due to way modal is inserted into the DOM
+      (document.getElementsByClassName('bulkCreateDialog')[0].getElementsByClassName('ui-inputtext')[1] as HTMLInputElement).focus();
+    }, 200);
   }
 
 
