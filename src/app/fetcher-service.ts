@@ -1,13 +1,13 @@
 import { Injectable } from '@angular/core';
 import { Subject, BehaviorSubject, Subscription } from 'rxjs';
 import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { DemistoProperties } from './types/demisto-properties';
 import { User } from './types/user';
 import { ApiStatus } from './types/api-status';
 import { DemistoIncidentField } from './types/demisto-incident-field';
 import { FieldConfig, FieldsConfig } from './types/fields-config';
+import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
 
-@Injectable()
+@Injectable({providedIn: 'root'})
 
 export class FetcherService {
 
@@ -15,7 +15,7 @@ export class FetcherService {
 
 
 
-  demistoProperties: DemistoProperties; // gets set during test
+  // demistoProperties: DemistoProperties; // gets set during test
   apiPath = '/api';
   currentUser: User;
 
@@ -34,13 +34,46 @@ export class FetcherService {
 
 
 
-  getApiStatus(): Promise<ApiStatus> {
+  getApiStatus(serverId: string): Promise<ApiStatus> {
     let headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
-    return this.http.get(this.apiPath + '/apiStatus', { headers } )
+    return this.http.get(`${this.apiPath}/demistoApi/test/${serverId}`, { headers } )
                     .toPromise()
                     .then( (status: ApiStatus) => status );
+  }
+
+
+
+  getApiStatusAdhoc(serverParams: DemistoAPI): Promise<ApiStatus> {
+    let headers = new HttpHeaders( {
+      Accept: 'application/json'
+    } );
+    return this.http.post(`${this.apiPath}/demistoApi/test/adhoc`, serverParams, { headers } )
+                    .toPromise()
+                    .then( (status: ApiStatus) => status );
+  }
+
+
+
+  getDemistoApi(): Promise<DemistoAPIEndpoints> {
+    let headers = new HttpHeaders( {
+      Accept: 'application/json'
+    } );
+    return this.http.get(this.apiPath + '/demistoApi', { headers } )
+                    .toPromise()
+                    .then( (endpoints: DemistoAPIEndpoints) => endpoints );
+  }
+
+
+
+  getDemistoDefaultApi(): Promise<any> {
+    let headers = new HttpHeaders( {
+      Accept: 'application/json'
+    } );
+    return this.http.get(this.apiPath + '/demistoApi/default', { headers } )
+                    .toPromise()
+                    .then( res => res );
   }
 
 
@@ -56,16 +89,6 @@ export class FetcherService {
       headers = headers.set('Authorization', authUser);
     }
     return headers;
-  }
-
-
-
-  testDemisto( demistoProperties: DemistoProperties ): Promise<any> {
-    this.demistoProperties = demistoProperties;
-    let headers = this.buildHeaders();
-    // headers = headers.append('Authorization', this.demistoProperties.apiKey);
-    return this.http.post(this.apiPath + '/testConnect', demistoProperties, { headers } )
-                    .toPromise();
   }
 
 
@@ -129,9 +152,9 @@ export class FetcherService {
 
 
 
-  createInvestigation(id): Promise<boolean> {
+  createInvestigation(incidentId, serverId): Promise<boolean> {
     let headers = this.buildHeaders();
-    return this.http.get(this.apiPath + '/createInvestigation/' + id, { headers } )
+    return this.http.post(this.apiPath + '/createInvestigation', {incidentId, serverId}, { headers } )
                     .toPromise()
                     .then( (value: any) => value.success);
   }

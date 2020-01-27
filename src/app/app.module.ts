@@ -9,9 +9,6 @@ import { AppComponent } from './app.component';
 import { FieldDisplayComponent } from './field-display.component';
 import { JsonEditorComponent } from './json-editor.component';
 
-// Services
-import { FetcherService } from './fetcher-service';
-
 // PrimeNG Imports
 import { ListboxModule } from 'primeng/listbox';
 import { CardModule } from 'primeng/card';
@@ -68,7 +65,7 @@ import { ConfirmationService } from 'primeng/api';
   entryComponents: [
     JsonEditorComponent
   ],
-  providers: [ FetcherService, ConfirmationService ],
+  providers: [ ConfirmationService ],
   bootstrap: [ AppComponent ]
 })
 export class AppModule { }

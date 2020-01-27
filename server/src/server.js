@@ -8,9 +8,10 @@ console.log('Demisto incident importer server is starting');
 const listenPort = 4002;
 const proxyDest = 'http://localhost:4200'; // used in client development mode
 const apiPath = '/api';
-var demistoUrl = ''; // the Demisto base URL
-var demistoApiKey = '';
-var trustAny = null; // boolean -- whether to trust any Demisto server certificiate
+
+// Demisto API Config
+var demistoApiConfigs = {};
+var defaultDemistoApiName; // the key/url of the default demistoApiConfig
 
 // Directories and files
 const fs = require('fs');
@@ -20,7 +21,7 @@ const staticDir = '../../dist/demisto-form';
 const foundDist = fs.existsSync(staticDir); // check for presence of pre-built angular client directory
 const configDir = '../config';
 const apiCfgFile = configDir + '/api.json';
-const foundApiConfig = fs.existsSync(apiCfgFile); // check for presence of API configuration file
+const foundDemistoApiConfig = fs.existsSync(apiCfgFile); // check for presence of API configuration file
 const fieldsConfigFile = configDir + '/fields-config.json';
 const foundFieldsConfigFile = fs.existsSync(fieldsConfigFile);
 
@@ -29,6 +30,8 @@ var uuidv4 = require('uuid/v4');
 
 // Field Configs
 var fieldsConfig;
+
+var incident_fields = {};
 
 
 
@@ -77,40 +80,14 @@ app.get(apiPath + '/whoami', (req, res) => {
 
 
 
-app.get(apiPath + '/apiStatus', (req, res) => {
-  // Tells the client whether the Demisto API has already been initialised
-  let statusGood = demistoUrl !== '' && demistoApiKey !== '';
-  let response = {
-    initialised: statusGood
+function saveApiConfig() {
+  let config = {
+    servers: demistoApiConfigs
+  };
+  if (defaultDemistoApiName) {
+    config['default'] = defaultDemistoApiName;
   }
-  if (statusGood) {
-    response['url'] = demistoUrl;
-    response['trust'] = trustAny;
-  }
-  res.status(200).json( response );
-} );
-
-
-
-app.get(apiPath + '/clientOptions', (req, res) => {
-  res.status(200).json({
-    workLocations,
-    countries,
-    defaultCountry,
-    computerTypes,
-    activeDirectoryGroups
-  })
-} );
-
-
-
-function saveApiConfig(url, key, trust) {
-  let apiCfg = {
-    url: url,
-    apiKey: key,
-    trustAny: trust
-  }
-  return fs.promises.writeFile(apiCfgFile, JSON.stringify(apiCfg)), { encoding: 'utf8', mode: 0o660};
+  return fs.promises.writeFile(apiCfgFile, JSON.stringify(config, null, 2), { encoding: 'utf8', mode: 0o660} );
 }
 
 
@@ -152,10 +129,9 @@ async function testApi(url, apiKey, trustAny) {
 
 
 
-app.post(apiPath + '/testConnect', async (req, res) => {
-
-  // Tests for good connectivity to Demisto server by checking
-  // installed content.  If successful, future calls to the Demisto API will use the URL and API key set here.
+app.post(apiPath + '/demistoApi/test/adhoc', async (req, res) => {
+  // Tests for good connectivity to Demisto server by fetching user settings.
+  // Does not save settings.  Another call will handle that.
   
   // check for client body fields
   if (! 'url' in req.body) {
@@ -165,6 +141,11 @@ app.post(apiPath + '/testConnect', async (req, res) => {
   }
   if (! 'apiKey' in req.body) {
     console.error('Client did not send apiKey');
+    res.send(400);
+    return;
+  }
+  if (! 'trustAny' in req.body) {
+    console.error('Client did not send trustAny');
     res.send(400);
     return;
   }
@@ -180,18 +161,8 @@ app.post(apiPath + '/testConnect', async (req, res) => {
       statusCode = testResult['statusCode'];
     }
     // console.error('error:', error);
-    demistoUrl = '';
-    demistoApiKey = '';
-    trustAny = null;
     
-    /*if ( error && 'response' in error && error.response && 'statusCode' in error.response && error.statusCode !== null) {
-      console.error('Caught error testing Demisto server:', error.response.statusMessage);
-      res.json( { success: false, statusCode: error.statusCode, statusMessage: error.response.statusMessage } );
-    }
-    else if (error && 'message' in error) {
-      console.error('Caught error testing Demisto server:', error.message);
-      res.json({ success: false, statusCode: null, error: error.message });
-    }*/
+    // since this is a test, we don't want to return a 500 if it fails.  Status code should be normal
     if (error && statusCode) {
       console.error(`Caught error testing Demisto server with code ${statusCode}:`, error);
       res.json({ success: false, statusCode, error });
@@ -207,13 +178,144 @@ app.post(apiPath + '/testConnect', async (req, res) => {
     return;
   }
   console.log(`Logged into Demisto as user '${testResult.result.body.username}'`);
-  demistoUrl = req.body.url;
-  demistoApiKey = req.body.apiKey;
-  trustAny = req.body.trustAny;
-  await saveApiConfig(demistoUrl, demistoApiKey, trustAny);
   res.json( { success: true, statusCode: 200 } );
-  console.log(`Demisto API URL set to: ${demistoUrl}`);
+  console.log(`Successfully tested URL '${req.body.url}'`);
 });
+
+
+
+app.get(apiPath + '/demistoApi/test/:serverId', async (req, res) => {
+  // Tests for good connectivity to Demisto server by fetching user settings.
+  // Does not save settings.  Another call will handle that.
+
+  const serverId = req.params.serverId;
+  const apiToTest = getDemistoApiConfig(serverId);
+
+  // console.log('body:', req.body);
+
+  let testResult = await testApi(apiToTest.url, apiToTest.apiKey, apiToTest.trustAny);
+  // console.debug('testResult:', testResult);
+  if (!testResult.success) {
+    let error = testResult.error;
+    let statusCode = null;
+    if ('statusCode' in res) {
+      statusCode = testResult['statusCode'];
+    }
+    // console.error('error:', error);
+    
+    // since this is a test, we don't want to return a 500 if it fails.  Status code should be normal
+    if (error && statusCode) {
+      console.error(`Caught error testing Demisto server with code ${statusCode}:`, error);
+      res.json({ success: false, statusCode, error });
+    }
+    else if (error && !statusCode) {
+      console.error(`Caught error testing Demisto server:`, error);
+      res.json({ success: false, error });
+    }
+    else {
+      console.error('Caught unspecified error testing Demisto server');
+      res.json({ success: false, error: 'unspecified' });
+    }
+    return;
+  }
+  console.log(`Logged into Demisto as user '${testResult.result.body.username}'`);
+  res.json( { success: true, statusCode: 200 } );
+  console.log(`Successfully tested URL '${req.body.url}'`);
+});
+
+
+
+app.post(apiPath + '/demistoApi/default', async (req, res) => {
+  // sets the default Demisto API endpoint
+  let serverId;
+
+  try {
+    serverId = req.body.serverId;
+  }
+  catch(err) {
+    return returnError(`serverId not found in request body`, res);
+  }
+
+  if (serverId in demistoApiConfigs) {
+    defaultDemistoApiName = serverId;
+    res.status(200).json({success: true});
+    await saveApiConfig();
+  }
+  else {
+    return returnError(`${serverId} is not a known Demisto API endpoint`, res);
+  }
+});
+
+
+
+app.get(apiPath + '/demistoApi/default', async (req, res) => {
+  // fetch the default Demisto API endpoint
+  if (defaultDemistoApiName) {
+    res.status(200).json({defined: true, serverId: defaultDemistoApiName});
+  }
+  else {
+    res.status(200).json({defined: false});
+  }
+});
+
+
+
+app.post(apiPath + '/demistoApi', async (req, res) => {
+    // saves Demisto API config
+    // will overwrite existing config for url
+
+    let config = req.body;
+
+    // check for client body fields
+    if (! 'url' in config) {
+      return returnError(`Client did not send url`, res);
+    }
+    if (! 'apiKey' in config) {
+      return returnError(`Client did not send apiKey`, res);
+    }
+    if (! 'trustAny' in config) {
+      return returnError(`Client did not send trustAny`, res);
+    }
+
+    // remove any junk data
+    config = {
+      url: config.url,
+      apiKey: config.apiKey,
+      trustAny: config.trustAny
+    };
+
+    demistoApiConfigs[config.url] = config;
+    await saveApiConfig();
+    res.status(200).json({success: true});
+});
+
+
+
+app.delete(apiPath + '/demistoApi/:serverId', async (req, res) => {
+  // deletes a Demisto server from the API config
+  const serverId = req.params.id;
+  if (serverId in demistoApiConfigs) {
+    delete demistoApiConfigs[serverId];
+    res.status(200).json({success: true});
+    await saveApiConfig();
+  }
+  else {
+    return returnError(`Demisto server '${serverID}' was not found`, res);
+  }
+});
+
+
+
+
+app.get(apiPath + '/demistoApi', async (req, res) => {
+  // return all demisto API configs to the client, minus their apiKeys
+  let tmpDemistoApiConfigs = JSON.parse(JSON.stringify(demistoApiConfigs));
+  Object.values(tmpDemistoApiConfigs).forEach( apiConfig => {
+    delete apiConfig.apiKey;
+  });
+  res.status(200).json(tmpDemistoApiConfigs);
+});
+
 
 
 
@@ -279,23 +381,23 @@ function removeEmptyValues(obj) {
 
 
 
-var incident_fields;
+async function getIncidentFields(demistoUrl) {
+  // This method will get incident field definitions from a Demisto server
+  
+  let demistoServerConfig = getDemistoApiConfig(demistoUrl);
 
-async function getIncidentFields() {
-  // This method will get incident field definitions from Demisto
-
-  console.log('Fetching incident fields');
+  console.log(`Fetching incident fields from '${demistoServerConfig.url}'`);
 
   let result;
   let options = {
-    url: demistoUrl + '/incidentfields',
+    url: demistoServerConfig.url + '/incidentfields',
     method: 'GET',
     headers: {
-      Authorization: demistoApiKey,
+      Authorization: demistoServerConfig.apiKey,
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    rejectUnauthorized: !trustAny,
+    rejectUnauthorized: !demistoServerConfig.trustAny,
     resolveWithFullResponse: true,
     json: true
   }
@@ -313,9 +415,9 @@ async function getIncidentFields() {
       return result;
     }, []);
 
-    // console.log(incident_fields);
+    // console.log(fields);
 
-    console.log('Successfully fetched incident fields');
+    console.log(`Successfully fetched incident fields from '${demistoServerConfig.url}'`);
     return fields;
   }
   catch (error) {
@@ -356,9 +458,11 @@ app.get(apiPath + '/sampleincident', async (req, res) => {
 
 
 
-app.get(apiPath + '/incidentfields', async (req, res) => {
-  incident_fields = await getIncidentFields();
-  res.json( {incident_fields} );
+app.get(apiPath + '/incidentfields/:serverId', async (req, res) => {
+  const serverId = req.params.id;
+  const fields = await getIncidentFields(serverId);
+  incident_fields[serverId] = fields;
+  res.json( {id: serverId, incident_fields: fields} );
 } );
 
 
@@ -369,19 +473,30 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
   let currentUser = req.headers.authorization;
 
   let body = req.body;
+  let demistoServerConfig;
+  try {
+    const serverId = body.serverId;
+    demistoServerConfig = getDemistoApiConfig(serverId);
+  }
+  catch {
+    const error = `'serverId' field not present in body`;
+    console.error(error);
+    res.status(500).json({ success: false, statusCode: 500, error });
+    return;
+  }
 
   // console.debug(body);
   
   let result;
   let options = {
-    url: demistoUrl + '/incident',
+    url: demistoServerConfig.url + '/incident',
     method: 'POST',
     headers: {
-      Authorization: demistoApiKey,
+      Authorization: demistoServerConfig.apiKey,
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    rejectUnauthorized: !trustAny,
+    rejectUnauthorized: !demistoServerConfig.trustAny,
     resolveWithFullResponse: true,
     json: true,
     body: body
@@ -394,15 +509,15 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
   catch (error) {
     if ( error && 'response' in error && error.response && 'statusCode' in error.response && error.statusCode !== null) {
       console.error(`Caught error opening Demisto incident: code ${error.response.status}: ${error.response.statusMessage}`);
-      res.json( { success: false, statusCode: error.statusCode, statusMessage: error.response.statusMessage } );
+      res.status(500).json( { success: false, statusCode: error.statusCode, statusMessage: error.response.statusMessage } );
     }
     else if (error && 'message' in error) {
       console.error('Caught error opening Demisto incident:', error.message);
-      res.json({ success: false, statusCode: null, error: error.message });
+      res.status(500).json({ success: false, statusCode: null, error: error.message });
     }
     else {
       console.error('Caught unspecified error opening Demisto incident:', error);
-      res.json({ success: false, statusCode: 500, error: 'unspecified' });
+      res.status(500).json({ success: false, statusCode: 500, error: 'unspecified' });
     }
     return;
   }
@@ -417,7 +532,7 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
 
 
 function saveFieldsConfig() {
-  return fs.promises.writeFile(fieldsConfigFile, JSON.stringify(fieldsConfig), { encoding: 'utf8', mode: 0o660});
+  return fs.promises.writeFile(fieldsConfigFile, JSON.stringify(fieldsConfig, null, 2), { encoding: 'utf8', mode: 0o660});
 }
 
 
@@ -543,23 +658,37 @@ app.delete(apiPath + '/fieldConfig/:name', async (req, res) => {
 
 
 
-app.get(apiPath + '/createInvestigation/:id', async (req, res) => {
-  const id = `${req.params.id}`; // coerce id into a string
+app.post(apiPath + '/createInvestigation', async (req, res) => {
+  // creates a demisto investigation (as opposed to an incident)
+  const incidentId = `${req.body.incidentId}`; // coerce id into a string
+  
+  let demistoServerConfig;
+  try {
+    const serverId = req.body.serverId;
+    demistoServerConfig = getDemistoApiConfig(serverId);
+  }
+  catch {
+    const error = `'serverId' field not present in body`;
+    console.error(error);
+    res.status(500).json({ success: false, statusCode: 500, error });
+    return;
+  }
+  
   const body = {
-    id,
+    id: incidentId,
     version: 1
   };
 
   let result;
   let options = {
-    url: demistoUrl + '/incident/investigate',
+    url: demistoServerConfig.url + '/incident/investigate',
     method: 'POST',
     headers: {
-      Authorization: demistoApiKey,
+      Authorization: demistoServerConfig.apiKey,
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    rejectUnauthorized: !trustAny,
+    rejectUnauthorized: !demistoServerConfig.trustAny,
     resolveWithFullResponse: true,
     json: true,
     body: body
@@ -580,36 +709,74 @@ app.get(apiPath + '/createInvestigation/:id', async (req, res) => {
 
 
 
+function returnError(error, res) {
+  console.error(error);
+  res.status(500).json({success: false, error});
+}
 
 
-///// FINISH STARTUP //////
 
-(async function() {
-  
-  // Read API config
-  if (!foundApiConfig) {
+
+
+///// UTILITY FUNCTIONS //////
+
+async function loadDemistoApiConfigs() {
+  // Read Demisto API configs
+  if (!foundDemistoApiConfig) {
     console.log('No Demisto API configuration was found');
   }
   else {
-    let apiPrefs = JSON.parse(fs.readFileSync(apiCfgFile, 'utf8'));
-    if ('url' in apiPrefs && 'apiKey' in apiPrefs && 'trustAny' in apiPrefs) {
-      let testResult = await testApi(apiPrefs.url, apiPrefs.apiKey, apiPrefs.trustAny);
+    let parsedApiConfig = JSON.parse(fs.readFileSync(apiCfgFile, 'utf8'));
+    // console.log(parsedApiConfig);
+
+    if ('url' in parsedApiConfig && 'apiKey' in parsedApiConfig && 'trustAny' in parsedApiConfig) {
+      // convert legacy api config
+      let tmpConfig = {
+        servers: {
+          [parsedApiConfig.url]: parsedApiConfig
+        },
+        default: parsedApiConfig.url
+      };
+      demistoApiConfigs = tmpConfig.servers;
+      defaultDemistoApiName = parsedApiConfig.url;
+      parsedApiConfig = tmpConfig;
+      await saveApiConfig();
+    }
+
+    demistoApiConfigs = parsedApiConfig.servers;
+
+    // identify the default demisto api config
+    let demistoServerConfig;
+    if ('default' in parsedApiConfig) {
+      defaultDemistoApiName = parsedApiConfig.default;
+      console.log(`The default API config is '${defaultDemistoApiName}'`);
+      demistoServerConfig = getDemistoApiConfig(defaultDemistoApiName);
+    }
+    
+    
+    if (demistoServerConfig && 'url' in demistoServerConfig && 'apiKey' in demistoServerConfig && 'trustAny' in demistoServerConfig) {
+      console.log('Testing default Demisto API server API communication');
+      
+      // test API communication
+      let testResult = await testApi(demistoServerConfig.url, demistoServerConfig.apiKey, demistoServerConfig.trustAny);
+
       if (testResult.success) {
-        demistoApiKey = apiPrefs.apiKey;
-        demistoUrl = apiPrefs.url;
-        trustAny = apiPrefs.trustAny;
         console.log(`Logged into Demisto as user '${testResult.result.body.username}'`);
         console.log('Demisto API is initialised');
 
         // fetch incident fields
-        incident_fields = await getIncidentFields();
+        incident_fields = await getIncidentFields(defaultDemistoApiName);
       }
       else {
-        console.error(`Demisto API initialisation failed with URL ${apiPrefs.url} with trustAny: ${apiPrefs.trustAny}.  Using default configuration.`);
+        console.error(`Demisto API initialisation failed with URL ${defaultDemistoApiName} with trustAny: ${defaultDemistoApiName.trustAny}.  Using default configuration.`);
       }
     }
   }
+}
 
+
+
+function loadFieldConfigs() {
   // Read Field Configs
   if (!foundFieldsConfigFile) {
     console.log('Fields configuration file was not found');
@@ -624,7 +791,23 @@ app.get(apiPath + '/createInvestigation/:id', async (req, res) => {
       fieldsConfig = {};
     }
   }
+}
 
+
+
+function getDemistoApiConfig(serverId) {
+  return demistoApiConfigs[serverId];
+}
+
+
+
+///// FINISH STARTUP //////
+
+(async function() {
+  
+  await loadDemistoApiConfigs();
+  
+  loadFieldConfigs();
 
   if (foundDist && !devMode) {
     // Serve compiled Angular files statically

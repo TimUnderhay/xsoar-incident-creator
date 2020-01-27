@@ -1,5 +1,5 @@
 export interface ApiStatus {
-  initialised: boolean;
-  url?: string;
-  trust?: boolean;
+  success: boolean;
+  statusCode?: number;
+  error?: boolean;
 }

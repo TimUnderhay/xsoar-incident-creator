@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChildren } from '@angular/core';
 import { FetcherService } from './fetcher-service';
-import { DemistoProperties } from './types/demisto-properties';
+import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
 import { User } from './types/user';
 import { ApiStatus } from './types/api-status';
 import { SelectItem } from 'primeng/api';
@@ -27,14 +27,22 @@ export class AppComponent implements OnInit {
 
   private investigationFields = ['id', 'account', 'created', 'modified', 'ShardID', 'account', 'activated', 'autime', 'canvases', 'closeNotes', 'closeReason', 'closed', 'closingUserId', 'created', 'droppedCount', 'dueDate', 'hasRole', 'id', 'investigationId', 'isPlayground', 'lastOpen', 'linkedCount', 'linkedIncidents', 'modified', 'notifyTime', 'openDuration', 'parent', 'playbookId', 'previousRoles', 'rawCategory', 'rawCloseReason', 'rawJSON', 'rawName', 'rawPhase', 'rawType', 'reason', 'runStatus', 'sla', 'sortValues', 'sourceBrand', 'sourceInstance', 'status', 'version' ]; // it may become necessary to permit some of these fields in the future
 
-  demistoProperties: DemistoProperties = {
+  /*demistoProperties: DemistoProperties = {
     url: '',
     apiKey: '',
     trustAny: true
-  };
+  };*/
+
+  // API
+  serverApiInit = false;
+  demistoApiConfigs: DemistoAPIEndpoints = {};
+  demistoApiConfigsOptions: SelectItem[];
+  get demistoApiConfigsLen() { return Object.keys(this.demistoApiConfigs).length; }
+  defaultDemistoApiName: string;
+  currentDemistoApiName: string;
+
 
   loggedInUser: User;
-  serverApiInit = false;
   resultMessage: string;
   resultSuccess: boolean;
   longNamesLabel = 'Short Names';
@@ -91,7 +99,9 @@ export class AppComponent implements OnInit {
   showBulkResultsDialog = false;
   bulkCreateResults: BulkCreateResult[] = [];
 
-
+  // select demisto api server dialog
+  showDemistoApiServerOpenDialog = false;
+  selectedDemistoApiName: string;
 
 
   get saveAsDisabled(): boolean {
@@ -171,7 +181,19 @@ export class AppComponent implements OnInit {
   async demistoApiInit() {
     console.log('demistoApiInit()');
     try {
-      let res: ApiStatus = await this.fetcherService.getApiStatus(); // checks whether the server has already initialised Demisto communication.  This is does not actually perform a new test.
+      this.demistoApiConfigs = await this.fetcherService.getDemistoApi(); // obtain saved Demisto API endpoints
+      let defaultApiRes: any = await this.fetcherService.getDemistoDefaultApi();
+      if (this.demistoApiConfigsLen !== 0 && defaultApiRes.defined) {
+        this.defaultDemistoApiName = defaultApiRes.serverId;
+        let testRes = await this.fetcherService.getApiStatus(this.defaultDemistoApiName);
+        this.selectedDemistoApiName = this.defaultDemistoApiName;
+        if (testRes.success) {
+          
+        }
+      }
+
+
+
       this.serverApiInit = res.initialised;
       if (this.serverApiInit) {
         this.messageWithAutoClear( { severity: 'success', summary: 'Success', detail: 'Demisto API communication is initialised'});
@@ -946,11 +968,34 @@ export class AppComponent implements OnInit {
 
 
 
-  async onClickDemistoInvestigateUrl(id: number) {
-    console.log('onClickDemistoInvestigateUrl(): id:', id);
-    await this.fetcherService.createInvestigation(id);
-    const url = `${this.demistoProperties.url}/#/incident/${id}`;
+  async onClickDemistoInvestigateUrl(incidentId: number, serverId: string) {
+    console.log('onClickDemistoInvestigateUrl(): id:', incidentId);
+    await this.fetcherService.createInvestigation(incidentId, serverId);
+    const url = `${serverId}/#/incident/${incidentId}`;
     window.open(url, '_blank');
+  }
+
+
+
+  async testDemistoApiServer(serverId: string): Promise<boolean> {
+    let testRes = await this.fetcherService.getApiStatus(serverId);
+    return testRes.success;
+  }
+
+
+
+  async loadDemistoApiServer(serverId: string): Promise<void> {
+    // this is the procedure to load a demistoApiServer
+    // test it and then 'load' it
+    let testRes = await this.fetcherService.getApiStatus(serverId);
+    this.selectedDemistoApiName = serverId;
+  }
+
+
+
+  async onDemistoApiServerSelected() {
+    console.log('onDemistoApiServerSelected(): selectedDemistoApiName:', this.selectedDemistoApiName);
+    await this.loadDemistoApiServer(this.selectedDemistoApiName);
   }
 
 }

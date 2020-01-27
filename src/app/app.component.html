@@ -16,38 +16,44 @@
 
     <p-card header="Demisto Parameters" subheader="Use this section to initialise the server's connection to the Demisto API.  The configuration will be saved by the server.">
 
-        <div class="demistoForm">
-          
-          <!-- Demisto Base URL -->
-          <div>
-            <span class="ui-float-label">
-              <input pInputText type="url" id="url" required [(ngModel)]="demistoProperties.url" name="url" size="50">
-              <label for="url">Demisto Base URL</label>
-            </span>
-          </div>
-          
-          <!-- Demisto API Key -->
-          <div>
-            <span class="ui-float-label">
-              <input pInputText type="password" id="apiKey" required [(ngModel)]="demistoProperties.apiKey" name="apiKey" size="50" autocomplete="off" standalone>
-              <label for="apiKey">API Key</label>
-            </span>
-          </div>
-          
-          <!-- Trust Any Certificate -->
-          <div>
-            <span class="formLabel">Trust Any Certificate&nbsp;&nbsp;</span>
-            <p-inputSwitch name="trustAny" [(ngModel)]="demistoProperties.trustAny" [style]="{'vertical-align' : 'middle' }"></p-inputSwitch>
-          </div>
-    
-        </div>
+      <div style="margin-top: 1em;">
+        <span>Selected Demisto Server: </span>
+        <span class="formLabel" style="font-size: 18px;">"{{currentDemistoApiName ? currentDemistoApiName : 'None'}}"</span>
+      </div>
 
-        <!-- Test Button -->
-        <div style="margin-top: .5em;">
-          <span><button pButton type="button" (click)="testAPI()" label="Test"></button>&nbsp;&nbsp;</span>
-          <p-message *ngIf="serverApiInit" severity="success" text="API Initialised"></p-message>
-          <p-message *ngIf="!serverApiInit" severity="error" text="API Not Initialised"></p-message>
+
+      <div class="demistoForm">
+        
+        <!-- Demisto Base URL -->
+        <div>
+          <span class="ui-float-label">
+            <input pInputText type="url" id="url" required [(ngModel)]="demistoProperties.url" name="url" size="50">
+            <label for="url">Demisto Base URL</label>
+          </span>
         </div>
+        
+        <!-- Demisto API Key -->
+        <div>
+          <span class="ui-float-label">
+            <input pInputText type="password" id="apiKey" required [(ngModel)]="demistoProperties.apiKey" name="apiKey" size="50" autocomplete="off" standalone>
+            <label for="apiKey">API Key</label>
+          </span>
+        </div>
+        
+        <!-- Trust Any Certificate -->
+        <div>
+          <span class="formLabel">Trust Any Certificate&nbsp;&nbsp;</span>
+          <p-inputSwitch name="trustAny" [(ngModel)]="demistoProperties.trustAny" [style]="{'vertical-align' : 'middle' }"></p-inputSwitch>
+        </div>
+  
+      </div>
+
+      <!-- Test Button -->
+      <div style="margin-top: .5em;">
+        <span><button pButton type="button" (click)="testAPI()" label="Test"></button>&nbsp;&nbsp;</span>
+        <p-message *ngIf="serverApiInit" severity="success" text="API Initialised"></p-message>
+        <p-message *ngIf="!serverApiInit" severity="error" text="API Not Initialised"></p-message>
+      </div>
 
     </p-card>
 
@@ -302,6 +308,25 @@
     </div>
 
   </p-dialog>
+
+
+
+    <!-- Demisto API Server Open Dialog -->
+    <p-dialog header="Select a Demisto API Server" [(visible)]="showDemistoApiServerOpenDialog" [modal]="true" [style]="{width: '400px'}" [contentStyle]="{'overflow':'visible'}" styleClass="bulkCreateDialog">
+
+      <div class="formLabel">Server to select</div>
+
+        <p-listbox [options]="demistoApiConfigsOptions" [(ngModel)]="selectedDemistoApiName" [style]="{'width':'100%'}" (onDblClick)="onDemistoApiServerSelected()" [filter]="true"></p-listbox>
+
+        <div style="margin-top: .5em;">
+
+          <p-button label="Open" (onClick)="onDemistoApiServerSelected()"></p-button>
+
+          <p-button label="Cancel" (onClick)="showDemistoApiServerOpenDialog = false"></p-button>
+
+      </div>
+    
+    </p-dialog>
 
 
 
