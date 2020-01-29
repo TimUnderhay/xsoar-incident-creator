@@ -59,7 +59,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Logging
 function logConnection(req, res, next) {
-  // logs new client connections to the console 
+  // logs new client connections to the console
   let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
   if (req.url.startsWith(apiPath) ) {
    console.log(`${req.method} ${req.url} from ${ip}`);
@@ -103,7 +103,8 @@ async function testApi(url, apiKey, trustAny) {
     },
     rejectUnauthorized: !trustAny,
     resolveWithFullResponse: true,
-    json: true
+    json: true,
+    timeout: 2000
   }
   try {
     let result = await request( options );
@@ -132,7 +133,7 @@ async function testApi(url, apiKey, trustAny) {
 app.post(apiPath + '/demistoApi/test/adhoc', async (req, res) => {
   // Tests for good connectivity to Demisto server by fetching user settings.
   // Does not save settings.  Another call will handle that.
-  
+
   // check for client body fields
   if (! 'url' in req.body) {
     console.error('Client did not send url');
@@ -161,7 +162,7 @@ app.post(apiPath + '/demistoApi/test/adhoc', async (req, res) => {
       statusCode = testResult['statusCode'];
     }
     // console.error('error:', error);
-    
+
     // since this is a test, we don't want to return a 500 if it fails.  Status code should be normal
     if (error && statusCode) {
       console.error(`Caught error testing Demisto server with code ${statusCode}:`, error);
@@ -188,7 +189,7 @@ app.get(apiPath + '/demistoApi/test/:serverId', async (req, res) => {
   // Tests for good connectivity to Demisto server by fetching user settings.
   // Does not save settings.  Another call will handle that.
 
-  const serverId = req.params.serverId;
+  const serverId = decodeURIComponent(req.params.serverId);
   const apiToTest = getDemistoApiConfig(serverId);
 
   // console.log('body:', req.body);
@@ -202,7 +203,7 @@ app.get(apiPath + '/demistoApi/test/:serverId', async (req, res) => {
       statusCode = testResult['statusCode'];
     }
     // console.error('error:', error);
-    
+
     // since this is a test, we don't want to return a 500 if it fails.  Status code should be normal
     if (error && statusCode) {
       console.error(`Caught error testing Demisto server with code ${statusCode}:`, error);
@@ -293,11 +294,15 @@ app.post(apiPath + '/demistoApi', async (req, res) => {
 
 app.delete(apiPath + '/demistoApi/:serverId', async (req, res) => {
   // deletes a Demisto server from the API config
-  const serverId = req.params.id;
+  const serverId = decodeURIComponent(req.params.serverId);
   if (serverId in demistoApiConfigs) {
     delete demistoApiConfigs[serverId];
-    res.status(200).json({success: true});
+    if (!(defaultDemistoApiName in demistoApiConfigs)) {
+      // make sure default api is still defined.  If not, unset it
+      defaultDemistoApiName = undefined;
+    }
     await saveApiConfig();
+    res.status(200).json({success: true});
   }
   else {
     return returnError(`Demisto server '${serverID}' was not found`, res);
@@ -383,7 +388,7 @@ function removeEmptyValues(obj) {
 
 async function getIncidentFields(demistoUrl) {
   // This method will get incident field definitions from a Demisto server
-  
+
   let demistoServerConfig = getDemistoApiConfig(demistoUrl);
 
   console.log(`Fetching incident fields from '${demistoServerConfig.url}'`);
@@ -453,13 +458,13 @@ app.get(apiPath + '/sampleincident', async (req, res) => {
     res.status(500).json({error})
     return;
   }
-  
+
 });
 
 
 
 app.get(apiPath + '/incidentfields/:serverId', async (req, res) => {
-  const serverId = req.params.id;
+  const serverId = decodeURIComponent(req.params.serverId);
   const fields = await getIncidentFields(serverId);
   incident_fields[serverId] = fields;
   res.json( {id: serverId, incident_fields: fields} );
@@ -486,7 +491,7 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
   }
 
   // console.debug(body);
-  
+
   let result;
   let options = {
     url: demistoServerConfig.url + '/incident',
@@ -661,7 +666,7 @@ app.delete(apiPath + '/fieldConfig/:name', async (req, res) => {
 app.post(apiPath + '/createInvestigation', async (req, res) => {
   // creates a demisto investigation (as opposed to an incident)
   const incidentId = `${req.body.incidentId}`; // coerce id into a string
-  
+
   let demistoServerConfig;
   try {
     const serverId = req.body.serverId;
@@ -673,7 +678,7 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
     res.status(500).json({ success: false, statusCode: 500, error });
     return;
   }
-  
+
   const body = {
     id: incidentId,
     version: 1
@@ -752,11 +757,11 @@ async function loadDemistoApiConfigs() {
       console.log(`The default API config is '${defaultDemistoApiName}'`);
       demistoServerConfig = getDemistoApiConfig(defaultDemistoApiName);
     }
-    
-    
+
+
     if (demistoServerConfig && 'url' in demistoServerConfig && 'apiKey' in demistoServerConfig && 'trustAny' in demistoServerConfig) {
       console.log('Testing default Demisto API server API communication');
-      
+
       // test API communication
       let testResult = await testApi(demistoServerConfig.url, demistoServerConfig.apiKey, demistoServerConfig.trustAny);
 
@@ -768,7 +773,7 @@ async function loadDemistoApiConfigs() {
         incident_fields = await getIncidentFields(defaultDemistoApiName);
       }
       else {
-        console.error(`Demisto API initialisation failed with URL ${defaultDemistoApiName} with trustAny: ${defaultDemistoApiName.trustAny}.  Using default configuration.`);
+        console.error(`Demisto API initialisation failed with URL ${defaultDemistoApiName} with trustAny = ${demistoApiConfigs[defaultDemistoApiName].trustAny}.  Using default configuration.`);
       }
     }
   }
@@ -804,9 +809,9 @@ function getDemistoApiConfig(serverId) {
 ///// FINISH STARTUP //////
 
 (async function() {
-  
+
   await loadDemistoApiConfigs();
-  
+
   loadFieldConfigs();
 
   if (foundDist && !devMode) {
@@ -818,10 +823,10 @@ function getDemistoApiConfig(serverId) {
   else {
     // Proxy client connections to the 'ng serve' instance
     console.log(`Enabling client development mode -- proxying Angular development server at ${proxyDest}`);
-    
+
     var proxy = require('express-http-proxy'); // express-http-proxy supports being tied to defined express routes
     app.use('/', proxy(proxyDest));
-    
+
     // proxy websockets to enable live reload - must use separate proxy lib
     var httpProxy = require('http-proxy');
     var wsProxy = httpProxy.createProxyServer({ ws: true });

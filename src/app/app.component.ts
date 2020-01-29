@@ -34,12 +34,12 @@ export class AppComponent implements OnInit {
   };*/
 
   // API
-  serverApiInit = false;
   demistoApiConfigs: DemistoAPIEndpoints = {};
   demistoApiConfigsOptions: SelectItem[];
   get demistoApiConfigsLen() { return Object.keys(this.demistoApiConfigs).length; }
   defaultDemistoApiName: string;
   currentDemistoApiName: string;
+  currentServerApiInit = false;
 
 
   loggedInUser: User;
@@ -103,6 +103,17 @@ export class AppComponent implements OnInit {
   showDemistoApiServerOpenDialog = false;
   selectedDemistoApiName: string;
 
+  // new Demisto api server dialog
+  showNewDemistoApiServerDialog = false;
+  newDemistoServerUrl = '';
+  newDemistoServerApiKey = '';
+  newDemistoServerTrustAny = true;
+  newDemistoServerSaveDisabled = false;
+
+  // delete Demisto api server dialog
+  showDeleteDemistoApiServerDialog = false;
+  demistoApiServerToDelete: string;
+
 
   get saveAsDisabled(): boolean {
     return this.saveAsConfigName in this.fieldsConfigurations;
@@ -121,9 +132,9 @@ export class AppComponent implements OnInit {
     }
 
     // API Init
-    await this.demistoApiInit();
+    await this.demistoApiInit(); // sets currentServerApiInit
 
-    if (this.serverApiInit) {
+    if (this.currentServerApiInit) {
       // Demisto Incident Fields
       try {
         await this.getDemistoIncidentFields();
@@ -157,7 +168,7 @@ export class AppComponent implements OnInit {
 
 
   messageAdd(message: PMessageOption) {
-    this.messages.push();
+    this.messages.push(message);
   }
 
 
@@ -182,33 +193,91 @@ export class AppComponent implements OnInit {
     console.log('demistoApiInit()');
     try {
       this.demistoApiConfigs = await this.fetcherService.getDemistoApi(); // obtain saved Demisto API endpoints
-      let defaultApiRes: any = await this.fetcherService.getDemistoDefaultApi();
-      if (this.demistoApiConfigsLen !== 0 && defaultApiRes.defined) {
-        this.defaultDemistoApiName = defaultApiRes.serverId;
-        let testRes = await this.fetcherService.getApiStatus(this.defaultDemistoApiName);
-        this.selectedDemistoApiName = this.defaultDemistoApiName;
-        if (testRes.success) {
-          
+      let defaultApiRes = await this.fetcherService.getDemistoDefaultApi();
+      console.log('demistoApiInit(): demistoApiConfigs:', this.demistoApiConfigs);
+      console.log('demistoApiInit(): defaultApiRes:', defaultApiRes);
+      if (this.demistoApiConfigsLen === 0) {
+        this.currentServerApiInit = false;
+        this.messageWithAutoClear( { severity: 'info', summary: 'Info', detail: `No Demisto servers are defined.  Configure one below`} );
+      }
+      else if (this.demistoApiConfigsLen !== 0) {
+        if (defaultApiRes.defined) {
+          this.defaultDemistoApiName = defaultApiRes.serverId;
+          let testRes = await this.fetcherService.testApiServer(this.defaultDemistoApiName);
+          this.currentDemistoApiName = this.defaultDemistoApiName;
+          this.currentServerApiInit = testRes.success;
+          if (this.currentServerApiInit) {
+            this.messageWithAutoClear( { severity: 'success', summary: 'Success', detail: `Demisto API communication to ${this.defaultDemistoApiName} is initialised`});
+            /*this.demistoProperties.url = res.url;
+            this.demistoProperties.trustAny = res.trust;*/
+          }
+          else {
+            this.messageWithAutoClear( { severity: 'error', summary: 'Failure', detail: `Demisto API communication is not initialised to ${this.defaultDemistoApiName}`} );
+          }
+          this.buildDemistoApiConfigOptions();
         }
+
       }
-
-
-
-      this.serverApiInit = res.initialised;
-      if (this.serverApiInit) {
-        this.messageWithAutoClear( { severity: 'success', summary: 'Success', detail: 'Demisto API communication is initialised'});
-
-        this.demistoProperties.url = res.url;
-        this.demistoProperties.trustAny = res.trust;
-      }
-      else {
-        this.messageWithAutoClear( { severity: 'error', summary: 'Failure', detail: 'Demisto API communication is not initialised!'} );
-      }
-      console.log('Demisto Server API:', res);
     }
     catch (err) {
       console.log('Caught error fetching Demisto server API status:', err);
     }
+  }
+
+
+
+  buildDemistoApiConfigOptions() {
+    console.log('buildDemistoApiConfigOptions()');
+    this.demistoApiConfigsOptions = Object.keys(this.demistoApiConfigs).map( key => ({ value: key, label: this.defaultDemistoApiName && key === this.defaultDemistoApiName ? `${key} (default)` : key}
+    ) );
+    console.log('buildDemistoApiConfigOptions(): demistoApiConfigsOptions:', this.demistoApiConfigsOptions);
+  }
+
+
+
+  async refreshDemistoApi(setDefault = false) {
+    // setDefault = true means that demistoDefaultApi should be set automatically if this is the first server to be added, typically only upon a create or delete operation
+    console.log('refreshDemistoApi()');
+    const lastDemistoApiConfigsLen = this.demistoApiConfigsLen;
+
+    this.demistoApiConfigs = await this.fetcherService.getDemistoApi(); // obtain saved Demisto API endpoints
+
+    const updateDefaultApiServer = setDefault && lastDemistoApiConfigsLen === 0 && this.demistoApiConfigsLen !== 0;
+
+    if (updateDefaultApiServer) {
+      // make the first API to be added, the default
+      const firstServerId = Object.keys(this.demistoApiConfigs)[0];
+      this.fetcherService.setDemistoDefaultApi(firstServerId);
+    }
+
+    const defaultApiResult = await this.fetcherService.getDemistoDefaultApi();
+
+    const configsAreEmpty = this.demistoApiConfigsLen === 0;
+    const defaultDemistoApiIsDefined = this.demistoApiConfigsLen !== 0 && defaultApiResult.defined && defaultApiResult.serverId in this.demistoApiConfigs;
+
+
+    if (configsAreEmpty) {
+      this.currentServerApiInit = false;
+      this.currentDemistoApiName = undefined;
+    }
+    else if (defaultDemistoApiIsDefined) {
+      this.defaultDemistoApiName = defaultApiResult.serverId;
+    }
+
+    if (this.currentDemistoApiName) {
+      let testRes = await this.fetcherService.testApiServer(this.currentDemistoApiName);
+
+      // const updateCurrentStuff = this.currentDemistoApiName &&
+      this.currentServerApiInit = testRes.success; // this is the problem line
+    }
+
+    const currentApiStillDefined = this.currentDemistoApiName && this.currentDemistoApiName in this.demistoApiConfigs; // make sure the currently selected API hasn't been deleted
+    if (!currentApiStillDefined) {
+      // clear selected api
+      this.currentDemistoApiName = undefined;
+    }
+
+    this.buildDemistoApiConfigOptions();
   }
 
 
@@ -243,43 +312,41 @@ export class AppComponent implements OnInit {
 
 
 
-  async testAPI(): Promise<any> {
+  async testDemistoApi(url: string, apiKey: string, trustAny: boolean): Promise<boolean> {
+    // performs an ad hoc test of a Demisto API endpoint
     console.log('testAPI()');
     let testResult: string;
     try {
-      let result = await this.fetcherService.testDemisto(this.demistoProperties);
+      let result = await this.fetcherService.testApiServerAdhoc({url, apiKey, trustAny});
       if (this.messagesClearTimeout) {
         clearTimeout(this.messagesClearTimeout);
         this.messagesClearTimeout = null;
       }
       console.log('testCredentials() result:', result);
       if ( 'success' in result && result.success ) {
-        // successful
+        // test successful
         testResult = 'Test successful';
-        this.serverApiInit = true;
-        this.messageWithAutoClear({ severity: 'success', summary: 'Success', detail: 'Demisto API communication is initialised'});
-        await this.onReloadFieldDefinitions();
+        // this.currentServerApiInit = true;
+        this.messageWithAutoClear({ severity: 'success', summary: 'Success', detail: 'Demisto API communication test success'});
+        // await this.onReloadFieldDefinitions(); // !!!TODO: only do this upon selecting an API server
+        return true;
       }
       else if ( 'success' in result && !result.success ) {
-        // unsuccessful
-        let err = 'statusMessage' in result ? result.statusMessage : result.error;
+        // test unsuccessful
+        let err = 'error' in result ? result.error : 'Unspecified error';
         if ('statusCode' in result) {
           testResult = `Test failed with code ${result.statusCode}: "${err}"`;
-          this.messages = [{
-            severity: 'error',
-            summary: 'Failure',
-            detail: `Demisto API communication is not initialised. ${testResult}`
-          }];
         }
         else {
           testResult = `Test failed with error: "${err}"`;
-          this.messages = [{
-            severity: 'error',
-            summary: 'Failure',
-            detail: `Demisto API communication is not initialised. ${testResult}`
-          }];
         }
-        this.serverApiInit = false;
+        this.messages = [{
+          severity: 'error',
+          summary: 'Failure',
+          detail: `Demisto API communication is not initialised. ${testResult}`
+        }];
+        // this.currentServerApiInit = false;
+        return false;
       }
     }
     catch (error) {
@@ -289,7 +356,8 @@ export class AppComponent implements OnInit {
         summary: 'Failure',
         detail: `Demisto API communication is not initialised. ${testResult}`
       }];
-      this.serverApiInit = false;
+      // this.currentServerApiInit = false;
+      return false;
     }
   }
 
@@ -978,17 +1046,32 @@ export class AppComponent implements OnInit {
 
 
   async testDemistoApiServer(serverId: string): Promise<boolean> {
-    let testRes = await this.fetcherService.getApiStatus(serverId);
+    let testRes = await this.fetcherService.testApiServer(serverId);
     return testRes.success;
   }
 
 
 
   async loadDemistoApiServer(serverId: string): Promise<void> {
+    console.log('loadDemistoApiServer(): serverId:', serverId);
     // this is the procedure to load a demistoApiServer
     // test it and then 'load' it
-    let testRes = await this.fetcherService.getApiStatus(serverId);
-    this.selectedDemistoApiName = serverId;
+    let testRes;
+    try {
+      testRes = await this.fetcherService.testApiServer(serverId);
+      // console.log('testRes:', testRes);
+      this.currentDemistoApiName = serverId;
+      this.currentServerApiInit = testRes.success;
+    }
+    catch (error) {
+      this.currentServerApiInit = false;
+      if (testRes) {
+        console.error('Error loading API server:', testRes);
+      }
+      else {
+        console.error('Error loading API server:', error);
+      }
+    }
   }
 
 
@@ -996,6 +1079,113 @@ export class AppComponent implements OnInit {
   async onDemistoApiServerSelected() {
     console.log('onDemistoApiServerSelected(): selectedDemistoApiName:', this.selectedDemistoApiName);
     await this.loadDemistoApiServer(this.selectedDemistoApiName);
+    this.showDemistoApiServerOpenDialog = false;
+  }
+
+
+
+  async onOpenDemistoServersClicked() {
+    console.log('onOpenDemistoServersClicked()');
+    this.showDemistoApiServerOpenDialog = true;
+  }
+
+
+
+  async onNewDemistoApiServer() {
+    console.log('onNewDemistoApiServer()');
+    this.showDemistoApiServerOpenDialog = false;
+    this.showNewDemistoApiServerDialog = true;
+    setTimeout( () =>
+      document.getElementsByClassName('newDemistoApiServerDialog')[0].getElementsByTagName('input')[0].focus()
+      , 100);
+  }
+
+
+
+  async onNewDemistoApiServerSaved() {
+    console.log('onNewDemistoApiServerSaved()');
+    this.showNewDemistoApiServerDialog = false;
+    this.showDemistoApiServerOpenDialog = true;
+
+    const lastDemistoApiConfigsLen = this.demistoApiConfigsLen;
+
+    const success = await this.fetcherService.createDemistoApi(this.newDemistoServerUrl, this.newDemistoServerApiKey, this.newDemistoServerTrustAny);
+    console.log('onNewDemistoApiServerSaved(): success:', success);
+
+    // refresh servers
+    await this.refreshDemistoApi(true);
+
+    this.newDemistoServerUrl = '';
+    this.newDemistoServerApiKey = '';
+    this.newDemistoServerTrustAny = true;
+  }
+
+
+
+  async onDeleteDemistoApiServer() {
+    console.log(`onDeleteDemistoApiServer(): ${this.demistoApiServerToDelete}`);
+    this.showDemistoApiServerOpenDialog = false;
+    this.showDeleteDemistoApiServerDialog = true;
+    this.demistoApiServerToDelete = this.selectedDemistoApiName;
+  }
+
+
+
+  async onDeleteDemistoApiServerConfirmed() {
+    console.log('onDeleteDemistoApiServerConfirmed()');
+    this.showDemistoApiServerOpenDialog = true;
+    this.showDeleteDemistoApiServerDialog = false;
+    let res;
+    try {
+      res = await this.fetcherService.deleteDemistoApi(this.demistoApiServerToDelete);
+      await this.refreshDemistoApi();
+
+      console.log('demistoApiConfigs:', this.demistoApiConfigs);
+
+      // handle deletion of current API
+      if (!(this.demistoApiServerToDelete in this.demistoApiConfigs) ) {
+        console.log('got to 1');
+        this.currentDemistoApiName = undefined;
+      }
+    }
+    catch (error) {
+      //  do something if there's an error
+      console.error(`Caught error deleting ${this.demistoApiServerToDelete}`, res.error);
+    }
+  }
+
+
+
+  async onSetDefaultDemistoApiServer() {
+    console.log('onSetDefaultDemistoApiServer()');
+    await this.fetcherService.setDemistoDefaultApi(this.selectedDemistoApiName);
+    await this.refreshDemistoApi();
+  }
+
+
+
+  async onRefreshDemistoApiServers() {
+    console.log('onRefreshDemistoApiServers()');
+    await this.refreshDemistoApi();
+  }
+
+
+
+  async onTestDemistoApiServer() {
+    console.log('onTestDemistoApiServer()');
+    const success = await this.testDemistoApiServer(this.selectedDemistoApiName);
+    if (success) {
+      this.messagesReplace( [{ severity: 'success', summary: 'Success', detail: `Demisto API test success for ${this.defaultDemistoApiName}`}] );
+    }
+    else {
+      this.messagesReplace( [{ severity: 'error', summary: 'Failure', detail: `Demisto API test failure for ${this.defaultDemistoApiName}`}] );
+    }
+  }
+
+
+
+  async onEditDemistoApiServer() {
+    console.log('onEditDemistoApiServer()');
   }
 
 }

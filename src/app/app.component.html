@@ -2,7 +2,7 @@
 
   <div class="formContainer">
     <img src="/assets/demisto-logo-1.png" style="margin-top: 1em;">
-    
+
     <div style="margin-top: 1em; margin-right: 1em; float: right;">Logged in as: <span style="font-weight: bold;"> {{loggedInUser.username}}</span></div>
 
     <h1 class="bodyHeader">
@@ -10,50 +10,70 @@
     </h1>
 
 
+
     <h3 style="margin-top: 0;">This app creates Demisto incidents from exported Demisto incident JSON.  The fields to be imported are selectable.  These can be saved in configurations for easy retrieval.</h3>
+
+
 
     <h1 class="bodyHeader" style="color: red;">CONSIDER THIS APP TO BE INSECURE!!!</h1>
 
-    <p-card header="Demisto Parameters" subheader="Use this section to initialise the server's connection to the Demisto API.  The configuration will be saved by the server.">
 
-      <div style="margin-top: 1em;">
-        <span>Selected Demisto Server: </span>
-        <span class="formLabel" style="font-size: 18px;">"{{currentDemistoApiName ? currentDemistoApiName : 'None'}}"</span>
+
+    <!-- Demisto Servers-->
+    <p-card header="Demisto Servers" subheader="Define and select Demisto servers">
+
+      <div style="margin-top: 1em; margin-bottom: 1em;">
+
+        <p-button label="Select" (onClick)="onOpenDemistoServersClicked()" styleClass="alignButton"></p-button>
+
+        <ng-container *ngIf="currentDemistoApiName; else apiServerNotDefined">
+            <span class="formLabel">Selected Demisto Server: </span>
+            <span class="formLabel" style="text-decoration: underline;">{{currentDemistoApiName}}</span>
+            &nbsp;&nbsp;(&nbsp;
+            <span [class.success]="currentServerApiInit" [class.failure]="!currentServerApiInit">{{currentServerApiInit ? 'Initialised' : 'Not Initialised'}}</span>
+            &nbsp;)
+        </ng-container>
+
+        <ng-template #apiServerNotDefined>
+          <span class="formLabel">No Demisto servers are defined</span>
+        </ng-template>
       </div>
 
+       <!-- [disabled]="demistoApiConfigsLen === 0" -->
 
-      <div class="demistoForm">
-        
+
+      <!-- <div class="demistoForm"> -->
+
         <!-- Demisto Base URL -->
-        <div>
+        <!--<div>
           <span class="ui-float-label">
             <input pInputText type="url" id="url" required [(ngModel)]="demistoProperties.url" name="url" size="50">
             <label for="url">Demisto Base URL</label>
           </span>
-        </div>
-        
+        </div>-->
+
         <!-- Demisto API Key -->
-        <div>
+        <!--<div>
           <span class="ui-float-label">
             <input pInputText type="password" id="apiKey" required [(ngModel)]="demistoProperties.apiKey" name="apiKey" size="50" autocomplete="off" standalone>
             <label for="apiKey">API Key</label>
           </span>
-        </div>
-        
+        </div>-->
+
         <!-- Trust Any Certificate -->
-        <div>
+        <!--<div>
           <span class="formLabel">Trust Any Certificate&nbsp;&nbsp;</span>
           <p-inputSwitch name="trustAny" [(ngModel)]="demistoProperties.trustAny" [style]="{'vertical-align' : 'middle' }"></p-inputSwitch>
-        </div>
-  
-      </div>
+        </div>-->
+
+      <!-- </div> -->
 
       <!-- Test Button -->
-      <div style="margin-top: .5em;">
+      <!--<<div style="margin-top: .5em;">
         <span><button pButton type="button" (click)="testAPI()" label="Test"></button>&nbsp;&nbsp;</span>
-        <p-message *ngIf="serverApiInit" severity="success" text="API Initialised"></p-message>
-        <p-message *ngIf="!serverApiInit" severity="error" text="API Not Initialised"></p-message>
-      </div>
+        <p-message *ngIf="currentServerApiInit" severity="success" text="API Initialised"></p-message>
+        <p-message *ngIf="!currentServerApiInit" severity="error" text="API Not Initialised"></p-message>
+      </div>-->
 
     </p-card>
 
@@ -62,14 +82,14 @@
     <p-card header="Incident Data" subheader="Either upload an incident JSON file, or perform other file and playback operations.  Create such an incident file through use of the Demisto command '!ExportIncident make_importable=false create_investigation=false'">
 
       <div style="margin-top: 1em;">
-        
+
         <!-- File Upload -->
         <span>
           <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Upload JSON" [customUpload]="true" (uploadHandler)="onFileUpload($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true"></p-fileUpload>
         </span>
 
         <span *ngIf="fieldsConfigurations">
-          
+
           <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span>
 
           <p-button label="Open" (onClick)="onOpenClicked()" styleClass="alignButton" [disabled]="fieldsConfigurationsLen === 0"></p-button>
@@ -81,7 +101,7 @@
           <p-button label="Delete" (onClick)="onDeleteClicked()" [disabled]="fieldsConfigurationsLen === 0"></p-button>
 
           <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="fieldsConfigurationsLen === 0"></p-button>
-           
+
         </span>
 
       </div>
@@ -101,7 +121,7 @@
 
     <!-- Create Investigation -->
     <p-card *ngIf="fileData" header="Create Investigation" subheader="If enabled, this option will cause an investigation to be created along with this incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so.">
-  
+
       <div style="margin-top: 1em;">
         <p-selectButton name="createInvestigation" [options]="createInvestigationButtonOptions" [(ngModel)]="createInvestigation"></p-selectButton>
       </div>
@@ -125,20 +145,20 @@
             <p-button type="button" label="Clear All" (onClick)="onClearAllFields()"></p-button>
             <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()"></p-button>
           </div >
-        
+
           <!-- Incident Fields -->
           <div class="fieldContainer">
 
             <div></div>
 
             <header>Name</header>
-            
+
             <header>Type</header>
-            
+
             <header>Value</header>
 
             <ng-container *ngFor="let field of incidentFields | keyvalue">
-              
+
               <field-display *ngIf="![undefined, null].includes(field.value.value)" [(field)]="incidentFields[field.key]" [displayShortNames]="displayIncidentFieldShortNames"></field-display>
 
             </ng-container>
@@ -159,20 +179,20 @@
             <p-toggleButton [onLabel]="shortNamesLabel" [offLabel]="longNamesLabel" [(ngModel)]="displayCustomFieldShortNames" name="shortCustomNames"></p-toggleButton>
             <p-button type="button" label="Reload Definitions" name="createIncident" (onClick)="onReloadFieldDefinitions()"></p-button>
           </div >
-          
+
           <!-- Custom Fields -->
           <div class="fieldContainer">
 
             <div></div>
-            
+
             <header>Name</header>
-            
+
             <header>Type</header>
-            
+
             <header>Value</header>
 
             <ng-container *ngFor="let field of customFields | keyvalue">
-              
+
               <field-display *ngIf="![undefined, null].includes(field.value.value)" [(field)]="customFields[field.key]" [displayShortNames]="displayCustomFieldShortNames"></field-display>
 
             </ng-container>
@@ -183,7 +203,7 @@
 
     </div>
 
-      
+
 
       <!-- Submit Button -->
       <div style="margin-top: 1em;">
@@ -221,13 +241,13 @@
 
 
 
-  <!-- Delete Dialog -->
+  <!-- Delete Config Dialog -->
   <p-dialog header="Delete Configuration" [(visible)]="showDeleteDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="deleteConfigDialog">
-    
+
     <div class="formLabel">Configurations to delete</div>
-    
+
     <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedDeleteConfigs" [multiple]="true" [filter]="true" [checkbox]="true" [style]="{'width':'100%'}"></p-listbox>
-    
+
     <div style="margin-top: .5em;">
 
       <p-button label="Delete" (onClick)="onDeleteAccepted()"></p-button>
@@ -265,15 +285,15 @@
     <div class="formLabel">Select configurations to push to Demisto</div>
 
     <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedBulkCreateConfigs" [style]="{'width':'100%'}" (onDblClick)="onConfigOpened()" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
-    
+
     <div style="margin-top: .5em;">
-    
+
       <p-button label="Create Incidents" (onClick)="onBulkCreateSubmit()" [disabled]="selectedBulkCreateConfigs.length === 0"></p-button>
-    
+
       <p-button label="Cancel" (onClick)="onBulkCreateCanceled()"></p-button>
-  
+
     </div>
-  
+
   </p-dialog>
 
 
@@ -287,13 +307,13 @@
       <div class="bulkCreateResultsGridHeader">Incident ID</div>
       <div class="bulkCreateResultsGridHeader">Comments</div>
       <ng-container *ngFor="let result of bulkCreateResults">
-        
+
         <div>{{result.configName}}</div>
-        
+
         <div>{{result.success ? 'Success' : 'Failure'}}</div>
-        
+
         <div *ngIf="result.hasOwnProperty('incidentId')"><a href="javascript:void(0)" (click)="onClickDemistoInvestigateUrl(result.incidentId)">{{result.incidentId}}</a></div>
-        
+
         <div *ngIf="!result.hasOwnProperty('incidentId')"></div>
 
         <div>
@@ -311,22 +331,112 @@
 
 
 
-    <!-- Demisto API Server Open Dialog -->
-    <p-dialog header="Select a Demisto API Server" [(visible)]="showDemistoApiServerOpenDialog" [modal]="true" [style]="{width: '400px'}" [contentStyle]="{'overflow':'visible'}" styleClass="bulkCreateDialog">
+    <!-- Select Demisto API Server Dialog -->
+    <p-dialog header="Demisto API Servers" [(visible)]="showDemistoApiServerOpenDialog" [modal]="true" [style]="{width: '50%'}" styleClass="bulkCreateDialog">
 
-      <div class="formLabel">Server to select</div>
+      <!-- header bar -->
+      <div>
+
+        <!-- New -->
+        <p-button label="New" (onClick)="onNewDemistoApiServer()" styleClass="alignButton"></p-button>
+
+        <!-- Edit -->
+        <p-button *ngIf="demistoApiConfigsLen !== 0" label="Edit" (onClick)="onEditDemistoApiServer()" styleClass="alignButton" [disabled]="!selectedDemistoApiName"></p-button>
+
+        <!-- Delete -->
+        <p-button *ngIf="demistoApiConfigsLen !== 0" label="Delete" (onClick)="onDeleteDemistoApiServer()" styleClass="alignButton" [disabled]="!selectedDemistoApiName"></p-button>
+
+        <!-- Test -->
+        <p-button *ngIf="demistoApiConfigsLen !== 0" label="Test" (onClick)="onTestDemistoApiServer()" styleClass="alignButton" [disabled]="!selectedDemistoApiName"></p-button>
+
+        <!-- Default -->
+        <p-button *ngIf="demistoApiConfigsLen !== 0" label="Set Default" (onClick)="onSetDefaultDemistoApiServer()" styleClass="alignButton" [disabled]="!selectedDemistoApiName"></p-button>
+
+        <!-- Refresh -->
+        <p-button label="Refresh" (onClick)="onRefreshDemistoApiServers()" styleClass="alignButton"></p-button>
+
+      </div>
+
+      <div style="margin-top: 1em;">
+
+        <span *ngIf="demistoApiConfigsLen === 0; else demistoApiConfigs" style="font-weight: bold;">No Demisto servers are defined</span>
+
+      </div>
+
+      <ng-template #demistoApiConfigs>
+
+        <div class="formLabel">Select a server</div>
 
         <p-listbox [options]="demistoApiConfigsOptions" [(ngModel)]="selectedDemistoApiName" [style]="{'width':'100%'}" (onDblClick)="onDemistoApiServerSelected()" [filter]="true"></p-listbox>
 
-        <div style="margin-top: .5em;">
+      </ng-template>
 
-          <p-button label="Open" (onClick)="onDemistoApiServerSelected()"></p-button>
+        <div style="margin-top: .5em; float: right;">
+
+          <p-button *ngIf="demistoApiConfigsLen !== 0" label="Select" (onClick)="onDemistoApiServerSelected()" [disabled]="!selectedDemistoApiName"></p-button>
 
           <p-button label="Cancel" (onClick)="showDemistoApiServerOpenDialog = false"></p-button>
 
       </div>
-    
+
     </p-dialog>
+
+
+
+    <!-- Delete API Server Dialog -->
+  <p-dialog header="Delete Demisto Server" [(visible)]="showDeleteDemistoApiServerDialog" [modal]="true" [style]="{width: '50%'}" styleClass="deleteConfigDialog">
+
+    <div class="formLabel">Please confirm deletion of Demisto server "{{demistoApiServerToDelete}}"</div>
+
+    <div style="margin-top: .5em; float: right;">
+
+      <p-button label="Confirm" (onClick)="onDeleteDemistoApiServerConfirmed()"></p-button>
+
+      <p-button label="Cancel" (onClick)="showDeleteDemistoApiServerDialog = false"></p-button>
+
+    </div>
+
+  </p-dialog>
+
+
+
+  <!-- New Demisto API Server Dialog -->
+  <p-dialog header="New Demisto Server" [(visible)]="showNewDemistoApiServerDialog" [modal]="true" [style]="{width: '400px'}" styleClass="newDemistoApiServerDialog">
+
+    <!--<div style="margin-bottom: .5em;" class="formLabel">Configuration Name</div>-->
+
+    <div style="margin-top: 1.5em;">
+      <span class="ui-float-label">
+        <input pInputText type="url" id="url" required [(ngModel)]="newDemistoServerUrl" name="url" size="50">
+        <label for="url">Demisto Base URL</label>
+      </span>
+    </div>
+
+    <div style="margin-top: 1.5em;">
+      <span class="ui-float-label">
+        <input pInputText type="password" id="apiKey" required [(ngModel)]="newDemistoServerApiKey" name="apiKey" size="50" autocomplete="off" standalone>
+        <label for="apiKey">API Key</label>
+      </span>
+    </div>
+
+    <div style="margin-top: 1.5em;">
+      <span class="formLabel">Trust Any Certificate&nbsp;&nbsp;</span>
+      <p-inputSwitch name="trustAny" [(ngModel)]="newDemistoServerTrustAny" [style]="{'vertical-align' : 'middle' }"></p-inputSwitch>
+    </div>
+
+    <div style="margin-top: .5em;">{{newDemistoServerSaveDisabled ? 'This name is already taken' : '&nbsp;'}}</div>
+
+    <div style="margin-top: .5em; float: right;">
+
+      <p-button label="Test" (onClick)="testDemistoApi(newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny)" [disabled]="!newDemistoServerUrl || !newDemistoServerApiKey"></p-button>
+
+      <p-button label="Save" (onClick)="onNewDemistoApiServerSaved()" [disabled]="saveAsDisabled"></p-button>
+
+      <p-button label="Cancel" (onClick)="onSaveAsCanceled()"></p-button>
+
+    </div>
+
+  </p-dialog>
 
 
 
