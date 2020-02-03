@@ -119,6 +119,21 @@ export class FetcherService {
 
 
 
+  updateDemistoApi(serverId, url, trustAny, apiKey?): Promise<ApiStatus> {
+    let headers = new HttpHeaders( {
+      Accept: 'application/json'
+    } );
+    let body = { url, trustAny, serverId };
+    if (apiKey) {
+      body['apiKey'] = apiKey;
+    }
+    return this.http.post(this.apiPath + '/demistoApi/update', body, { headers } )
+                    .toPromise()
+                    .then( res => res as ApiStatus );
+  }
+
+
+
   deleteDemistoApi(serverId): Promise<ApiStatus> {
     let headers = new HttpHeaders( {
       Accept: 'application/json'

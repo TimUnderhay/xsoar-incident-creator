@@ -4,6 +4,8 @@ console.log('Demisto incident importer server is starting');
 
 ////////////////////// Config and Imports //////////////////////
 
+const os = require('os');
+
 // Config parameters
 const listenPort = 4002;
 const proxyDest = 'http://localhost:4200'; // used in client development mode
@@ -20,13 +22,21 @@ const incidentsDir = '../incidents';
 const staticDir = '../../dist/demisto-form';
 const foundDist = fs.existsSync(staticDir); // check for presence of pre-built angular client directory
 const configDir = '../config';
-const apiCfgFile = configDir + '/api.json';
+const apiCfgFile = `${configDir}/api.json`;
 const foundDemistoApiConfig = fs.existsSync(apiCfgFile); // check for presence of API configuration file
-const fieldsConfigFile = configDir + '/fields-config.json';
+const fieldsConfigFile = `${configDir}/fields-config.json`;
 const foundFieldsConfigFile = fs.existsSync(fieldsConfigFile);
+const selfsigned = require('selfsigned');
+
+// SSL
+const sslDir = `${configDir}/ssl`;
+const certFile = `${sslDir}/cert.pem`;
+var sslCert;
+const privkeyFile = `${sslDir}/private.pem`;
+var privKey;
 
 // UUID
-var uuidv4 = require('uuid/v4');
+const uuidv4 = require('uuid/v4');
 
 // Field Configs
 var fieldsConfig;
@@ -52,7 +62,7 @@ const request = require('request-promise-native');
 // Express
 const express = require('express');
 const app = express();
-const server = require('http').createServer(app);
+var server;
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -135,25 +145,29 @@ app.post(apiPath + '/demistoApi/test/adhoc', async (req, res) => {
   // Does not save settings.  Another call will handle that.
 
   // check for client body fields
-  if (! 'url' in req.body) {
-    console.error('Client did not send url');
-    res.send(400);
-    return;
+  if (!('url' in req.body)) {
+    return returnError(`Client did not send url`, res);
   }
-  if (! 'apiKey' in req.body) {
-    console.error('Client did not send apiKey');
-    res.send(400);
-    return;
+  if (!('apiKey' in req.body || 'serverId' in req.body)) {
+    return returnError('Client did not send apiKey or serverId', res);
   }
-  if (! 'trustAny' in req.body) {
-    console.error('Client did not send trustAny');
-    res.send(400);
-    return;
+  if (!('trustAny' in req.body)) {
+    return returnError(`Client did not send trustAny`, res);
+  }
+
+  let apiKey;
+  const foundServerId = 'serverId' in req.body;
+  if (foundServerId) {
+    const serverId = req.body.serverId;
+    apiKey = getDemistoApiConfig(serverId).apiKey;
+  }
+  else {
+    apiKey = req.body.apiKey;
   }
 
   // console.log('body:', req.body);
 
-  let testResult = await testApi(req.body.url, req.body.apiKey, req.body.trustAny);
+  let testResult = await testApi(req.body.url, apiKey, req.body.trustAny);
   // console.debug('testResult:', testResult);
   if (!testResult.success) {
     let error = testResult.error;
@@ -190,38 +204,44 @@ app.get(apiPath + '/demistoApi/test/:serverId', async (req, res) => {
   // Does not save settings.  Another call will handle that.
 
   const serverId = decodeURIComponent(req.params.serverId);
-  const apiToTest = getDemistoApiConfig(serverId);
 
-  // console.log('body:', req.body);
+  try {
+    const apiToTest = getDemistoApiConfig(serverId);
 
-  let testResult = await testApi(apiToTest.url, apiToTest.apiKey, apiToTest.trustAny);
-  // console.debug('testResult:', testResult);
-  if (!testResult.success) {
-    let error = testResult.error;
-    let statusCode = null;
-    if ('statusCode' in res) {
-      statusCode = testResult['statusCode'];
-    }
-    // console.error('error:', error);
+    // console.log('body:', req.body);
 
-    // since this is a test, we don't want to return a 500 if it fails.  Status code should be normal
-    if (error && statusCode) {
-      console.error(`Caught error testing Demisto server with code ${statusCode}:`, error);
-      res.json({ success: false, statusCode, error });
+    let testResult = await testApi(apiToTest.url, apiToTest.apiKey, apiToTest.trustAny);
+    // console.debug('testResult:', testResult);
+    if (!testResult.success) {
+      let error = testResult.error;
+      let statusCode = null;
+      if ('statusCode' in res) {
+        statusCode = testResult['statusCode'];
+      }
+      // console.error('error:', error);
+
+      // since this is a test, we don't want to return a 500 if it fails.  Status code should be normal
+      if (error && statusCode) {
+        console.error(`Caught error testing Demisto server with code ${statusCode}:`, error);
+        res.json({ success: false, statusCode, error });
+      }
+      else if (error && !statusCode) {
+        console.error(`Caught error testing Demisto server:`, error);
+        res.json({ success: false, error });
+      }
+      else {
+        console.error('Caught unspecified error testing Demisto server');
+        res.json({ success: false, error: 'unspecified' });
+      }
+      return;
     }
-    else if (error && !statusCode) {
-      console.error(`Caught error testing Demisto server:`, error);
-      res.json({ success: false, error });
-    }
-    else {
-      console.error('Caught unspecified error testing Demisto server');
-      res.json({ success: false, error: 'unspecified' });
-    }
-    return;
+    console.log(`Logged into Demisto as user '${testResult.result.body.username}'`);
+    res.json( { success: true, statusCode: 200 } );
+    console.log(`Successfully tested URL '${req.body.url}'`);
   }
-  console.log(`Logged into Demisto as user '${testResult.result.body.username}'`);
-  res.json( { success: true, statusCode: 200 } );
-  console.log(`Successfully tested URL '${req.body.url}'`);
+  catch(error) {
+    return returnError(`Error testing ${serverId}: ${error}`);
+  }
 });
 
 
@@ -286,6 +306,56 @@ app.post(apiPath + '/demistoApi', async (req, res) => {
     };
 
     demistoApiConfigs[config.url] = config;
+    await saveApiConfig();
+    res.status(200).json({success: true});
+});
+
+
+
+app.post(apiPath + '/demistoApi/update', async (req, res) => {
+    // saves Demisto API config
+    // will overwrite existing config for url
+
+    let config = req.body;
+
+    // check for client body fields
+    if (! 'url' in config) {
+      return returnError(`Client did not send url`, res);
+    }
+    if (!('apiKey' in req.body || 'serverId' in req.body)) {
+      return returnError('Client did not send apiKey or serverId', res);
+    }
+    if (! 'trustAny' in config) {
+      return returnError(`Client did not send trustAny`, res);
+    }
+
+    let apiKey;
+    let serverId;
+    const foundApiKey = 'apiKey' in config;
+    if (!foundApiKey) {
+      serverId = config.serverId;
+      apiKey = getDemistoApiConfig(serverId).apiKey;
+    }
+    else {
+      apiKey = config.apiKey;
+    }
+
+    // remove any junk data
+    config = {
+      url: config.url,
+      apiKey: apiKey,
+      trustAny: config.trustAny
+    };
+
+    delete demistoApiConfigs[serverId];
+    demistoApiConfigs[config.url] = config;
+
+    if (defaultDemistoApiName === serverId) {
+      // update the default server, if necessary
+      defaultDemistoApiName = config.url;
+    }
+
+
     await saveApiConfig();
     res.status(200).json({success: true});
 });
@@ -806,11 +876,87 @@ function getDemistoApiConfig(serverId) {
 
 
 
+function initSSL() {
+  const privkeyExists = fs.existsSync(privkeyFile);
+  const certExists = fs.existsSync(certFile);
+  if (!privkeyExists && !certExists) {
+    // generate ssl cert
+    const attrs = [
+      {
+        name: 'commonName',
+        value: os.hostname
+      },
+      {
+        name: 'countryName',
+        value: 'US'
+      },
+      {
+        name: 'organizationName',
+        value: 'Demisto'
+      },
+      {
+        shortName: 'OU',
+        value: 'Demisto'
+      }
+    ];
+    const extensions = [
+      {
+        name: 'basicConstraints',
+        cA: true
+      },
+      {
+        name: 'keyUsage',
+        keyCertSign: true,
+        digitalSignature: true
+      },
+      {
+        name: 'extKeyUsage',
+        serverAuth: true
+      }
+    ];
+    const options = {
+      keySize: 2048,
+      days: 825,
+      algorithm: 'sha512',
+      extensions
+    };
+    const pems = selfsigned.generate(attrs, options);
+    // console.log(pems);
+    fs.writeFileSync(certFile, pems.cert, { encoding: 'utf8', mode: 0o660 });
+    fs.writeFileSync(privkeyFile, pems.private, { encoding: 'utf8', mode: 0o660 });
+
+  }
+  else if (!privkeyExists) {
+    console.error(`Private key file ${privkeyFile} not found`);
+    return false;
+  }
+  else if (!certFile) {
+    console.error(`Certificate file ${certFile} not found`);
+    return false;
+  }
+
+  sslCert = fs.readFileSync(certFile, { encoding: 'utf8' });
+  privKey = fs.readFileSync(privkeyFile, { encoding: 'utf8' });
+  server = require('https').createServer({
+    key: privKey,
+    cert: sslCert,
+  }, app);
+  return true;
+}
+
+
+
 ///// FINISH STARTUP //////
 
 (async function() {
 
   await loadDemistoApiConfigs();
+
+  if ( !initSSL() ) {
+    const exitCode = 1;
+    console.error(`SSL initialisation failed.  Exiting with code ${exitCode}`);
+    process.exit(exitCode);
+  }
 
   loadFieldConfigs();
 
@@ -835,5 +981,5 @@ function getDemistoApiConfig(serverId) {
     });
   }
 
-  server.listen(listenPort, () => console.log(`Listening for client connections at http://*:${listenPort}`)); // listen for client connections
+  server.listen(listenPort, () => console.log(`Listening for client connections at https://*:${listenPort}`)); // listen for client connections
 })();

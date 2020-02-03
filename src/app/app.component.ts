@@ -12,6 +12,8 @@ import { ConfirmationService } from 'primeng/api';
 import { PMessageOption } from './types/message-options';
 import { BulkCreateResult } from './types/bulk-create-result';
 
+type DemistoServerEditMode = 'edit' | 'new';
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html'
@@ -103,12 +105,26 @@ export class AppComponent implements OnInit {
   showDemistoApiServerOpenDialog = false;
   selectedDemistoApiName: string;
 
-  // new Demisto api server dialog
+  // new / edit Demisto api server dialog
   showNewDemistoApiServerDialog = false;
   newDemistoServerUrl = '';
   newDemistoServerApiKey = '';
   newDemistoServerTrustAny = true;
-  newDemistoServerSaveDisabled = false;
+  get newDemistoServerSaveDisabled() {
+    if (this.newDemistoServerDialogMode === 'new') {
+      return this.newDemistoServerUrl in this.demistoApiConfigs;
+    }
+    // edit mode
+    return this.selectedDemistoApiName !== this.newDemistoServerUrl && this.newDemistoServerUrl in this.demistoApiConfigs;
+  }
+  newDemistoServerDialogMode: DemistoServerEditMode = 'new';
+  get newEditTestButtonDisabled(): boolean {
+    if (this.newDemistoServerDialogMode === 'new') {
+      return !this.newDemistoServerUrl || !this.newDemistoServerApiKey;
+    }
+    // edit mode
+    return !this.newDemistoServerUrl;
+  }
 
   // delete Demisto api server dialog
   showDeleteDemistoApiServerDialog = false;
@@ -242,6 +258,8 @@ export class AppComponent implements OnInit {
 
     this.demistoApiConfigs = await this.fetcherService.getDemistoApi(); // obtain saved Demisto API endpoints
 
+    // console.log('refreshDemistoApi(): demistoApiConfigs:', this.demistoApiConfigs);
+
     const updateDefaultApiServer = setDefault && lastDemistoApiConfigsLen === 0 && this.demistoApiConfigsLen !== 0;
 
     if (updateDefaultApiServer) {
@@ -254,7 +272,6 @@ export class AppComponent implements OnInit {
 
     const configsAreEmpty = this.demistoApiConfigsLen === 0;
     const defaultDemistoApiIsDefined = this.demistoApiConfigsLen !== 0 && defaultApiResult.defined && defaultApiResult.serverId in this.demistoApiConfigs;
-
 
     if (configsAreEmpty) {
       this.currentServerApiInit = false;
@@ -270,6 +287,7 @@ export class AppComponent implements OnInit {
       // const updateCurrentStuff = this.currentDemistoApiName &&
       this.currentServerApiInit = testRes.success; // this is the problem line
     }
+
 
     const currentApiStillDefined = this.currentDemistoApiName && this.currentDemistoApiName in this.demistoApiConfigs; // make sure the currently selected API hasn't been deleted
     if (!currentApiStillDefined) {
@@ -316,8 +334,15 @@ export class AppComponent implements OnInit {
     // performs an ad hoc test of a Demisto API endpoint
     console.log('testAPI()');
     let testResult: string;
+    const useServerId = this.newDemistoServerDialogMode === 'edit' && this.newDemistoServerApiKey === '';
     try {
-      let result = await this.fetcherService.testApiServerAdhoc({url, apiKey, trustAny});
+      let result;
+      if (!useServerId) {
+        result = await this.fetcherService.testApiServerAdhoc({url, apiKey, trustAny});
+      }
+      else {
+        result = await this.fetcherService.testApiServerAdhoc({url, trustAny, serverId: this.selectedDemistoApiName});
+      }``
       if (this.messagesClearTimeout) {
         clearTimeout(this.messagesClearTimeout);
         this.messagesClearTimeout = null;
@@ -822,6 +847,12 @@ export class AppComponent implements OnInit {
 
 
 
+  onDeleteDemistoApiServerHidden() {
+    this.showDemistoApiServerOpenDialog = true;
+  }
+
+
+
   onDeleteAccepted() {
     console.log('onDeleteAccepted()');
     this.showDeleteDialog = false;
@@ -1093,8 +1124,12 @@ export class AppComponent implements OnInit {
 
   async onNewDemistoApiServer() {
     console.log('onNewDemistoApiServer()');
+    this.newDemistoServerDialogMode = 'new';
     this.showDemistoApiServerOpenDialog = false;
     this.showNewDemistoApiServerDialog = true;
+    this.newDemistoServerUrl = '';
+    this.newDemistoServerApiKey = '';
+    this.newDemistoServerTrustAny = true;
     setTimeout( () =>
       document.getElementsByClassName('newDemistoApiServerDialog')[0].getElementsByTagName('input')[0].focus()
       , 100);
@@ -1118,6 +1153,13 @@ export class AppComponent implements OnInit {
     this.newDemistoServerUrl = '';
     this.newDemistoServerApiKey = '';
     this.newDemistoServerTrustAny = true;
+  }
+
+
+
+  onNewDemistoApiServerCanceled() {
+    this.showNewDemistoApiServerDialog = false;
+    this.showDemistoApiServerOpenDialog = true;
   }
 
 
@@ -1186,6 +1228,54 @@ export class AppComponent implements OnInit {
 
   async onEditDemistoApiServer() {
     console.log('onEditDemistoApiServer()');
+    this.newDemistoServerDialogMode = 'edit';
+    this.showNewDemistoApiServerDialog = true;
+    this.showDemistoApiServerOpenDialog = false;
+
+    // get Demisto server details and stick them in
+    // newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny
+    const demistoServer = this.demistoApiConfigs[this.selectedDemistoApiName];
+    this.newDemistoServerUrl = demistoServer.url;
+    this.newDemistoServerApiKey = '';
+    this.newDemistoServerTrustAny = demistoServer.trustAny;
+  }
+
+
+
+  async onDemistoApiServerUpdated() {
+    console.log('onDemistoApiServerUpdated()');
+
+    this.showNewDemistoApiServerDialog = false;
+    this.showDemistoApiServerOpenDialog = true;
+
+    const oldSelectedDemistoApiName = this.selectedDemistoApiName;
+
+    let res;
+    if (this.newDemistoServerApiKey === '') {
+      res = await this.fetcherService.updateDemistoApi(this.selectedDemistoApiName, this.newDemistoServerUrl, this.newDemistoServerTrustAny );
+    }
+    else {
+      res = await this.fetcherService.updateDemistoApi(this.selectedDemistoApiName, this.newDemistoServerUrl, this.newDemistoServerTrustAny, this.newDemistoServerApiKey);
+    }
+
+    if (oldSelectedDemistoApiName === this.currentDemistoApiName) {
+      // it's necessary to fix currentDemistoApiName if it has been edited
+      // before running refreshDemistoApi()
+      this.currentDemistoApiName = this.newDemistoServerUrl;
+    }
+
+    // refresh servers
+    await this.refreshDemistoApi();
+
+    this.newDemistoServerUrl = '';
+    this.newDemistoServerApiKey = '';
+    this.newDemistoServerTrustAny = true;
+  }
+
+
+
+  onNewEditDemistoApiServerHidden() {
+    this.showDemistoApiServerOpenDialog = true;
   }
 
 }
