@@ -29,12 +29,6 @@ export class AppComponent implements OnInit {
 
   private investigationFields = ['id', 'account', 'created', 'modified', 'ShardID', 'account', 'activated', 'autime', 'canvases', 'closeNotes', 'closeReason', 'closed', 'closingUserId', 'created', 'droppedCount', 'dueDate', 'hasRole', 'id', 'investigationId', 'isPlayground', 'lastOpen', 'linkedCount', 'linkedIncidents', 'modified', 'notifyTime', 'openDuration', 'parent', 'playbookId', 'previousRoles', 'rawCategory', 'rawCloseReason', 'rawJSON', 'rawName', 'rawPhase', 'rawType', 'reason', 'runStatus', 'sla', 'sortValues', 'sourceBrand', 'sourceInstance', 'status', 'version' ]; // it may become necessary to permit some of these fields in the future
 
-  /*demistoProperties: DemistoProperties = {
-    url: '',
-    apiKey: '',
-    trustAny: true
-  };*/
-
   // API
   demistoApiConfigs: DemistoAPIEndpoints = {};
   demistoApiConfigsOptions: SelectItem[];
@@ -146,6 +140,10 @@ export class AppComponent implements OnInit {
     catch (err) {
       console.log('AppComponent: ngOnInit(): Caught error fetching logged in user:', err);
     }
+
+    // Encryptiion
+    await this.fetcherService.initEncryption();
+    // console.log(`AppComponent: ngOnInit(): publicKey:`, this.fetcherService.publicKey);
 
     // API Init
     await this.demistoApiInit(); // sets currentServerApiInit
@@ -342,7 +340,7 @@ export class AppComponent implements OnInit {
       }
       else {
         result = await this.fetcherService.testApiServerAdhoc({url, trustAny, serverId: this.selectedDemistoApiName});
-      }``
+      }
       if (this.messagesClearTimeout) {
         clearTimeout(this.messagesClearTimeout);
         this.messagesClearTimeout = null;

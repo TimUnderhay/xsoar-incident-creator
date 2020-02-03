@@ -13,11 +13,7 @@
 
     <h3 style="margin-top: 0;">This app creates Demisto incidents from exported Demisto incident JSON.  The fields to be imported are selectable.  These can be saved in configurations for easy retrieval.</h3>
 
-
-
-    <h1 class="bodyHeader" style="color: red;">CONSIDER THIS APP TO BE INSECURE!!!</h1>
-
-
+  
 
     <!-- Demisto Servers-->
     <p-card header="Demisto Servers" subheader="Define and select Demisto servers">
@@ -38,42 +34,6 @@
           <span class="formLabel">No Demisto servers are defined</span>
         </ng-template>
       </div>
-
-       <!-- [disabled]="demistoApiConfigsLen === 0" -->
-
-
-      <!-- <div class="demistoForm"> -->
-
-        <!-- Demisto Base URL -->
-        <!--<div>
-          <span class="ui-float-label">
-            <input pInputText type="url" id="url" required [(ngModel)]="demistoProperties.url" name="url" size="50">
-            <label for="url">Demisto Base URL</label>
-          </span>
-        </div>-->
-
-        <!-- Demisto API Key -->
-        <!--<div>
-          <span class="ui-float-label">
-            <input pInputText type="password" id="apiKey" required [(ngModel)]="demistoProperties.apiKey" name="apiKey" size="50" autocomplete="off" standalone>
-            <label for="apiKey">API Key</label>
-          </span>
-        </div>-->
-
-        <!-- Trust Any Certificate -->
-        <!--<div>
-          <span class="formLabel">Trust Any Certificate&nbsp;&nbsp;</span>
-          <p-inputSwitch name="trustAny" [(ngModel)]="demistoProperties.trustAny" [style]="{'vertical-align' : 'middle' }"></p-inputSwitch>
-        </div>-->
-
-      <!-- </div> -->
-
-      <!-- Test Button -->
-      <!--<<div style="margin-top: .5em;">
-        <span><button pButton type="button" (click)="testAPI()" label="Test"></button>&nbsp;&nbsp;</span>
-        <p-message *ngIf="currentServerApiInit" severity="success" text="API Initialised"></p-message>
-        <p-message *ngIf="!currentServerApiInit" severity="error" text="API Not Initialised"></p-message>
-      </div>-->
 
     </p-card>
 

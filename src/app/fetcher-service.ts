@@ -7,6 +7,7 @@ import { DemistoIncidentField } from './types/demisto-incident-field';
 import { FieldConfig, FieldsConfig } from './types/fields-config';
 import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
 import { DefaultApiServer } from './types/default-api-server';
+declare var JSEncrypt: any;
 
 @Injectable({providedIn: 'root'})
 
@@ -19,6 +20,8 @@ export class FetcherService {
   // demistoProperties: DemistoProperties; // gets set during test
   apiPath = '/api';
   currentUser: User;
+  private publicKey: string;
+  encryptor: any;
 
 
 
@@ -63,6 +66,9 @@ export class FetcherService {
 
 
   testApiServerAdhoc(serverParams: DemistoAPI): Promise<ApiStatus> {
+    if ('apiKey' in serverParams) {
+      serverParams.apiKey = this.encrypt(serverParams.apiKey);
+    }
     let headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
@@ -111,7 +117,7 @@ export class FetcherService {
     let headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
-    let body = { url, apiKey, trustAny };
+    let body = { url, apiKey: this.encrypt(apiKey), trustAny };
     return this.http.post(this.apiPath + '/demistoApi', body, { headers } )
                     .toPromise()
                     .then( res => res as ApiStatus );
@@ -125,7 +131,7 @@ export class FetcherService {
     } );
     let body = { url, trustAny, serverId };
     if (apiKey) {
-      body['apiKey'] = apiKey;
+      body['apiKey'] = this.encrypt(apiKey);
     }
     return this.http.post(this.apiPath + '/demistoApi/update', body, { headers } )
                     .toPromise()
@@ -211,6 +217,29 @@ export class FetcherService {
     return this.http.post(this.apiPath + '/createInvestigation', {incidentId, serverId}, { headers } )
                     .toPromise()
                     .then( (value: any) => value.success);
+  }
+
+
+
+  getPublicKey(): Promise<string> {
+    let headers = this.buildHeaders();
+    return this.http.get(this.apiPath + '/publicKey', { headers } )
+                    .toPromise()
+                    .then( (value: any) => this.publicKey = value.publicKey );
+  }
+
+
+
+  async initEncryption(): Promise<any> {
+    await this.getPublicKey();
+    this.encryptor = new JSEncrypt();
+    this.encryptor.setPublicKey(this.publicKey);
+  }
+
+
+
+  encrypt(str): string {
+    return this.encryptor.encrypt(str);
   }
 
 }
