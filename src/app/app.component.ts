@@ -365,7 +365,17 @@ export class AppComponent implements OnInit {
       }
     }
     */
+  }
 
+
+
+  parseDemistoIncidentFieldDefinitions(demistoIncidentFieldDefinitions: DemistoIncidentField[]): DemistoIncidentFieldDefinitions {
+    let tmpFields: DemistoIncidentFieldDefinitions = {};
+    demistoIncidentFieldDefinitions.forEach( (field: DemistoIncidentField) => {
+      const shortName = field.cliName;
+      tmpFields[shortName] = field;
+    });
+    return tmpFields;
   }
 
 
@@ -378,13 +388,10 @@ export class AppComponent implements OnInit {
     */
     console.log('getDemistoIncidentFieldDefinitions()');
     try {
-      let demistoIncidentFieldDefinitions: DemistoIncidentField[] = await this.fetcherService.getIncidentFieldDefinitions(serverId);
-      let tmpFields: DemistoIncidentFieldDefinitions = {};
-      demistoIncidentFieldDefinitions.forEach( (field: DemistoIncidentField) => {
-        let shortName = field.cliName;
-        tmpFields[shortName] = field;
-      });
-      this.demistoIncidentFieldDefinitions = tmpFields;
+      const demistoIncidentFieldDefinitions: DemistoIncidentField[] = await this.fetcherService.getIncidentFieldDefinitions(serverId);
+
+      this.demistoIncidentFieldDefinitions = this.parseDemistoIncidentFieldDefinitions(demistoIncidentFieldDefinitions);
+
       console.log('demistoIncidentFieldDefinitions:', this.demistoIncidentFieldDefinitions);
       return true;
 
@@ -1131,27 +1138,62 @@ export class AppComponent implements OnInit {
 
   async onCreateBulkIncidents() {
     console.log('onCreateBulkIncidents()');
-    await this.onReloadFieldDefinitions();
+    // await this.onReloadFieldDefinitions();
     this.showBulkCreateDialog = false;
     this.showBulkResultsDialog = true;
     this.changeDetector.detectChanges(); // trigger change detection
 
     this.bulkCreateResults = [];
-    this.selectedBulkCreateConfigs.forEach( async (configName) => {
 
-      this.selectedBulkCreateApiServers.forEach( async (serverId) => {
+    console.log('selectedBulkCreateConfigs:', this.selectedBulkCreateConfigs);
 
-        /*
-        Steps to complete:
+    /*
+    Steps to complete:
 
-        1.  Load config
-        !!! 2.  Test server
-        !!! 3.  Load server fields
-        4.  Check for keys that can't be pushed
-        5.  Display them in a column
-        6.  Push case with all other fields
-        7.  Display results in a column
-        */
+    1.  Load config
+    !!! 2.  Test server
+    !!! 3.  Load server fields
+    4.  Check for keys that can't be pushed
+    5.  Display them in a column
+    6.  Push case with all other fields
+    7.  Display results in a column
+    */
+
+    // this.selectedBulkCreateApiServers.forEach( async (serverId) => {
+    for (const serverId of this.selectedBulkCreateApiServers) {
+
+      console.log(`onCreateBulkIncidents(): Testing Demisto server ${serverId}`);
+      const testResult = await this.fetcherService.testApiServer(serverId);
+
+      let serverFieldDefinitions;
+      if (testResult.success) {
+        console.log(`Fetching field definitions from Demisto server ${serverId}`);
+        const demistoIncidentFieldDefinitions: DemistoIncidentField[] = await this.fetcherService.getIncidentFieldDefinitions(serverId);
+
+        serverFieldDefinitions = this.parseDemistoIncidentFieldDefinitions(demistoIncidentFieldDefinitions);
+        console.log('serverFieldDefinitions:', serverFieldDefinitions);
+      }
+
+      console.log('selectedBulkCreateConfigs2:', this.selectedBulkCreateConfigs);
+
+      // await this.selectedBulkCreateConfigs.forEach( async (configName) => {
+      for (const configName of this.selectedBulkCreateConfigs) {
+
+        console.log('got to 1: configName:', configName);
+
+        if (!testResult.success) {
+          let error;
+          if ('statusCode' in testResult) {
+            error = `Server test failed with status code ${testResult.statusCode}: ${testResult.error}`;
+          }
+          else {
+            error = `Server test failed with error: ${testResult.error}`;
+          }
+          this.bulkCreateResults.push({configName, serverId, success: false, error});
+          this.changeDetector.detectChanges(); // update UI
+          return;
+        }
+
         console.log('onCreateBulkIncidents(): configName:', configName);
         let selectedConfig = this.fieldsConfigurations[configName];
         let skippedFields: string[] = [];
@@ -1167,7 +1209,7 @@ export class AppComponent implements OnInit {
             // silently skip non-enabled fields
             return;
           }
-          if (!(fieldName in this.demistoIncidentFieldDefinitions)) {
+          if (!(fieldName in serverFieldDefinitions)) {
             // skip fields which don't exist in Demisto config
             skippedFields.push(fieldName);
             return;
@@ -1184,7 +1226,7 @@ export class AppComponent implements OnInit {
             // silently skip non-enabled fields
             return;
           }
-          if (!(fieldName in this.demistoIncidentFieldDefinitions)) {
+          if (!(fieldName in serverFieldDefinitions)) {
             // skip fields which don't exist in Demisto config
             skippedFields.push(fieldName);
             return;
@@ -1205,15 +1247,14 @@ export class AppComponent implements OnInit {
         }
         this.changeDetector.detectChanges(); // update UI
 
-      });
+      }
 
-
-
-    });
+    }
 
     console.log('onCreateBulkIncidents(): bulkCreateResults:', this.bulkCreateResults);
 
     this.selectedBulkCreateConfigs = []; // reset selection
+    this.selectedBulkCreateApiServers = [];
   }
 
 

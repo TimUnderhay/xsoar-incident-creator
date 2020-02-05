@@ -62,6 +62,8 @@
 
           <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="fieldsConfigurationsLen === 0 || demistoApiConfigsLen === 0"></p-button>
 
+          <p-button *ngIf="this.bulkCreateResults.length !== 0"  label="Bulk Create Results" (onClick)="showBulkResultsDialog = true"></p-button>
+          
         </span>
 
       </div>
@@ -300,7 +302,7 @@
 
         <div>{{result.success ? 'Success' : 'Failure'}}</div>
 
-        <div *ngIf="result.hasOwnProperty('incidentId')"><a href="javascript:void(0)" (click)="onClickDemistoInvestigateUrl(result.incidentId)">{{result.incidentId}}</a></div>
+        <div *ngIf="result.hasOwnProperty('incidentId')"><a href="javascript:void(0)" (click)="onClickDemistoInvestigateUrl(result.incidentId, result.serverId)">{{result.incidentId}}</a></div>
 
         <div *ngIf="!result.hasOwnProperty('incidentId')"></div>
 
