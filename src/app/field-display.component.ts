@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnChanges, OnDestroy, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
 import { IncidentField } from './types/incident-fields';
 import { SelectItem } from 'primeng/api';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
@@ -12,7 +12,7 @@ import { Subscription } from 'rxjs';
   providers: [ DialogService ]
 })
 
-export class FieldDisplayComponent implements OnInit, OnDestroy {
+export class FieldDisplayComponent implements OnInit, OnChanges, OnDestroy {
 
   constructor(public dialogService: DialogService) {}
 
@@ -31,19 +31,19 @@ export class FieldDisplayComponent implements OnInit, OnDestroy {
 
 
   ngOnInit() {
-    console.log('FieldDisplayComponent: ngOnInit(): field:', this.field);
+    // console.log('FieldDisplayComponent: ngOnInit(): field:', this.field);
+  }
 
-    if (this.field.fieldType === 'undefined') {
+  ngOnChanges(values: SimpleChanges) {
+    // console.log('ngOnChanges(): values:', values);
+    const updateFieldType = 'field' in values && (values.field.isFirstChange() || values.field.currentValue !== values.field.previousValue);
+    if (updateFieldType && this.field.fieldType === 'undefined') {
       this.detectedFieldType = this.identifyType(this.field.value);
-      // console.log(`FieldDisplayComponent: ngOnInit(): detectedFieldType: ${this.field.shortName}: ${this.detectedFieldType}` );
     }
-
-    if ('fieldType' in this.field && this.field.fieldType === 'date') {
+    else if (updateFieldType && this.field.fieldType === 'date') {
+    // if ('fieldType' in this.field && this.field.fieldType === 'date') {
       this.dateFieldValue = new Date(this.field.value);
     }
-
-
-
   }
 
 

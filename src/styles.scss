@@ -272,3 +272,18 @@ body p-fileupload {
 .bulkCreateResultsInfoIcon {
   font-size: 1.5em !important;
 }
+
+.bulkCreateContainer {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: stretch;
+
+  > :first-child {
+    margin-right: 1em;
+  }
+}
+
+.bulkCreateContainerColumn {
+  flex: 1;
+}

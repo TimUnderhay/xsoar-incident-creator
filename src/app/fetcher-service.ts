@@ -162,9 +162,10 @@ export class FetcherService {
 
 
 
-  getIncidentFields(): Promise<DemistoIncidentField[]> {
+  getIncidentFieldDefinitions(serverId): Promise<DemistoIncidentField[]> {
+    serverId = encodeURIComponent(serverId);
     let headers = this.buildHeaders();
-    return this.http.get(this.apiPath + '/incidentfields', { headers } )
+    return this.http.get(`${this.apiPath}/incidentfields/${serverId}`, { headers } )
                     .toPromise()
                     .then( (res: any) => res.incident_fields );
   }

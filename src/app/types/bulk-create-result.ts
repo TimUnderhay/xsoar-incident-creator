@@ -4,4 +4,5 @@ export interface BulkCreateResult {
   success: boolean;
   error?: string;
   incidentId?: number;
+  serverId: string;
 }

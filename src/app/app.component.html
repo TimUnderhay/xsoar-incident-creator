@@ -23,7 +23,7 @@
         <p-button label="Select" (onClick)="onOpenDemistoServersClicked()" styleClass="alignButton"></p-button>
 
         <ng-container *ngIf="currentDemistoApiName; else apiServerNotDefined">
-            <span class="formLabel">Selected Demisto Server: </span>
+            <span class="formLabel">Current Demisto Server: </span>
             <span class="formLabel" style="text-decoration: underline;">{{currentDemistoApiName}}</span>
             &nbsp;&nbsp;(&nbsp;
             <span [class.success]="currentServerApiInit" [class.failure]="!currentServerApiInit">{{currentServerApiInit ? 'Initialised' : 'Not Initialised'}}</span>
@@ -60,7 +60,7 @@
 
           <p-button label="Delete" (onClick)="onDeleteClicked()" [disabled]="fieldsConfigurationsLen === 0"></p-button>
 
-          <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="fieldsConfigurationsLen === 0"></p-button>
+          <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="fieldsConfigurationsLen === 0 || demistoApiConfigsLen === 0"></p-button>
 
         </span>
 
@@ -101,9 +101,12 @@
 
           <!-- Select / Toggle Buttons -->
           <div>
-            <p-button type="button" label="Select All" (onClick)="onSelectAllFields()"></p-button>
-            <p-button type="button" label="Clear All" (onClick)="onClearAllFields()"></p-button>
-            <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()"></p-button>
+            <p-button type="button" label="Select All" (onClick)="onSelectAllFields()" [disabled]="!currentServerApiInit"></p-button>
+
+            <p-button type="button" label="Clear All" (onClick)="onClearAllFields()" [disabled]="!currentServerApiInit"></p-button>
+
+            <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()" [disabled]="!currentServerApiInit"></p-button>
+
           </div >
 
           <!-- Incident Fields -->
@@ -133,11 +136,16 @@
 
           <!-- Select / Toggle Buttons -->
           <div>
-            <p-button type="button" label="Select All" (onClick)="onSelectAllCustomFields()"></p-button>
-            <p-button type="button" label="Clear All" (onClick)="onClearAllCustomFields()"></p-button>
-            <p-button type="button" label="Reset Values" (onClick)="onResetAllCustomFieldValues()"></p-button>
-            <p-toggleButton [onLabel]="shortNamesLabel" [offLabel]="longNamesLabel" [(ngModel)]="displayCustomFieldShortNames" name="shortCustomNames"></p-toggleButton>
-            <p-button type="button" label="Reload Definitions" name="createIncident" (onClick)="onReloadFieldDefinitions()"></p-button>
+            <p-button type="button" label="Select All" (onClick)="onSelectAllCustomFields()" [disabled]="!currentServerApiInit"></p-button>
+
+            <p-button type="button" label="Clear All" (onClick)="onClearAllCustomFields()" [disabled]="!currentServerApiInit"></p-button>
+
+            <p-button type="button" label="Reset Values" (onClick)="onResetAllCustomFieldValues()" [disabled]="!currentServerApiInit"></p-button>
+
+            <p-toggleButton [onLabel]="shortNamesLabel" [offLabel]="longNamesLabel" [(ngModel)]="displayCustomFieldShortNames" name="shortCustomNames" [disabled]="!currentServerApiInit"></p-toggleButton>
+
+            <p-button type="button" label="Reload Definitions" name="createIncident" (onClick)="onReloadFieldDefinitions()" [disabled]="!currentServerApiInit"></p-button>
+
           </div >
 
           <!-- Custom Fields -->
@@ -167,7 +175,7 @@
 
       <!-- Submit Button -->
       <div style="margin-top: 1em;">
-        &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onIncidentSubmit()" [disabled]="!fileData || countEnabledFields() === 0"></button>
+        &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onCreateIncident()" [disabled]="!fileData || countEnabledFields() === 0"></button>
       </div>
 
     <div>&nbsp;</div>
@@ -180,7 +188,7 @@
 
 
 
-  <!-- Save As Dialog -->
+  <!-- Fields Config Save As Dialog -->
   <p-dialog header="Save Configuration As" [(visible)]="showSaveAsDialog" [modal]="true" [style]="{width: '300px'}" styleClass="saveAsDialog">
 
     <div style="margin-bottom: .5em;" class="formLabel">Configuration Name</div>
@@ -201,7 +209,7 @@
 
 
 
-  <!-- Delete Config Dialog -->
+  <!-- Delete Fields Config Dialog -->
   <p-dialog header="Delete Configuration" [(visible)]="showDeleteDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="deleteConfigDialog">
 
     <div class="formLabel">Configurations to delete</div>
@@ -220,7 +228,7 @@
 
 
 
-  <!-- Open Dialog -->
+  <!-- Open Fields Config Dialog -->
   <p-dialog header="Open Configuration" [(visible)]="showOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="openDialog">
 
     <div class="formLabel">Configuration to open</div>
@@ -239,16 +247,33 @@
 
 
 
-  <!-- Bulk Create Dialog -->
-  <p-dialog header="Bulk Incident Creation" [(visible)]="showBulkCreateDialog" [modal]="true" [style]="{width: '400px'}" [contentStyle]="{'overflow':'visible'}" styleClass="bulkCreateDialog">
+  <!-- Bulk Create Incident Dialog -->
+  <p-dialog header="Bulk Incident Creation" [(visible)]="showBulkCreateDialog" [modal]="true" [style]="{width: '75%'}" styleClass="bulkCreateDialog">
 
-    <div class="formLabel">Select configurations to push to Demisto</div>
+    
+    <div class="bulkCreateContainer">
 
-    <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedBulkCreateConfigs" [style]="{'width':'100%'}" (onDblClick)="onConfigOpened()" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
+      <div class="bulkCreateContainerColumn">
+  
+        <div class="formLabel">Select configurations to push to Demisto</div>
+  
+        <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedBulkCreateConfigs" [style]="{'width':'100%'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
+  
+      </div>
+  
+      <div class="bulkCreateContainerColumn">
+  
+        <div class="formLabel">Select Demisto servers to push to</div>
 
-    <div style="margin-top: .5em;">
+        <p-listbox [options]="demistoApiConfigsOptions" [(ngModel)]="selectedBulkCreateApiServers" [style]="{'width':'100%'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
+  
+      </div>
 
-      <p-button label="Create Incidents" (onClick)="onBulkCreateSubmit()" [disabled]="selectedBulkCreateConfigs.length === 0"></p-button>
+    </div>
+
+    <div style="margin-top: .5em; float: right;">
+
+      <p-button label="Create Incidents" (onClick)="onCreateBulkIncidents()" [disabled]="selectedBulkCreateConfigs.length === 0 || selectedBulkCreateApiServers.length === 0"></p-button>
 
       <p-button label="Cancel" (onClick)="onBulkCreateCanceled()"></p-button>
 
@@ -263,12 +288,15 @@
 
     <div class="bulkCreateResults">
       <div class="bulkCreateResultsGridHeader">Config Name</div>
+      <div class="bulkCreateResultsGridHeader">Demisto Server</div>
       <div class="bulkCreateResultsGridHeader">Result</div>
       <div class="bulkCreateResultsGridHeader">Incident ID</div>
       <div class="bulkCreateResultsGridHeader">Comments</div>
       <ng-container *ngFor="let result of bulkCreateResults">
 
         <div>{{result.configName}}</div>
+
+        <div>{{result.serverId}}</div>
 
         <div>{{result.success ? 'Success' : 'Failure'}}</div>
 
@@ -318,6 +346,13 @@
       </div>
 
       <div style="margin-top: 1em;">
+        <span class="formLabel">Current Demisto Server: </span>
+            <span class="formLabel" style="text-decoration: underline;">{{currentDemistoApiName ? currentDemistoApiName : 'No server is selected'}}</span>
+            <span *ngIf="currentDemistoApiName" [class.success]="currentServerApiInit" [class.failure]="!currentServerApiInit">&nbsp;&nbsp;(&nbsp;{{currentServerApiInit ? 'Initialised' : 'Not Initialised'}}</span>
+            &nbsp;)
+      </div>
+
+      <div style="margin-top: 1em;">
 
         <span *ngIf="demistoApiConfigsLen === 0; else demistoApiConfigs" style="font-weight: bold;">No Demisto servers are defined</span>
 
@@ -361,20 +396,20 @@
 
 
   <!-- New / Edit Demisto API Server Dialog -->
-  <p-dialog [header]="newDemistoServerDialogMode === 'new' ? 'New Demisto Server' : 'Edit Demisto Server'" [(visible)]="showNewDemistoApiServerDialog" [modal]="true" [style]="{width: '400px'}" styleClass="newDemistoApiServerDialog" (onHide)="onNewEditDemistoApiServerHidden()">
+  <p-dialog [header]="newDemistoServerDialogMode === 'new' ? 'New Demisto Server' : 'Edit Demisto Server'" [(visible)]="showNewDemistoApiServerDialog" [modal]="true" [style]="{width: '500px'}" styleClass="newDemistoApiServerDialog" (onHide)="onNewEditDemistoApiServerHidden()">
 
     <!--<div style="margin-bottom: .5em;" class="formLabel">Configuration Name</div>-->
 
     <div style="margin-top: 1.5em;">
       <span class="ui-float-label">
-        <input pInputText type="url" id="url" required [(ngModel)]="newDemistoServerUrl" name="url" size="50">
+        <input pInputText type="url" id="url" required [(ngModel)]="newDemistoServerUrl" name="url" class="inputDisplay">
         <label for="url">Demisto Base URL</label>
       </span>
     </div>
 
     <div style="margin-top: 1.5em;">
       <span class="ui-float-label">
-        <input pInputText type="password" id="apiKey" required [(ngModel)]="newDemistoServerApiKey" name="apiKey" size="50" autocomplete="off" standalone>
+        <input pInputText type="password" id="apiKey" required [(ngModel)]="newDemistoServerApiKey" name="apiKey" size="50" autocomplete="off" class="inputDisplay" standalone>
         <label for="apiKey">API Key</label>
       </span>
     </div>
@@ -392,7 +427,7 @@
 
       <p-button label="Save" *ngIf="newDemistoServerDialogMode === 'new'" (onClick)="onNewDemistoApiServerSaved()" [disabled]="!newDemistoServerUrl || !newDemistoServerApiKey || newDemistoServerSaveDisabled"></p-button>
 
-      <p-button label="Update" *ngIf="newDemistoServerDialogMode === 'edit'" (onClick)="onDemistoApiServerUpdated()" [disabled]="!newDemistoServerUrl || newDemistoServerSaveDisabled"></p-button>
+      <p-button label="Update" *ngIf="newDemistoServerDialogMode === 'edit'" (onClick)="onDemistoApiServerUpdated(newDemistoServerUrl)" [disabled]="!newDemistoServerUrl || newDemistoServerSaveDisabled"></p-button>
 
       <p-button label="Cancel" (onClick)="onNewDemistoApiServerCanceled()"></p-button>
 
@@ -403,7 +438,7 @@
 
 
   <!-- Confirmation Dialog -->
-  <p-confirmDialog [header]="confirmDialogHeader" icon="pi pi-exclamation-triangle" [style]="{width: '50vw'}"></p-confirmDialog>
+  <p-confirmDialog [header]="confirmDialogHeader" [style]="{width: '50vw'}" [closeOnEscape]="false" [closable]="false"></p-confirmDialog>
 
 </ng-container>
 

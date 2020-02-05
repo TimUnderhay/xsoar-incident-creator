@@ -43,6 +43,6 @@ export interface DemistoIncidentField {
   version: 3;
 }
 
-export interface DemistoIncidentFields {
+export interface DemistoIncidentFieldDefinitions {
   [index: string]: DemistoIncidentField;
 }
