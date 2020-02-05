@@ -5,6 +5,8 @@ This web application will import incidents into Demisto over the Demisto REST AP
 - Selection of which incident fields to import.
 - The ability to edit field values, including JSON.
 - It will also prohibit the import of fields which are not defined in Demisto,
+- Bulk incident creation...
+- To one or more Demisto servers
 
 ![Screenshot of the app](content/importer1.png)
 
@@ -12,6 +14,7 @@ This web application will import incidents into Demisto over the Demisto REST AP
 
 - I'm writing/testing a Demisto playbook and I need to create incidents for testing
 - I'm a Demisto SE or SA and I need to easily create demo incidents without the headache of configuring integrations, 3rd-party products, and ingesting the incidents.  As anyone who has tried sending emails for creating demo incidents well knows, this can consume hours of time in mucking about with email security, spam and malware filters, and other bother.
+- I'm running a Demisto workshop or training exercise and need the ability to push incidents to multiple Demisto servers quickly.
 
 ## Exporting an Incident from Demisto
 
@@ -43,7 +46,7 @@ The client is not distributed in pre-built form, so to run it for the first time
 
 ### Demisto API Key
 
-Before this app can be used, An API key must first be generated within Demisto. using `Settings -> Integrations -> API Keys -> Get Your Key`.  Enter this key and the server infornation into the Demisto Parameters section of the app.
+Before this app can be used, An API key must first be generated within Demisto. using `Settings -> Integrations -> API Keys -> Get Your Key`.  Enter this key and the server infornation into the Demisto Servers section of the app.
 
 ## Running the Node.js server
 
@@ -63,4 +66,4 @@ Run `npm run ng -- build` to build the project in development mode (yes, there i
 
 ## Connecting to the Application
 
-Browse to http://yourserver:4002 in your favourite web browser to launch the application.
+Browse to https://yourserver:4002 in your favourite web browser to launch the application.
