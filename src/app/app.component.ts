@@ -1179,8 +1179,6 @@ export class AppComponent implements OnInit {
       // await this.selectedBulkCreateConfigs.forEach( async (configName) => {
       for (const configName of this.selectedBulkCreateConfigs) {
 
-        console.log('got to 1: configName:', configName);
-
         if (!testResult.success) {
           let error;
           if ('statusCode' in testResult) {
