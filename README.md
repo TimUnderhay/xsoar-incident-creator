@@ -70,7 +70,7 @@ This is also distributed as a Docker image.
 
 ### Create a container
 
-`docker create -p 4002:4002 --name demisto-incident-importer demisto-incident-importer:latest`
+`docker create -p 4002:4002 --name demisto-incident-importer tundisto/demisto-incident-importer:latest`
 
 ### Start the conatiner:
 
@@ -82,7 +82,7 @@ This is also distributed as a Docker image.
 
 ### Run a temporary container:
 
-`docker run -p 4002:4002 -ti --rm demisto-incident-importer:latest`
+`docker run -p 4002:4002 -ti --rm tundisto/demisto-incident-importer:latest`
 
 ## Connecting to the Application
 
