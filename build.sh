@@ -26,7 +26,7 @@ if [ ! $? -eq 0 ]; then
 fi
 
 # build docker image
-echo docker build -t ${IMAGE_NAME}:${VERSION} -t ${IMAGE_NAME}:latest .
+docker build -t ${IMAGE_NAME}:${VERSION} -t ${IMAGE_NAME}:latest .
 if [ ! $? -eq 0 ]; then
   echo "'docker build' failed"
   exit 1
