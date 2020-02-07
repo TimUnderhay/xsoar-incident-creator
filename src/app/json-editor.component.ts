@@ -31,7 +31,7 @@ export class JsonEditorComponent implements OnInit {
 
 
 
-  onValueChanged() {
+  onValueChanged(value) {
     try {
       this.parsedValue = JSON.parse(this.stringValue);
       this.canSubmit = true;

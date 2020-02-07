@@ -20,7 +20,7 @@ const fs = require('fs');
 const configDir = '../etc';
 const defsDir = `./definitions`;
 const incidentsDir = `${configDir}/incidents`;
-const staticDir = '../../dist/demisto-form';
+const staticDir = '../../dist/demisto-importer';
 const foundDist = fs.existsSync(staticDir); // check for presence of pre-built angular client directory
 const apiCfgFile = `${configDir}/api.json`;
 const foundDemistoApiConfig = fs.existsSync(apiCfgFile); // check for presence of API configuration file
@@ -39,13 +39,6 @@ const internalKeyFile = `${sslDir}/internal.key`;
 
 // encryption
 var encryptor;
-function decrypt(str, encoding = 'utf8') {
-  return encryptor.decrypt(str, encoding);
-}
-function encrypt(str, encoding = 'utf8') {
-  return encryptor.encrypt(str, encoding);
-}
-
 
 // UUID
 const uuidv4 = require('uuid/v4');
@@ -89,11 +82,6 @@ function logConnection(req, res, next) {
   next();
 }
 app.use(logConnection);
-
-
-function dos2unix(str) {
-  return str.replace(/\r\n/g, '\n');
-}
 
 
 
@@ -900,6 +888,24 @@ function loadFieldConfigs() {
 
 function getDemistoApiConfig(serverId) {
   return demistoApiConfigs[serverId];
+}
+
+
+
+function dos2unix(str) {
+  return str.replace(/\r\n/g, '\n');
+}
+
+
+
+function decrypt(str, encoding = 'utf8') {
+  return encryptor.decrypt(str, encoding);
+}
+
+
+
+function encrypt(str, encoding = 'utf8') {
+  return encryptor.encrypt(str, encoding);
 }
 
 

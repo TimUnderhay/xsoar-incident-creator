@@ -64,6 +64,26 @@ Run `npm start` to start the Angular client app in development mode, allowing li
 
 Run `npm run ng -- build` to build the project in development mode (yes, there is a space between '--' and 'build').  The build artifacts will be stored in the `dist/` subdirectory. Add the `--prod` flag for a production build.
 
+## Running in Docker
+
+This is also distributed as a Docker image.
+
+### Create a container
+
+`docker create -p 4002:4002 --name demisto-incident-importer demisto-incident-importer:latest`
+
+### Start the conatiner:
+
+`docker start demisto-incident-importer`
+
+### Stop the container:
+
+`docker stop demisto-incident-importer`
+
+### Run a temporary container:
+
+`docker run -p 4002:4002 -ti --rm demisto-incident-importer:latest`
+
 ## Connecting to the Application
 
 Browse to https://yourserver:4002 in your favourite web browser to launch the application.
