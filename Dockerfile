@@ -3,7 +3,7 @@
 # Stop the container: docker stop demisto-incident-importer
 # Run a temporary container: docker run -p 4002:4002 -ti --rm tundisto/demisto-incident-importer:latest
 
-FROM node:latest
+FROM node:lts-alpine
 ENV DESTDIR /opt/demisto/demisto-incident-importer
 WORKDIR $DESTDIR
 ARG IMPORTER_DEBUG
