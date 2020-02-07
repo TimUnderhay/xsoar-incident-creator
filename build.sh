@@ -26,11 +26,17 @@ if [ ! $? -eq 0 ]; then
 fi
 
 # build docker image
-docker build -t ${IMAGE_NAME}:${VERSION} -t ${REGISTRY}/${DOCKER_USER}/${IMAGE_NAME}:${VERSION} -t ${IMAGE_NAME}:latest -t ${REGISTRY}/${DOCKER_USER}/${IMAGE_NAME}:latest  .
+echo docker build -t ${IMAGE_NAME}:${VERSION} -t ${IMAGE_NAME}:latest .
 if [ ! $? -eq 0 ]; then
   echo "'docker build' failed"
   exit 1
 fi
 
-docker push ${REGISTRY}/${DOCKER_USER}/${IMAGE_NAME}:${VERSION}
-docker push ${REGISTRY}/${DOCKER_USER}/${IMAGE_NAME}:latest
+if [ "$branch" == "master "]; then
+  # we only push master builds to docker hub
+  docker tag ${IMAGE_NAME}:${VERSION} ${REGISTRY}/${DOCKER_USER}/${IMAGE_NAME}:${VERSION}
+  docker tag ${IMAGE_NAME}:${VERSION} ${REGISTRY}/${DOCKER_USER}/${IMAGE_NAME}:latest
+
+  docker push ${REGISTRY}/${DOCKER_USER}/${IMAGE_NAME}:${VERSION}
+  docker push ${REGISTRY}/${DOCKER_USER}/${IMAGE_NAME}:latest
+fi
