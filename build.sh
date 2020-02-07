@@ -34,7 +34,7 @@ if [ ! $? -eq 0 ]; then
   exit 1
 fi
 
-if [ "$GIT_BRANCH" == "origin/master" ]; then
+if [[ "$GIT_BRANCH" == "origin/master" || "$DOCKER_HUB_FORCE_PUSH" == "true" ]]; then
   # we only push master builds to docker hub
   docker tag ${IMAGE_NAME}:${VERSION} ${REGISTRY}/${DOCKER_USER}/${IMAGE_NAME}:${VERSION}
   docker tag ${IMAGE_NAME}:${VERSION} ${REGISTRY}/${DOCKER_USER}/${IMAGE_NAME}:latest
