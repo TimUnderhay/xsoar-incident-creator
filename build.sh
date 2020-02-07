@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -x
+set -ex
 
 IMAGE_NAME=demisto-incident-importer
 DOCKER_USER=tundisto
@@ -24,6 +24,8 @@ if [ ! $? -eq 0 ]; then
   echo "'npm run build' failed"
   exit 1
 fi
+
+# test
 
 # build docker image
 echo docker build -t ${IMAGE_NAME}:${VERSION} -t ${IMAGE_NAME}:latest .
