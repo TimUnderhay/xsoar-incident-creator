@@ -222,7 +222,7 @@ export class FetcherService {
 
 
 
-  getPublicKey(): Promise<string> {
+  getPublicKey(): Promise<void> {
     let headers = this.buildHeaders();
     return this.http.get(this.apiPath + '/publicKey', { headers } )
                     .toPromise()

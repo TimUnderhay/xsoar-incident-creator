@@ -167,6 +167,8 @@ app.post(apiPath + '/demistoApi/test/adhoc', async (req, res) => {
     return returnError(`Client did not send trustAny`, res);
   }
 
+  // console.log('body:', req.body);
+
   let apiKey;
   const foundServerId = 'serverId' in req.body;
   if (foundServerId) {
