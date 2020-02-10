@@ -6,33 +6,30 @@
     <div style="margin-top: 1em; margin-right: 1em; float: right;">Logged in as: <span style="font-weight: bold;"> {{loggedInUser.username}}</span></div>
 
     <h1 class="bodyHeader">
-      Demisto Incident Importer
+      Incident Importer
     </h1>
 
 
 
-    <h3 style="margin-top: 0;">This app creates Demisto incidents from exported Demisto incident JSON.  The fields to be imported are selectable.  These can be saved in configurations for easy retrieval.</h3>
+    <div style="margin-top: 0; margin-bottom: 1em;">This app creates Demisto incidents from exported Demisto incident JSON.  The fields to be imported are selectable.  These can be saved in configurations for easy retrieval.</div>
 
-  
+
 
     <!-- Demisto Servers-->
-    <p-card header="Demisto Servers" subheader="Define and select Demisto servers">
+    <p-card header="Demisto Servers">
 
-      <div style="margin-top: 1em; margin-bottom: 1em;">
+      <h3 style="margin-top: .5em; text-decoration: underline; color: white;">{{currentDemistoApiName ? currentDemistoApiName : 'No Demisto servers are defined'}}</h3>
+
+
+      <div style="margin-top: 1em;">
 
         <p-button label="Select" (onClick)="onOpenDemistoServersClicked()" styleClass="alignButton"></p-button>
 
-        <ng-container *ngIf="currentDemistoApiName; else apiServerNotDefined">
-            <span class="formLabel">Current Demisto Server: </span>
-            <span class="formLabel" style="text-decoration: underline;">{{currentDemistoApiName}}</span>
-            &nbsp;&nbsp;(&nbsp;
-            <span [class.success]="currentServerApiInit" [class.failure]="!currentServerApiInit">{{currentServerApiInit ? 'Initialised' : 'Not Initialised'}}</span>
-            &nbsp;)
-        </ng-container>
+        <p-message *ngIf="currentServerApiInit" severity="success" text="API Initialised"></p-message>
+        <p-message *ngIf="!currentServerApiInit" severity="error" text="API Not Initialised"></p-message>
 
-        <ng-template #apiServerNotDefined>
-          <span class="formLabel">No Demisto servers are defined</span>
-        </ng-template>
+
+
       </div>
 
     </p-card>
@@ -63,7 +60,7 @@
           <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="fieldsConfigurationsLen === 0 || demistoApiConfigsLen === 0"></p-button>
 
           <p-button *ngIf="this.bulkCreateResults.length !== 0"  label="Bulk Create Results" (onClick)="showBulkResultsDialog = true"></p-button>
-          
+
         </span>
 
       </div>
@@ -252,23 +249,23 @@
   <!-- Bulk Create Incident Dialog -->
   <p-dialog header="Bulk Incident Creation" [(visible)]="showBulkCreateDialog" [modal]="true" [style]="{width: '75%', maxHeight: '75%'}" styleClass="bulkCreateDialog">
 
-    
+
     <div class="bulkCreateContainer">
 
       <div class="bulkCreateContainerColumn">
-  
+
         <div class="formLabel">Select configurations to push to Demisto</div>
-  
+
         <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedBulkCreateConfigs" [style]="{'width':'100%'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
-  
+
       </div>
-  
+
       <div class="bulkCreateContainerColumn">
-  
+
         <div class="formLabel">Select Demisto servers to push to</div>
 
         <p-listbox [options]="demistoApiConfigsOptions" [(ngModel)]="selectedBulkCreateApiServers" [style]="{'width':'100%'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
-  
+
       </div>
 
     </div>
@@ -350,8 +347,7 @@
       <div style="margin-top: 1em;">
         <span class="formLabel">Current Demisto Server: </span>
             <span class="formLabel" style="text-decoration: underline;">{{currentDemistoApiName ? currentDemistoApiName : 'No server is selected'}}</span>
-            <span *ngIf="currentDemistoApiName" [class.success]="currentServerApiInit" [class.failure]="!currentServerApiInit">&nbsp;&nbsp;(&nbsp;{{currentServerApiInit ? 'Initialised' : 'Not Initialised'}}</span>
-            &nbsp;)
+            <span *ngIf="currentDemistoApiName" [class.success]="currentServerApiInit" [class.failure]="!currentServerApiInit">&nbsp;&nbsp;(&nbsp;{{currentServerApiInit ? 'Initialised' : 'Not Initialised'}}&nbsp;)</span>
       </div>
 
       <div style="margin-top: 1em;">
@@ -425,10 +421,13 @@
 
     <div style="margin-top: .5em; float: right;">
 
+      <!-- Test Button -->
       <p-button label="Test" (onClick)="testDemistoApi(newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny)" [disabled]="newEditTestButtonDisabled"></p-button>
 
+      <!-- Save Button -->
       <p-button label="Save" *ngIf="newDemistoServerDialogMode === 'new'" (onClick)="onNewDemistoApiServerSaved()" [disabled]="!newDemistoServerUrl || !newDemistoServerApiKey || newDemistoServerSaveDisabled"></p-button>
 
+      <!-- Update Button -->
       <p-button label="Update" *ngIf="newDemistoServerDialogMode === 'edit'" (onClick)="onDemistoApiServerUpdated(newDemistoServerUrl)" [disabled]="!newDemistoServerUrl || newDemistoServerSaveDisabled"></p-button>
 
       <p-button label="Cancel" (onClick)="onNewDemistoApiServerCanceled()"></p-button>

@@ -194,15 +194,15 @@ app.post(apiPath + '/demistoApi/test/adhoc', async (req, res) => {
 
     // since this is a test, we don't want to return a 500 if it fails.  Status code should be normal
     if (error && statusCode) {
-      console.error(`Caught error testing Demisto server with code ${statusCode}:`, error);
+      console.info(`Demisto server test failed with code ${statusCode}:`, error);
       res.json({ success: false, statusCode, error });
     }
     else if (error && !statusCode) {
-      console.error(`Caught error testing Demisto server:`, error);
+      console.info(`Demisto server test failed:`, error);
       res.json({ success: false, error });
     }
     else {
-      console.error('Caught unspecified error testing Demisto server');
+      console.info('Demisto server test failed.  Unspecified error');
       res.json({ success: false, error: 'unspecified' });
     }
     return;
@@ -237,15 +237,15 @@ app.get(apiPath + '/demistoApi/test/:serverId', async (req, res) => {
 
       // since this is a test, we don't want to return a 500 if it fails.  Status code should be normal
       if (error && statusCode) {
-        console.error(`Caught error testing Demisto server with code ${statusCode}:`, error);
+        console.info(`Demisto server test failed with code ${statusCode}:`, error);
         res.json({ success: false, statusCode, error });
       }
       else if (error && !statusCode) {
-        console.error(`Caught error testing Demisto server:`, error);
+        console.info(`Demisto server test failed:`, error);
         res.json({ success: false, error });
       }
       else {
-        console.error('Caught unspecified error testing Demisto server');
+        console.info('Demisto server test failed.  Unspecified error');
         res.json({ success: false, error: 'unspecified' });
       }
       return;
@@ -255,7 +255,7 @@ app.get(apiPath + '/demistoApi/test/:serverId', async (req, res) => {
     console.log(`Successfully tested URL '${req.body.url}'`);
   }
   catch(error) {
-    return returnError(`Error testing ${serverId}: ${error}`);
+    return returnError(`Error testing ${serverId}: ${error}`, res);
   }
 });
 
@@ -511,8 +511,11 @@ async function getIncidentFields(demistoUrl) {
     return fields;
   }
   catch (error) {
+    if ('message' in error) {
+      console.error('Caught error fetching Demisto fields configuration:', error.message);
+      return;
+    }
     console.error('Caught error fetching Demisto fields configuration:', error);
-    return;
   }
 }
 
@@ -527,9 +530,7 @@ app.get(apiPath + '/sampleincident', async (req, res) => {
     data = await fs.promises.readFile(filePath, { encoding: 'utf8' });
   }
   catch (error) {
-    console.error(`Error whilst parsing file ${fileName}:`, error);
-    res.status(500).json({error})
-    return;
+    return returnError(`Error whilst parsing file ${fileName}: ${error}`, res);
   }
 
   try {
@@ -539,9 +540,7 @@ app.get(apiPath + '/sampleincident', async (req, res) => {
     return;
   }
   catch (error) {
-    console.log(`Caught error parsing ${filePath}:`, error);
-    res.status(500).json({error})
-    return;
+    return returnError(`Caught error parsing ${filePath}: ${error}`, res);
   }
 
 });
@@ -569,10 +568,7 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
     demistoServerConfig = getDemistoApiConfig(serverId);
   }
   catch {
-    const error = `'serverId' field not present in body`;
-    console.error(error);
-    res.status(500).json({ success: false, statusCode: 500, error });
-    return;
+    return returnError(`'serverId' field not present in body`, res, { success: false, statusCode: 500, error });
   }
 
   // console.debug(body);
@@ -598,16 +594,13 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
   }
   catch (error) {
     if ( error && 'response' in error && error.response && 'statusCode' in error.response && error.statusCode !== null) {
-      console.error(`Caught error opening Demisto incident: code ${error.response.status}: ${error.response.statusMessage}`);
-      res.status(500).json( { success: false, statusCode: error.statusCode, statusMessage: error.response.statusMessage } );
+      return returnError(`Caught error opening Demisto incident: code ${error.response.status}: ${error.response.statusMessage}`, res, { success: false, statusCode: error.statusCode, statusMessage: error.response.statusMessage });
     }
     else if (error && 'message' in error) {
-      console.error('Caught error opening Demisto incident:', error.message);
-      res.status(500).json({ success: false, statusCode: null, error: error.message });
+      return returnError(`Caught error opening Demisto incident: ${error.message}`, res, { success: false, statusCode: null, error: error.message });
     }
     else {
-      console.error('Caught unspecified error opening Demisto incident:', error);
-      res.status(500).json({ success: false, statusCode: 500, error: 'unspecified' });
+      return returnError(`Caught unspecified error opening Demisto incident: ${error}`, res, { success: false, statusCode: 500, error: 'unspecified' });
     }
     return;
   }
@@ -758,10 +751,7 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
     demistoServerConfig = getDemistoApiConfig(serverId);
   }
   catch {
-    const error = `'serverId' field not present in body`;
-    console.error(error);
-    res.status(500).json({ success: false, statusCode: 500, error });
-    return;
+    return returnError(`'serverId' field not present in body`, res, { success: false, statusCode: 500, error });
   }
 
   const body = {
@@ -799,9 +789,12 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
 
 
 
-function returnError(error, res) {
+function returnError(error, res, body = null, statusCode = 500 ) {
   console.error(error);
-  res.status(500).json({success: false, error});
+  if (!body) {
+    body = {success: false, error};
+  }
+  res.status(statusCode).json(body);
 }
 
 
@@ -861,7 +854,7 @@ async function loadDemistoApiConfigs() {
         incident_fields = await getIncidentFields(defaultDemistoApiName);
       }
       else {
-        console.error(`Demisto API initialisation failed with URL ${defaultDemistoApiName} with trustAny = ${demistoApiConfigs[defaultDemistoApiName].trustAny}.  Using default configuration.`);
+        console.error(`Demisto API initialisation failed with URL ${defaultDemistoApiName} with trustAny = ${demistoApiConfigs[defaultDemistoApiName].trustAny}.`);
       }
     }
   }
@@ -1013,7 +1006,7 @@ function genSSLCerts() {
 
 
 function initSSL() {
-  
+
   // SSL Certs
   const privkeyExists = fs.existsSync(privKeyFile);
   const certExists = fs.existsSync(certFile);

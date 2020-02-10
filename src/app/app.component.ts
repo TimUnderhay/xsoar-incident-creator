@@ -1508,8 +1508,8 @@ export class AppComponent implements OnInit {
     // refresh servers
     await this.refreshDemistoApi();
 
-    if (currentDemistoApiServerUpdated) {
-      // Refresh Demisto Incident Fields
+    if (currentDemistoApiServerUpdated && this.currentServerApiInit) {
+      // Refresh Demisto Incident Fields, if current server is initialised
       try {
         await this.getDemistoIncidentFieldDefinitions(this.currentDemistoApiName);
 
