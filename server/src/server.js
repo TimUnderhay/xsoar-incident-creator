@@ -252,7 +252,7 @@ app.get(apiPath + '/demistoApi/test/:serverId', async (req, res) => {
     }
     console.log(`Logged into Demisto as user '${testResult.result.body.username}'`);
     res.json( { success: true, statusCode: 200 } );
-    console.log(`Successfully tested URL '${req.body.url}'`);
+    console.log(`Successfully tested URL '${serverId}'`);
   }
   catch(error) {
     return returnError(`Error testing ${serverId}: ${error}`, res);
@@ -352,6 +352,7 @@ app.post(apiPath + '/demistoApi/update', async (req, res) => {
       apiKey = getDemistoApiConfig(serverId).apiKey;
     }
     else {
+      serverId = config.serverId;
       apiKey = config.apiKey;
     }
 
@@ -362,7 +363,9 @@ app.post(apiPath + '/demistoApi/update', async (req, res) => {
       trustAny: config.trustAny
     };
 
-    delete demistoApiConfigs[serverId];
+    if (serverId !== config.url) {
+      delete demistoApiConfigs[serverId];
+    }
     demistoApiConfigs[config.url] = config;
 
     if (defaultDemistoApiName === serverId) {

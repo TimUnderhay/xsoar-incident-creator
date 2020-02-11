@@ -69,10 +69,10 @@
 
 
 
-    <!-- Loaded Configuration -->
-    <p-card *ngIf="loadedConfigName && loadedConfigId" header="Loaded Configuration">
+    <!-- Loaded Configuration Name -->
+    <p-card *ngIf="loadedConfigName && loadedConfigId" header="Loaded Configuration Name">
       <div style="margin-top: 1em;">
-        <span class="formLabel" style="font-size: 18px;">"{{loadedConfigName}}"</span>
+        <span class="formLabel" style="font-size: 18px;">{{loadedConfigName}}</span>
       </div>
     </p-card>
 
@@ -342,12 +342,14 @@
         <!-- Refresh -->
         <p-button label="Refresh" (onClick)="onRefreshDemistoApiServers()" styleClass="alignButton"></p-button>
 
+        <p-message *ngIf="currentServerApiInit" severity="success" text="API Initialised"></p-message>
+        <p-message *ngIf="!currentServerApiInit" severity="error" text="API Not Initialised"></p-message>
+
       </div>
 
       <div style="margin-top: 1em;">
         <span class="formLabel">Current Demisto Server: </span>
             <span class="formLabel" style="text-decoration: underline;">{{currentDemistoApiName ? currentDemistoApiName : 'No server is selected'}}</span>
-            <span *ngIf="currentDemistoApiName" [class.success]="currentServerApiInit" [class.failure]="!currentServerApiInit">&nbsp;&nbsp;(&nbsp;{{currentServerApiInit ? 'Initialised' : 'Not Initialised'}}&nbsp;)</span>
       </div>
 
       <div style="margin-top: 1em;">
