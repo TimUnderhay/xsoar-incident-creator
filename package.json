@@ -15,7 +15,7 @@
   "private": true,
   "dependencies": {
     "@angular/animations": "~9.0.1",
-    "@angular/cdk": "^8.2.3",
+    "@angular/cdk": "^9.0.0",
     "@angular/common": "~9.0.1",
     "@angular/compiler": "~9.0.1",
     "@angular/core": "~9.0.1",
@@ -31,7 +31,7 @@
     "node-rsa": "^1.0.7",
     "primeicons": "^2.0.0",
     "primeng": "^9.0.0-rc.4",
-    "request": "^2.88.0",
+    "request": "^2.88.2",
     "request-promise-native": "^1.0.7",
     "rxjs": "~6.5.4",
     "selfsigned": "^1.10.7",

@@ -156,7 +156,6 @@ export class FetcherService {
 
   createDemistoIncident( params: any ): Promise<any> {
     let headers = this.buildHeaders(this.currentUser.username);
-    console.log('Current User: ', this.currentUser.username);
     return this.http.post(this.apiPath + '/createDemistoIncident', params, { headers } )
                     .toPromise();
   }
