@@ -134,6 +134,14 @@ export class AppComponent implements OnInit {
     return this.saveAsConfigName in this.fieldsConfigurations;
   }
 
+  // Import from Demisto
+  showLoadFromDemistoDialog = false;
+  demistoIncidentToLoad = '';
+  demistoApiToLoadFrom = '';
+  get importFromDemistoAcceptDisabled(): boolean {
+    return this.demistoApiToLoadFrom === '' || this.demistoIncidentToLoad.match(/^\d+$/) === null;
+  }
+
 
 
   async ngOnInit() {
@@ -1138,7 +1146,6 @@ export class AppComponent implements OnInit {
 
   async onCreateBulkIncidents() {
     console.log('onCreateBulkIncidents()');
-    // await this.onReloadFieldDefinitions();
     this.showBulkCreateDialog = false;
     this.showBulkResultsDialog = true;
     this.changeDetector.detectChanges(); // trigger change detection
@@ -1151,33 +1158,41 @@ export class AppComponent implements OnInit {
     Steps to complete:
 
     1.  Load config
-    !!! 2.  Test server
-    !!! 3.  Load server fields
+    2.  Test server
+    3.  Load server fields
     4.  Check for keys that can't be pushed
     5.  Display them in a column
     6.  Push case with all other fields
     7.  Display results in a column
     */
 
-    // this.selectedBulkCreateApiServers.forEach( async (serverId) => {
-    for (const serverId of this.selectedBulkCreateApiServers) {
+    let createIncidentPromises: Promise<any>[] = [];
+    let testResults = [];
+    let serverFieldDefinitions = {};
 
+    let serverTestPromises: Promise<any>[] = this.selectedBulkCreateApiServers.map( async serverId => {
       console.log(`onCreateBulkIncidents(): Testing Demisto server ${serverId}`);
-      const testResult = await this.fetcherService.testApiServer(serverId);
+      const testResult  = await this.fetcherService.testApiServer(serverId);
 
-      let serverFieldDefinitions;
+      testResults.push({serverId, testResult});
+
       if (testResult.success) {
         console.log(`Fetching field definitions from Demisto server ${serverId}`);
         const demistoIncidentFieldDefinitions: DemistoIncidentField[] = await this.fetcherService.getIncidentFieldDefinitions(serverId);
 
-        serverFieldDefinitions = this.parseDemistoIncidentFieldDefinitions(demistoIncidentFieldDefinitions);
-        console.log('serverFieldDefinitions:', serverFieldDefinitions);
+        serverFieldDefinitions[serverId] = this.parseDemistoIncidentFieldDefinitions(demistoIncidentFieldDefinitions);
       }
+    } );
 
-      console.log('selectedBulkCreateConfigs2:', this.selectedBulkCreateConfigs);
+    await Promise.all(serverTestPromises);
+    console.log('Server tests and field fetching complete');
+    console.log('serverFieldDefinitions:', serverFieldDefinitions);
 
-      // await this.selectedBulkCreateConfigs.forEach( async (configName) => {
-      for (const configName of this.selectedBulkCreateConfigs) {
+    for (const configName of this.selectedBulkCreateConfigs) {
+
+      for (const result of testResults) {
+        const testResult = result.testResult;
+        const serverId = result.serverId;
 
         if (!testResult.success) {
           let error;
@@ -1207,7 +1222,7 @@ export class AppComponent implements OnInit {
             // silently skip non-enabled fields
             return;
           }
-          if (!(fieldName in serverFieldDefinitions)) {
+          if (!(fieldName in serverFieldDefinitions[serverId])) {
             // skip fields which don't exist in Demisto config
             skippedFields.push(fieldName);
             return;
@@ -1224,7 +1239,7 @@ export class AppComponent implements OnInit {
             // silently skip non-enabled fields
             return;
           }
-          if (!(fieldName in serverFieldDefinitions)) {
+          if (!(fieldName in serverFieldDefinitions[serverId])) {
             // skip fields which don't exist in Demisto config
             skippedFields.push(fieldName);
             return;
@@ -1235,19 +1250,23 @@ export class AppComponent implements OnInit {
         console.log('onCreateBulkIncidents(): newIncident:', newIncident);
 
         // now submit the incident
-        let res = await this.fetcherService.createDemistoIncident(newIncident);
-        if (!res.success) {
-          const error = res.statusMessage;
-          this.bulkCreateResults.push({configName, serverId, success: false, error});
-        }
-        else {
-          this.bulkCreateResults.push({configName, serverId, success: true, skippedFields, incidentId: res.id});
-        }
-        this.changeDetector.detectChanges(); // update UI
-
+        createIncidentPromises.push((async () => {
+          let res = await this.fetcherService.createDemistoIncident(newIncident);
+          if (!res.success) {
+            const error = res.statusMessage;
+            this.bulkCreateResults.push({configName, serverId, success: false, error});
+          }
+          else {
+            this.bulkCreateResults.push({configName, serverId, success: true, skippedFields, incidentId: res.id});
+          }
+          this.changeDetector.detectChanges(); // update UI
+        })());
       }
-
     }
+
+
+    await Promise.all(createIncidentPromises);
+    console.log('Incident creation complete');
 
     console.log('onCreateBulkIncidents(): bulkCreateResults:', this.bulkCreateResults);
 
@@ -1540,5 +1559,66 @@ export class AppComponent implements OnInit {
   onNewEditDemistoApiServerHidden() {
     this.showDemistoApiServerOpenDialog = true;
   }
+
+
+
+  onLoadFromDemistoClicked() {
+    this.showLoadFromDemistoDialog = true;
+    if (this.currentDemistoApiName !== '') {
+      this.demistoApiToLoadFrom = this.currentDemistoApiName;
+    }
+    setTimeout( () => {
+      // focus input element
+      // cannot use ViewChild due to way modal is inserted into the DOM
+      document.getElementsByClassName('loadFromDemistoDialog')[0].getElementsByTagName('input')[0].focus();
+    }, 100);
+  }
+
+
+
+  onLoadFromDemistoCanceled() {
+    this.showLoadFromDemistoDialog = false;
+  }
+
+
+
+  async onLoadFromDemistoAccepted() {
+    console.log('onLoadFromDemistoAccepted()');
+    this.showLoadFromDemistoDialog = false;
+
+    try {
+      const res = await this.fetcherService.demistoIncidentImport(this.demistoIncidentToLoad, this.demistoApiToLoadFrom);
+      console.log('onLoadFromDemistoAccepted(): res:', res);
+
+      if (res.success) {
+        this.fileData = res.incident;
+        this.buildIncidentFields(this.fileData);
+        this.messageWithAutoClear( { severity: 'success', summary: 'Success', detail: `Incident ${this.demistoIncidentToLoad} was successfully loaded from ${this.demistoApiToLoadFrom}`} );
+        this.loadedConfigName = undefined;
+        this.loadedConfigId = undefined;
+        this.createInvestigation = true;
+      }
+
+      else if (res.error === `Query returned 0 results`) {
+        this.messagesReplace( [{ severity: 'error', summary: 'Failure', detail: `Incident ${this.demistoIncidentToLoad} was not found on Demisto server ${this.demistoApiToLoadFrom}`}] );
+      }
+
+      else {
+        this.messagesReplace( [{ severity: 'error', summary: 'Error', detail: `Error returned fetching incident ${this.demistoIncidentToLoad}: ${res.error}`}] );
+      }
+      this.demistoApiToLoadFrom = '';
+      this.demistoIncidentToLoad = '';
+    }
+
+    catch (error) {
+      if ('message' in error) {
+        error = error.message;
+      }
+      this.messagesReplace( [{ severity: 'error', summary: 'Error', detail: `Error thrown pulling incident ${this.demistoIncidentToLoad}: ${error}`}] );
+      return;
+    }
+  }
+
+
 
 }

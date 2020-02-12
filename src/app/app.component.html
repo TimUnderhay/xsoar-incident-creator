@@ -49,6 +49,14 @@
 
           <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span>
 
+          <ng-container *ngIf="currentDemistoApiName !== undefined">
+
+            <p-button label="Load from Demisto" (onClick)="onLoadFromDemistoClicked()" [disabled]="currentServerApiInit === false"></p-button>
+
+            <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span>
+
+          </ng-container>
+
           <p-button label="Open" (onClick)="onOpenClicked()" styleClass="alignButton" [disabled]="fieldsConfigurationsLen === 0"></p-button>
 
           <p-button label="Save" (onClick)="onSaveClicked()" [disabled]="!(loadedConfigId && loadedConfigName)"></p-button>
@@ -378,7 +386,7 @@
 
 
 
-    <!-- Delete API Server Dialog -->
+  <!-- Delete API Server Dialog -->
   <p-dialog header="Delete Demisto Server" [(visible)]="showDeleteDemistoApiServerDialog" [modal]="true" [style]="{width: '50%'}" styleClass="deleteConfigDialog" (onHide)="onDeleteDemistoApiServerHidden()">
 
     <div class="formLabel">Please confirm deletion of Demisto server "{{demistoApiServerToDelete}}"</div>
@@ -433,6 +441,41 @@
       <p-button label="Update" *ngIf="newDemistoServerDialogMode === 'edit'" (onClick)="onDemistoApiServerUpdated(newDemistoServerUrl)" [disabled]="!newDemistoServerUrl || newDemistoServerSaveDisabled"></p-button>
 
       <p-button label="Cancel" (onClick)="onNewDemistoApiServerCanceled()"></p-button>
+
+    </div>
+
+  </p-dialog>
+
+
+
+  <!-- Load From Demisto Dialog -->
+  <p-dialog header="Load from Demisto" [(visible)]="showLoadFromDemistoDialog" [modal]="true" [style]="{width: '50%'}" styleClass="loadFromDemistoDialog">
+
+    <div class="bulkCreateContainer">
+
+      <div class="bulkCreateContainerColumn">
+
+        <div class="formLabel" style="margin-bottom: .5em;">Incident number to load</div>
+
+        <input pInputText type="url" id="url" required [(ngModel)]="demistoIncidentToLoad" name="url" class="inputDisplay">
+
+      </div>
+
+      <div class="bulkCreateContainerColumn">
+
+        <div class="formLabel" style="margin-bottom: .5em;">Select a Demisto server</div>
+
+        <p-listbox [options]="demistoApiConfigsOptions" [(ngModel)]="demistoApiToLoadFrom" [style]="{'width':'100%'}" [multiple]="false" [checkbox]="true" [filter]="false"></p-listbox>
+
+      </div>
+
+    </div>
+
+    <div style="margin-top: .5em; float: right;">
+
+      <p-button label="Import" (onClick)="onLoadFromDemistoAccepted()" [disabled]="importFromDemistoAcceptDisabled"></p-button>
+
+      <p-button label="Cancel" (onClick)="onLoadFromDemistoCanceled()"></p-button>
 
     </div>
 

@@ -792,6 +792,71 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
 
 
 
+app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
+  // imports an incident from Demisto
+  try {
+    const incidentId = `${req.body.incidentId}`; // coerce id into a string
+
+    let demistoServerConfig;
+    try {
+      const serverId = req.body.serverId;
+      demistoServerConfig = getDemistoApiConfig(serverId);
+    }
+    catch {
+      return returnError(`'serverId' field not present in body`, res, { success: false, statusCode: 500, error });
+    }
+
+    const body = {
+      "userFilter": false,
+      "filter": {
+        "page": 0,
+        "size": 1,
+        "query": `id:${incidentId}`
+      }
+    };
+
+    let result;
+    let options = {
+      url: demistoServerConfig.url + '/incidents/search',
+      method: 'POST',
+      headers: {
+        Authorization: decrypt(demistoServerConfig.apiKey),
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      rejectUnauthorized: !demistoServerConfig.trustAny,
+      resolveWithFullResponse: true,
+      json: true,
+      body: body
+    };
+
+    // send request to Demisto
+    result = await request( options );
+
+    if ('body' in result && 'total' in result.body && result.body.total === 0) {
+      return res.json({
+        success: false,
+        error: `Query returned 0 results`
+      });
+    }
+    else {
+      return res.json({
+        success: true,
+        incident: result.body.data[0]
+      });
+    }
+    // console.log('result:', result.body);
+  }
+  catch (error) {
+    if ('message' in error) {
+      return res.json({success: false, error: error.message});
+    }
+    return res.json({success: false, error: error});
+  }
+} );
+
+
+
 function returnError(error, res, body = null, statusCode = 500 ) {
   console.error(error);
   if (!body) {

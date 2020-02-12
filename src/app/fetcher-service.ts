@@ -7,6 +7,7 @@ import { DemistoIncidentField } from './types/demisto-incident-field';
 import { FieldConfig, FieldsConfig } from './types/fields-config';
 import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
 import { DefaultApiServer } from './types/default-api-server';
+import { ImportFromDemisto } from './types/import-from-demisto';
 declare var JSEncrypt: any;
 
 @Injectable({providedIn: 'root'})
@@ -218,6 +219,15 @@ export class FetcherService {
     return this.http.post(this.apiPath + '/createInvestigation', {incidentId, serverId}, { headers } )
                     .toPromise()
                     .then( (value: any) => value.success);
+  }
+
+
+
+  demistoIncidentImport(incidentId, serverId): Promise<ImportFromDemisto> {
+    let headers = this.buildHeaders();
+    return this.http.post(this.apiPath + '/demistoIncidentImport', {incidentId, serverId}, { headers } )
+                    .toPromise()
+                    .then( (res: ImportFromDemisto) => res);
   }
 
 
