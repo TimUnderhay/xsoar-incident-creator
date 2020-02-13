@@ -912,7 +912,18 @@ async function loadDemistoApiConfigs() {
       console.log('Testing default Demisto API server API communication');
 
       // test API communication
-      let testResult = await testApi(demistoServerConfig.url, decrypt(demistoServerConfig.apiKey), demistoServerConfig.trustAny);
+      try {
+        let testResult = await testApi(demistoServerConfig.url, decrypt(demistoServerConfig.apiKey), demistoServerConfig.trustAny);
+      }
+      catch (error) {
+        if ('message' in error && error.message.startsWith('Error during decryption')) {
+          console.log(`Decryption failed.  This probably means you installed new certificates.  Please delete ${apiCfgFile} and try again.`)
+        }
+        else {
+          console.log(error.message);
+        }
+        process.exit(1);
+      }
 
       if (testResult.success) {
         console.log(`Logged into Demisto as user '${testResult.result.body.username}'`);
@@ -1012,7 +1023,7 @@ function genInternalCerts() {
   const options = {
     keySize: 2048,
     days: 2653,
-    algorithm: 'sha512',
+    algorithm: 'sha256',
     extensions
   };
   const pems = selfsigned.generate(attrs, options);
@@ -1047,22 +1058,43 @@ function genSSLCerts() {
   const extensions = [
     {
       name: 'basicConstraints',
-      cA: true
+      cA: true,
+      critical: true
     },
     {
       name: 'keyUsage',
+      critical: true,
       keyCertSign: true,
-      digitalSignature: true
+      digitalSignature: true,
+      nonRepudiation: false,
+      keyEncipherment: false,
+      dataEncipherment: false
     },
     {
       name: 'extKeyUsage',
       serverAuth: true
+    },
+    {
+      name: 'subjectAltName',
+      altNames: [
+        {
+          type: 2, // DNS
+          value: os.hostname
+        },
+        {
+          type: 2,
+          value: 'localhost'
+        }
+      ]
+    },
+    {
+      name: 'subjectKeyIdentifier'
     }
   ];
   const options = {
     keySize: 2048,
     days: 825,
-    algorithm: 'sha512',
+    algorithm: 'sha256',
     extensions
   };
   const pems = selfsigned.generate(attrs, options);

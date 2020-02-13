@@ -10,7 +10,8 @@
     "e2e": "ng e2e",
     "server": "cd server/src && node server.js",
     "server-dev": "cd server/src && node server.js --dev",
-    "build-docker-dev": "docker build --no-cache=true -t demisto-incident-importer:dev ."
+    "build-docker-dev": "docker build --no-cache=true -t demisto-incident-importer:dev .",
+    "fixdeps": "cp -r node_modules/ace-builds/src-min/*-json.js src/assets"
   },
   "private": true,
   "dependencies": {
@@ -28,6 +29,7 @@
     "express-http-proxy": "^1.5.1",
     "http-proxy": "^1.17.0",
     "jsencrypt": "^3.0.0-rc.1",
+    "ng2-ace-editor": "^0.3.9",
     "node-rsa": "^1.0.7",
     "primeicons": "^2.0.0",
     "primeng": "^9.0.0-rc.2",

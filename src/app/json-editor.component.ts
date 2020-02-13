@@ -17,6 +17,13 @@ export class JsonEditorComponent implements OnInit {
   canSubmit = true;
   readOnly = false;
 
+  aceEditorOptions = {
+    useSoftTabs: false,
+    tabSize: 4,
+    wrapBehavioursEnabled: true,
+    wrap: true
+  };
+
   ngOnInit() {
     this.originalValue = this.dialogConfig.data.value;
     try {

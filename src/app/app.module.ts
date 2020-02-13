@@ -31,6 +31,9 @@ import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
 
+// Other 3rd-party Modules
+import { AceEditorModule } from 'ng2-ace-editor';
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -60,7 +63,8 @@ import { ConfirmationService } from 'primeng/api';
     TooltipModule,
     DynamicDialogModule,
     DialogModule,
-    ConfirmDialogModule
+    ConfirmDialogModule,
+    AceEditorModule
   ],
   entryComponents: [
     JsonEditorComponent
