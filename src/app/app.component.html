@@ -36,40 +36,36 @@
 
 
     <!-- Upload Incident -->
-    <p-card header="Incident Data" subheader="Either upload an incident JSON file, or perform other file and playback operations.  Create such an incident file through use of the Demisto command '!ExportIncident make_importable=false create_investigation=false'">
+    <p-card header="Incident Data" subheader="Load an incident from Demisto, upload an incident JSON file, or perform other file and bulk create operations.  To create an incident JSON file, use the Demisto command '!ExportIncident make_importable=false create_investigation=false', and download the result.">
 
       <div style="margin-top: 1em;">
+
+        <!-- Load From Demisto -->
+        <p-button label="Load from Demisto" (onClick)="onLoadFromDemistoClicked()" [disabled]="currentServerApiInit === false"></p-button>
+
+        <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span>
+
 
         <!-- File Upload -->
         <span>
           <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Upload JSON" [customUpload]="true" (uploadHandler)="onFileUpload($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true"></p-fileUpload>
         </span>
 
-        <span *ngIf="fieldsConfigurations">
+        <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span>
 
-          <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span>
 
-          <ng-container *ngIf="currentDemistoApiName !== undefined">
+        <p-button label="Open" (onClick)="onOpenClicked()" styleClass="alignButton" [disabled]="fieldsConfigurationsLen === 0"></p-button>
 
-            <p-button label="Load from Demisto" (onClick)="onLoadFromDemistoClicked()" [disabled]="currentServerApiInit === false"></p-button>
+        <p-button label="Save" (onClick)="onSaveClicked()" [disabled]="!(loadedConfigId && loadedConfigName)"></p-button>
 
-            <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span>
+        <p-button label="Save As" (onClick)="onSaveAsClicked()" [disabled]="!fileData"></p-button>
 
-          </ng-container>
+        <p-button label="Delete" (onClick)="onDeleteClicked()" [disabled]="fieldsConfigurationsLen === 0"></p-button>
 
-          <p-button label="Open" (onClick)="onOpenClicked()" styleClass="alignButton" [disabled]="fieldsConfigurationsLen === 0"></p-button>
+        <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="fieldsConfigurationsLen === 0 || demistoApiConfigsLen === 0"></p-button>
 
-          <p-button label="Save" (onClick)="onSaveClicked()" [disabled]="!(loadedConfigId && loadedConfigName)"></p-button>
+        <p-button *ngIf="this.bulkCreateResults.length !== 0"  label="Bulk Create Results" (onClick)="showBulkResultsDialog = true"></p-button>
 
-          <p-button label="Save As" (onClick)="onSaveAsClicked()" [disabled]="!fileData"></p-button>
-
-          <p-button label="Delete" (onClick)="onDeleteClicked()" [disabled]="fieldsConfigurationsLen === 0"></p-button>
-
-          <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="fieldsConfigurationsLen === 0 || demistoApiConfigsLen === 0"></p-button>
-
-          <p-button *ngIf="this.bulkCreateResults.length !== 0"  label="Bulk Create Results" (onClick)="showBulkResultsDialog = true"></p-button>
-
-        </span>
 
       </div>
 
@@ -473,7 +469,7 @@
 
     <div style="margin-top: .5em; float: right;">
 
-      <p-button label="Import" (onClick)="onLoadFromDemistoAccepted()" [disabled]="importFromDemistoAcceptDisabled"></p-button>
+      <p-button label="Load Incident" (onClick)="onLoadFromDemistoAccepted()" [disabled]="importFromDemistoAcceptDisabled"></p-button>
 
       <p-button label="Cancel" (onClick)="onLoadFromDemistoCanceled()"></p-button>
 

@@ -25,7 +25,9 @@
             "aot": true,
             "assets": [
               "src/favicon.ico",
-              "src/assets"
+              "src/assets",
+              "src/mode-json.js",
+              "src/worker-json.js"
             ],
             "styles": [
               "node_modules/primeicons/primeicons.css",
@@ -34,7 +36,8 @@
               "src/styles.scss"
             ],
             "scripts": [
-              "node_modules/jsencrypt/bin/jsencrypt.min.js"
+              "node_modules/jsencrypt/bin/jsencrypt.min.js",
+              "node_modules/ace-builds/src-min/ace.js"
             ]
           },
           "configurations": {

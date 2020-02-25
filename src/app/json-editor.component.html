@@ -4,9 +4,15 @@
     <p-button type="button" label="Reset Values" (onClick)="resetValues()" [disabled]="readOnly"></p-button>
   </div>
 
-  <div style="width: 100%; flex-grow: 1;">
-    <textarea pInputTextarea [(ngModel)]="stringValue" (ngModelChange)="onValueChanged($event)" class="jsonTextAreaDisplay" [class.disabled]="readOnly" [disabled]="readOnly"></textarea>
-  </div>
+  <ace-editor
+    [(text)]="stringValue"
+    mode="json"
+    [options]="aceEditorOptions"
+    [readOnly]="readOnly"
+    [autoUpdateContent]="true"
+    durationBeforeCallback="500"
+    (textChanged)="onValueChanged($event)"
+    style="width: 100%; flex-grow: 1;"></ace-editor>
 
   <div class="editJsonButtonGroup">
     <div class="verticalCenter">
