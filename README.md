@@ -40,7 +40,7 @@ The client is not distributed in pre-built form, so to run it for the first time
 
 1.  Install Node.js.  This is beyond the scope of this Readme.
 2.  Clone this repository by running `git clone https://github.com/tundisto/demisto-incident-importer.git`.
-2.  Install all necessary packages by running `npm install` from the cloned repo's directory.
+2.  Install all necessary packages by running `npm install && cd server && npm install && cd ..` from the cloned repo's directory.
 3.  Start the Node.js server by running `npm run server`.
 4.  In a separate terminal, start the Angular compiler using `npm start`.
 

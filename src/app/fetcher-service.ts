@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Subject, BehaviorSubject, Subscription } from 'rxjs';
-import { HttpHeaders, HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpHeaders, HttpClient } from '@angular/common/http';
 import { User } from './types/user';
 import { ApiStatus } from './types/api-status';
 import { DemistoIncidentField } from './types/demisto-incident-field';
@@ -8,7 +7,7 @@ import { FieldConfig, FieldsConfig } from './types/fields-config';
 import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
 import { DefaultApiServer } from './types/default-api-server';
 import { ImportFromDemisto } from './types/import-from-demisto';
-declare var JSEncrypt: any;
+import * as JSEncrypt from 'jsencrypt';
 
 @Injectable({providedIn: 'root'})
 
@@ -16,13 +15,11 @@ export class FetcherService {
 
   constructor( private http: HttpClient ) {}
 
-
-
   // demistoProperties: DemistoProperties; // gets set during test
   apiPath = '/api';
   currentUser: User;
   private publicKey: string;
-  encryptor: any;
+  encryptor: JSEncrypt.JSEncrypt;
 
 
 
@@ -156,6 +153,7 @@ export class FetcherService {
 
   createDemistoIncident( params: any ): Promise<any> {
     let headers = this.buildHeaders(this.currentUser.username);
+    console.log('Current User: ', this.currentUser.username);
     return this.http.post(this.apiPath + '/createDemistoIncident', params, { headers } )
                     .toPromise();
   }
@@ -242,7 +240,7 @@ export class FetcherService {
 
   async initEncryption(): Promise<any> {
     await this.getPublicKey();
-    this.encryptor = new JSEncrypt();
+    this.encryptor = new JSEncrypt.JSEncrypt();
     this.encryptor.setPublicKey(this.publicKey);
   }
 

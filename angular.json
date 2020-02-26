@@ -36,7 +36,6 @@
               "src/styles.scss"
             ],
             "scripts": [
-              "node_modules/jsencrypt/bin/jsencrypt.min.js",
               "node_modules/ace-builds/src-min/ace.js"
             ]
           },

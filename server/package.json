@@ -2,13 +2,14 @@
   "name": "demisto-incident-importer",
   "version": "0.0.1",
   "scripts": {
-    "start": "cd server/src && node server.js",
-    "start-dev": "cd server/src && node server.js --dev"
+    "start": "cd src && node server.js",
+    "start-dev": "cd src && node server.js --dev"
   },
   "private": true,
   "dependencies": {
     "body-parser": "^1.19.0",
     "express": "^4.17.1",
+    "express-http-proxy": "^1.6.0",
     "node-rsa": "^1.0.7",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7",
