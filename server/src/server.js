@@ -912,8 +912,9 @@ async function loadDemistoApiConfigs() {
       console.log('Testing default Demisto API server API communication');
 
       // test API communication
+      let testResult;
       try {
-        let testResult = await testApi(demistoServerConfig.url, decrypt(demistoServerConfig.apiKey), demistoServerConfig.trustAny);
+        testResult = await testApi(demistoServerConfig.url, decrypt(demistoServerConfig.apiKey), demistoServerConfig.trustAny);
       }
       catch (error) {
         if ('message' in error && error.message.startsWith('Error during decryption')) {

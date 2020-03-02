@@ -54,6 +54,12 @@ export class AppComponent implements OnInit {
 
   fileData: any; // parsed json
 
+  typeOfDataButtonOptions: SelectItem[] = [
+    { value: 'incident', label: 'Incident JSON'},
+    { value: 'freeform', label: 'Freeform JSON'}
+  ];
+  typeofDataSelection = 'incident';
+
   createInvestigation = true; // sets createInvestigation: true in json when submitting an incident
   createInvestigationButtonOptions: SelectItem[] = [
     { value: true, label: 'Enabled' },

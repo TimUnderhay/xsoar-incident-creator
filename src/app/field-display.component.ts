@@ -2,7 +2,7 @@ import { Component, OnInit, OnChanges, OnDestroy, Input, Output, EventEmitter, S
 import { IncidentField } from './types/incident-fields';
 import { SelectItem } from 'primeng/api';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
-import { JsonEditorComponent } from './json-editor.component';
+import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { Subscription } from 'rxjs';
 
 @Component({

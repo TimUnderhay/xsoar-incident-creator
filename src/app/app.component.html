@@ -35,7 +35,18 @@
     </p-card>
 
 
-    <!-- Upload Incident -->
+
+    <!-- Type of Data -->
+    <p-card header="Type of Data" subheader="Choose a scenario.  Incident JSON deals strictly JSON containing only incident fields.  Freeform JSON is for 3rd-party JSON data, which can be mapped to incident fields.">
+
+      <div style="margin-top: 1em;">
+        <p-selectButton name="createInvestigation" [options]="typeOfDataButtonOptions" [(ngModel)]="typeofDataSelection"></p-selectButton>
+      </div>
+
+    </p-card>
+
+
+    <!-- Incident Data -->
     <p-card header="Incident Data" subheader="Load an incident from Demisto, upload an incident JSON file, or perform other file and bulk create operations.  To create an incident JSON file, use the Demisto command '!ExportIncident make_importable=false create_investigation=false', and download the result.">
 
       <div style="margin-top: 1em;">

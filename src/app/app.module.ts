@@ -7,7 +7,9 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 // Components
 import { AppComponent } from './app.component';
 import { FieldDisplayComponent } from './field-display.component';
-import { JsonEditorComponent } from './json-editor.component';
+import { JsonEditorComponent } from './json-editor/json-editor.component';
+import { JsonViewerComponent } from './json-viewer/json-viewer.component';
+import { FreeformJsonComponent } from './freeform-json.component';
 
 // PrimeNG Imports
 import { ListboxModule } from 'primeng/listbox';
@@ -38,7 +40,9 @@ import { AceEditorModule } from 'ng2-ace-editor';
   declarations: [
     AppComponent,
     FieldDisplayComponent,
-    JsonEditorComponent
+    JsonEditorComponent,
+    JsonViewerComponent,
+    FreeformJsonComponent
   ],
   imports: [
     BrowserModule,
