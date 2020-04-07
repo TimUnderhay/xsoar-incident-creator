@@ -428,7 +428,7 @@ export class AppComponent implements OnInit {
 
   async testDemistoApi(url: string, apiKey: string, trustAny: boolean): Promise<boolean> {
     // performs an ad hoc test of a Demisto API endpoint
-    console.log('testAPI()');
+    console.log('testDemistoApi()');
     let testResult: string;
     const useServerId = this.newDemistoServerDialogMode === 'edit' && this.newDemistoServerApiKey === '';
     try {

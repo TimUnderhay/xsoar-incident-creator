@@ -11,7 +11,6 @@ EXPOSE 4002/tcp
 
 COPY dist/ ${DSTDIR}/dist/
 COPY server/ ${DSTDIR}/server/
-COPY package-node.json ${DSTDIR}/package.json
 
 # unset the entrypoint set in the base image
 ENTRYPOINT []
@@ -20,6 +19,8 @@ RUN \
 apk add bash \
 && ln -sf /bin/bash /bin/sh \
 && cd ${DSTDIR} \
+&& mv -f server/package-prod.json . \
+&& rm -f server/package.json \
 && npm install
 
 WORKDIR ${DSTDIR}/server/src

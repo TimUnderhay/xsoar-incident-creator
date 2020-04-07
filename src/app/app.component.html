@@ -11,7 +11,7 @@
 
 
 
-    <div style="margin-top: 0; margin-bottom: 1em;">This app creates Demisto incidents from exported Demisto incident JSON.  The fields to be imported are selectable.  These can be saved in configurations for easy retrieval.</div>
+    <div style="margin-top: 0; margin-bottom: 1em;">This app creates Cortex XSOAR incidents from incident field JSON.  The fields to be imported are selectable and editable.  These can be saved in configurations for easy retrieval.</div>
 
 
 
@@ -51,30 +51,31 @@
 
       <div style="margin-top: 1em;">
 
-        <!-- Load From Demisto -->
-        <p-button label="Load from Demisto" (onClick)="onLoadFromDemistoClicked()" [disabled]="currentServerApiInit === false"></p-button>
+        
+        <!-- <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span> -->
+        
+        <!-- Open -->
+        <p-button label="Open" (onClick)="onOpenClicked()" styleClass="alignButton" [disabled]="fieldsConfigurationsLen === 0" pTooltip="Open a saved incident configuration" showDelay="750"></p-button>
+        
+        <!-- Load From XSOAR -->
+        <p-button label="XSOAR Import" (onClick)="onLoadFromDemistoClicked()" [disabled]="currentServerApiInit === false" pTooltip="Import an incident directly from XSOAR" showDelay="750"></p-button>
+        
+        <!-- Upload JSON -->
+        <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Upload JSON" [customUpload]="true" (uploadHandler)="onFileUpload($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true" pTooltip="Import an incident from a JSON file" showDelay="750"></p-fileUpload>
 
-        <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span>
-
-
-        <!-- File Upload -->
-        <span>
-          <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Upload JSON" [customUpload]="true" (uploadHandler)="onFileUpload($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true"></p-fileUpload>
-        </span>
-
-        <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span>
-
-
-        <p-button label="Open" (onClick)="onOpenClicked()" styleClass="alignButton" [disabled]="fieldsConfigurationsLen === 0"></p-button>
-
+        <!-- Save -->
         <p-button label="Save" (onClick)="onSaveClicked()" [disabled]="!(loadedConfigId && loadedConfigName)"></p-button>
 
+        <!-- Save As -->
         <p-button label="Save As" (onClick)="onSaveAsClicked()" [disabled]="!fileData"></p-button>
 
+        <!-- Delete -->
         <p-button label="Delete" (onClick)="onDeleteClicked()" [disabled]="fieldsConfigurationsLen === 0"></p-button>
 
-        <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="fieldsConfigurationsLen === 0 || demistoApiConfigsLen === 0"></p-button>
+        <!-- Bulk Create -->
+        <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="fieldsConfigurationsLen === 0 || demistoApiConfigsLen === 0" pTooltip="Create incidents of one or more types, and on one or more XSOAR servers" showDelay="750"></p-button>
 
+        <!-- Bulk Create Results -->
         <p-button *ngIf="this.bulkCreateResults.length !== 0"  label="Bulk Create Results" (onClick)="showBulkResultsDialog = true"></p-button>
 
 
