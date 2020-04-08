@@ -15,10 +15,10 @@
 
 
 
-    <!-- Demisto Servers-->
-    <p-card header="Demisto Servers">
+    <!-- XSOAR Servers-->
+    <p-card header="XSOAR Servers">
 
-      <h3 style="margin-top: .5em; text-decoration: underline; color: white;">{{currentDemistoApiName ? currentDemistoApiName : 'No Demisto servers are defined'}}</h3>
+      <h3 style="margin-top: .5em; text-decoration: underline; color: white;">{{currentDemistoApiName ? currentDemistoApiName : 'No XSOAR servers are defined'}}</h3>
 
 
       <div style="margin-top: 1em;">
@@ -47,7 +47,7 @@
 
 
     <!-- Incident Data -->
-    <p-card header="Incident Data" subheader="Load an incident from Demisto, upload an incident JSON file, or perform other file and bulk create operations.  To create an incident JSON file, use the Demisto command '!ExportIncident make_importable=false create_investigation=false', and download the result.">
+    <p-card header="Incident Data" subheader="Load an incident from Demisto, upload an incident JSON file, or perform other file and bulk create operations.  To create an incident JSON file, use the XSOAR command '!ExportIncident make_importable=false create_investigation=false', and download the result.">
 
       <div style="margin-top: 1em;">
 
@@ -60,8 +60,11 @@
         <!-- Load From XSOAR -->
         <p-button label="XSOAR Import" (onClick)="onLoadFromDemistoClicked()" [disabled]="currentServerApiInit === false" pTooltip="Import an incident directly from XSOAR" showDelay="750"></p-button>
         
-        <!-- Upload JSON -->
-        <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Upload JSON" [customUpload]="true" (uploadHandler)="onFileUpload($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true" pTooltip="Import an incident from a JSON file" showDelay="750"></p-fileUpload>
+        <!-- Upload Incident JSON -->
+        <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Incident JSON" [customUpload]="true" (uploadHandler)="onIncidentJsonUploaded($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true" pTooltip="Import an incident from a JSON file" showDelay="750"></p-fileUpload>
+
+        <!-- Upload Freeform JSON -->
+        <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Freeform JSON" [customUpload]="true" (uploadHandler)="onFreeformJsonUploaded($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true" pTooltip="Import a JSON file of any type.  Incident fields must be mapped by the user" showDelay="750"></p-fileUpload>
 
         <!-- Save -->
         <p-button label="Save" (onClick)="onSaveClicked()" [disabled]="!(loadedConfigId && loadedConfigName)"></p-button>
@@ -244,7 +247,7 @@
 
 
   <!-- Open Fields Config Dialog -->
-  <p-dialog header="Open Configuration" [(visible)]="showOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="openDialog">
+  <p-dialog header="Select an Incident Configuration" [(visible)]="showOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="openDialog">
 
     <div class="formLabel">Configuration to open</div>
 
@@ -270,7 +273,7 @@
 
       <div class="bulkCreateContainerColumn">
 
-        <div class="formLabel">Select configurations to push to Demisto</div>
+        <div class="formLabel">Select configurations to push to XSOAR</div>
 
         <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedBulkCreateConfigs" [style]="{'width':'100%'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
 
@@ -278,7 +281,7 @@
 
       <div class="bulkCreateContainerColumn">
 
-        <div class="formLabel">Select Demisto servers to push to</div>
+        <div class="formLabel">Select XSOAR servers to push to</div>
 
         <p-listbox [options]="demistoApiConfigsOptions" [(ngModel)]="selectedBulkCreateApiServers" [style]="{'width':'100%'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
 
@@ -303,7 +306,7 @@
 
     <div class="bulkCreateResults">
       <div class="bulkCreateResultsGridHeader">Config Name</div>
-      <div class="bulkCreateResultsGridHeader">Demisto Server</div>
+      <div class="bulkCreateResultsGridHeader">XSOAR Server</div>
       <div class="bulkCreateResultsGridHeader">Result</div>
       <div class="bulkCreateResultsGridHeader">Incident ID</div>
       <div class="bulkCreateResultsGridHeader">Comments</div>
@@ -335,7 +338,7 @@
 
 
     <!-- Select Demisto API Server Dialog -->
-    <p-dialog header="Demisto API Servers" [(visible)]="showDemistoApiServerOpenDialog" [modal]="true" [style]="{width: '50%'}" styleClass="bulkCreateDialog">
+    <p-dialog header="XSOAR API Servers" [(visible)]="showDemistoApiServerOpenDialog" [modal]="true" [style]="{width: '50%'}" styleClass="bulkCreateDialog">
 
       <!-- header bar -->
       <div>
@@ -364,13 +367,13 @@
       </div>
 
       <div style="margin-top: 1em;">
-        <span class="formLabel">Current Demisto Server: </span>
+        <span class="formLabel">Current XSOAR Server: </span>
             <span class="formLabel" style="text-decoration: underline;">{{currentDemistoApiName ? currentDemistoApiName : 'No server is selected'}}</span>
       </div>
 
       <div style="margin-top: 1em;">
 
-        <span *ngIf="demistoApiConfigsLen === 0; else demistoApiConfigs" style="font-weight: bold;">No Demisto servers are defined</span>
+        <span *ngIf="demistoApiConfigsLen === 0; else demistoApiConfigs" style="font-weight: bold;">No XSOAR servers are defined</span>
 
       </div>
 
@@ -395,9 +398,9 @@
 
 
   <!-- Delete API Server Dialog -->
-  <p-dialog header="Delete Demisto Server" [(visible)]="showDeleteDemistoApiServerDialog" [modal]="true" [style]="{width: '50%'}" styleClass="deleteConfigDialog" (onHide)="onDeleteDemistoApiServerHidden()">
+  <p-dialog header="Delete XSOAR Server" [(visible)]="showDeleteDemistoApiServerDialog" [modal]="true" [style]="{width: '50%'}" styleClass="deleteConfigDialog" (onHide)="onDeleteDemistoApiServerHidden()">
 
-    <div class="formLabel">Please confirm deletion of Demisto server "{{demistoApiServerToDelete}}"</div>
+    <div class="formLabel">Please confirm deletion of XSOAR server "{{demistoApiServerToDelete}}"</div>
 
     <div style="margin-top: .5em; float: right;">
 
@@ -412,14 +415,14 @@
 
 
   <!-- New / Edit Demisto API Server Dialog -->
-  <p-dialog [header]="newDemistoServerDialogMode === 'new' ? 'New Demisto Server' : 'Edit Demisto Server'" [(visible)]="showNewDemistoApiServerDialog" [modal]="true" [style]="{width: '500px'}" styleClass="newDemistoApiServerDialog" (onHide)="onNewEditDemistoApiServerHidden()">
+  <p-dialog [header]="newDemistoServerDialogMode === 'new' ? 'New XSOAR Server' : 'Edit XSOAR Server'" [(visible)]="showNewDemistoApiServerDialog" [modal]="true" [style]="{width: '500px'}" styleClass="newDemistoApiServerDialog" (onHide)="onNewEditDemistoApiServerHidden()">
 
     <!--<div style="margin-bottom: .5em;" class="formLabel">Configuration Name</div>-->
 
     <div style="margin-top: 1.5em;">
       <span class="ui-float-label">
         <input pInputText type="url" id="url" required [(ngModel)]="newDemistoServerUrl" name="url" class="inputDisplay">
-        <label for="url">Demisto Base URL</label>
+        <label for="url">XSOAR Base URL</label>
       </span>
     </div>
 
@@ -456,8 +459,8 @@
 
 
 
-  <!-- Load From Demisto Dialog -->
-  <p-dialog header="Load from Demisto" [(visible)]="showLoadFromDemistoDialog" [modal]="true" [style]="{width: '50%'}" styleClass="loadFromDemistoDialog">
+  <!-- Load From XSOAR Dialog -->
+  <p-dialog header="Load from XSOAR" [(visible)]="showLoadFromDemistoDialog" [modal]="true" [style]="{width: '50%'}" styleClass="loadFromDemistoDialog">
 
     <div class="bulkCreateContainer">
 
@@ -471,7 +474,7 @@
 
       <div class="bulkCreateContainerColumn">
 
-        <div class="formLabel" style="margin-bottom: .5em;">Select a Demisto server</div>
+        <div class="formLabel" style="margin-bottom: .5em;">Select a XSOAR server</div>
 
         <p-listbox [options]="demistoApiConfigsOptions" [(ngModel)]="demistoApiToLoadFrom" [style]="{'width':'100%'}" [multiple]="false" [checkbox]="true" [filter]="false"></p-listbox>
 

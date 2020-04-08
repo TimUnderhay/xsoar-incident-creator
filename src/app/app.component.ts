@@ -572,7 +572,7 @@ export class AppComponent implements OnInit {
 
   buildIncidentFields(incident) { // incident = parsed json
     /*
-    Called from onFileUpload(), getSampleIncident(), onConfigOpened()
+    Called from onIncidentJsonUploaded(), getSampleIncident(), onConfigOpened()
     */
     let incidentFields: IncidentFields = {};
     Object.keys(incident).forEach( shortName => {
@@ -685,7 +685,7 @@ export class AppComponent implements OnInit {
   mergeLoadedFieldConfig(config: FieldConfig) {
     /*
     Called from onConfigOpened(), switchCurrentDemistoApiServer(), onDemistoApiServerUpdated()
-    Does not need to be called from onFileUpload() because uploaded JSON...
+    Does not need to be called from onIncidentJsonUploaded() because uploaded JSON...
     doesn't contain info on which fields to enable
     */
 
@@ -714,15 +714,15 @@ export class AppComponent implements OnInit {
 
 
 
-  onFileUpload(data: { files: File }, uploadRef) {
+  onIncidentJsonUploaded(data: { files: File }, uploadRef) {
     let file = data.files[0];
-    console.log('onFileUpload(): file:', file);
+    console.log('onIncidentJsonUploaded(): file:', file);
 
     try {
       let reader = new FileReader();
       reader.onloadend = (error: any) => {
         this.fileData = JSON.parse(reader.result as string);
-        console.log('onFileUpload(): fileData:', this.fileData);
+        console.log('onIncidentJsonUploaded(): fileData:', this.fileData);
         this.buildIncidentFields(this.fileData);
         this.loadedConfigName = undefined;
         this.loadedConfigId = undefined;
@@ -734,7 +734,33 @@ export class AppComponent implements OnInit {
       reader.readAsText(data.files[0]); // kick off the read operation (calls onloadend())
     }
     catch (error) {
-      console.error('Error parsing uploaded file:', error);
+      console.error('onIncidentJsonUploaded(): Error parsing uploaded file:', error);
+    }
+  }
+
+
+
+  onFreeformJsonUploaded(data: { files: File }, uploadRef) {
+    let file = data.files[0];
+    console.log('onFreeformJsonUploaded(): file:', file);
+
+    try {
+      let reader = new FileReader();
+      reader.onloadend = (error: any) => {
+        this.fileData = JSON.parse(reader.result as string);
+        console.log('onFreeformJsonUploaded(): fileData:', this.fileData);
+        this.buildIncidentFields(this.fileData);
+        this.loadedConfigName = undefined;
+        this.loadedConfigId = undefined;
+        this.createInvestigation = true;
+
+        uploadRef.clear(); // allow future uploads
+      };
+
+      reader.readAsText(data.files[0]); // kick off the read operation (calls onloadend())
+    }
+    catch (error) {
+      console.error('onFreeformJsonUploaded(): Error parsing uploaded file:', error);
     }
   }
 
