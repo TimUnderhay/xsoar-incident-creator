@@ -35,17 +35,6 @@
     </p-card>
 
 
-
-    <!-- Type of Data -->
-    <p-card header="Type of Data" subheader="Choose a scenario.  Incident JSON deals strictly JSON containing only incident fields.  Freeform JSON is for 3rd-party JSON data, which can be mapped to incident fields.">
-
-      <div style="margin-top: 1em;">
-        <p-selectButton name="createInvestigation" [options]="typeOfDataButtonOptions" [(ngModel)]="typeofDataSelection"></p-selectButton>
-      </div>
-
-    </p-card>
-
-
     <!-- Incident Data -->
     <p-card header="Incident Data" subheader="Load an incident from Demisto, upload an incident JSON file, or perform other file and bulk create operations.  To create an incident JSON file, use the XSOAR command '!ExportIncident make_importable=false create_investigation=false', and download the result.">
 
@@ -88,122 +77,19 @@
 
 
 
-    <!-- Loaded Configuration Name -->
-    <p-card *ngIf="loadedConfigName && loadedConfigId" header="Loaded Configuration Name">
-      <div style="margin-top: 1em;">
-        <span class="formLabel" style="font-size: 18px;">{{loadedConfigName}}</span>
-      </div>
-    </p-card>
-
-
-
-    <!-- Create Investigation -->
-    <p-card *ngIf="fileData" header="Create Investigation" subheader="If enabled, this option will cause an investigation to be created along with this incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so.">
-
-      <div style="margin-top: 1em;">
-        <p-selectButton name="createInvestigation" [options]="createInvestigationButtonOptions" [(ngModel)]="createInvestigation"></p-selectButton>
-      </div>
-
-    </p-card>
-
-
-
-
-
-
-    <div *ngIf="fileData" class="fieldsForm">
-
-      <!-- Incident Fields -->
-      <div style="min-width: 0;">
-        <p-card header="Incident Fields" subheader="Select the main incident fields to include in the new incident">
-
-          <!-- Select / Toggle Buttons -->
-          <div>
-            <p-button type="button" label="Select All" (onClick)="onSelectAllFields()" [disabled]="!currentServerApiInit"></p-button>
-
-            <p-button type="button" label="Clear All" (onClick)="onClearAllFields()" [disabled]="!currentServerApiInit"></p-button>
-
-            <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()" [disabled]="!currentServerApiInit"></p-button>
-
-          </div >
-
-          <!-- Incident Fields -->
-          <div class="fieldContainer">
-
-            <div></div>
-
-            <header>Name</header>
-
-            <header>Type</header>
-
-            <header>Value</header>
-
-            <ng-container *ngFor="let field of incidentFields | keyvalue">
-
-              <field-display *ngIf="![undefined, null].includes(field.value.value)" [(field)]="incidentFields[field.key]" [displayShortNames]="displayIncidentFieldShortNames"></field-display>
-
-            </ng-container>
-          </div>
-
-        </p-card>
-      </div>
-
-      <!-- Custom Fields -->
-      <div style="min-width: 0;">
-        <p-card header="Custom Fields" subheader="Select the custom fields to include in the new incident">
-
-          <!-- Select / Toggle Buttons -->
-          <div>
-            <p-button type="button" label="Select All" (onClick)="onSelectAllCustomFields()" [disabled]="!currentServerApiInit"></p-button>
-
-            <p-button type="button" label="Clear All" (onClick)="onClearAllCustomFields()" [disabled]="!currentServerApiInit"></p-button>
-
-            <p-button type="button" label="Reset Values" (onClick)="onResetAllCustomFieldValues()" [disabled]="!currentServerApiInit"></p-button>
-
-            <p-toggleButton [onLabel]="shortNamesLabel" [offLabel]="longNamesLabel" [(ngModel)]="displayCustomFieldShortNames" name="shortCustomNames" [disabled]="!currentServerApiInit"></p-toggleButton>
-
-            <p-button type="button" label="Reload Definitions" name="createIncident" (onClick)="onReloadFieldDefinitions()" [disabled]="!currentServerApiInit"></p-button>
-
-          </div >
-
-          <!-- Custom Fields -->
-          <div class="fieldContainer">
-
-            <div></div>
-
-            <header>Name</header>
-
-            <header>Type</header>
-
-            <header>Value</header>
-
-            <ng-container *ngFor="let field of customFields | keyvalue">
-
-              <field-display *ngIf="![undefined, null].includes(field.value.value)" [(field)]="customFields[field.key]" [displayShortNames]="displayCustomFieldShortNames"></field-display>
-
-            </ng-container>
-          </div>
-
-        </p-card>
-      </div>
-
-      <!-- Submit Button -->
-      <div style="margin-top: 1em;">
-        &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onCreateIncident()" [disabled]="!fileData || countEnabledFields() === 0"></button>
-      </div>
-
-    </div>
-
+    <!-- Incident Fields UI -->
+    <incident-fields-ui *ngIf="fileData" [fileData]="fileData" [loadedConfigName]="loadedConfigName" [currentDemistoApiName]="currentDemistoApiName" [(incidentFields)]="incidentFields" [(customFields)]="customFields" [demistoIncidentFieldDefinitions]="demistoIncidentFieldDefinitions" [(createInvestigation)]="createInvestigation" [(messages)]="messages" [currentServerApiInit]="currentServerApiInit"></incident-fields-ui>
+    
     <div>&nbsp;</div>
 
   </div>
 
-  <div class="messagesContainer">
-    <p-messages [(value)]="messages"></p-messages>
-  </div>
 
 
 
+  
+  <!--------------MODAL DIALOGS SECTION-------------->
+  
   <!-- Fields Config Save As Dialog -->
   <p-dialog header="Save Configuration As" [(visible)]="showSaveAsDialog" [modal]="true" [style]="{width: '300px'}" styleClass="saveAsDialog">
 
@@ -495,7 +381,15 @@
   <!-- Confirmation Dialog -->
   <p-confirmDialog [header]="confirmDialogHeader" [style]="{width: '50vw'}" [closeOnEscape]="false" [closable]="false"></p-confirmDialog>
 
+  <!-- Container for UI Messages -->
+  <div class="messagesContainer">
+    <p-messages [(value)]="messages"></p-messages>
+  </div>
+
 </ng-container>
+
+
+
 
 <ng-container *ngIf="!loggedInUser">
   <div>

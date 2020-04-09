@@ -1,0 +1,111 @@
+    <!-- Loaded Configuration Name Container -->
+    <p-card *ngIf="loadedConfigName" header="Loaded Configuration Name">
+      <div style="margin-top: 1em;">
+        <span class="formLabel" style="font-size: 18px;">{{loadedConfigName}}</span>
+      </div>
+    </p-card>
+
+
+
+    <!-- Create Investigation Container -->
+    <p-card *ngIf="fileData" header="Create Investigation" subheader="If enabled, this option will cause an investigation to be created along with this incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so.">
+
+      <div style="margin-top: 1em;">
+        <p-selectButton name="createInvestigation" [options]="createInvestigationButtonOptions" [ngModel]="createInvestigation" (ngModelChange)="createInvestigationChange.emit($event)"></p-selectButton>
+      </div>
+
+    </p-card>
+
+
+
+    <div class="fieldsForm">
+
+
+
+      <!-- Incident Fields Container -->
+      <div style="min-width: 0;">
+        <p-card header="Incident Fields" subheader="Select the main incident fields to include in the new incident">
+
+          <!-- Select / Toggle Buttons -->
+          <div>
+            <p-button type="button" label="Select All" (onClick)="onSelectAllFields()" [disabled]="!currentServerApiInit"></p-button>
+
+            <p-button type="button" label="Clear All" (onClick)="onClearAllFields()" [disabled]="!currentServerApiInit"></p-button>
+
+            <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()" [disabled]="!currentServerApiInit"></p-button>
+
+          </div >
+
+          <!-- Incident Fields -->
+          <div class="fieldContainer">
+
+            <div></div>
+
+            <header>Name</header>
+
+            <header>Type</header>
+
+            <header>Value</header>
+
+            <ng-container *ngFor="let field of _incidentFields | keyvalue">
+
+              <!--<field-display *ngIf="![undefined, null].includes(field.value.value)" [(field)]="incidentFields[field.key]" [displayShortNames]="displayIncidentFieldShortNames"></field-display>-->
+              <field-display *ngIf="![undefined, null].includes(field.value.value)" [field]="_incidentFields[field.key]" (fieldChange)="onIncidentFieldChanged(field.key, $event)" [displayShortNames]="displayIncidentFieldShortNames"></field-display>
+
+            </ng-container>
+          </div>
+
+        </p-card>
+      </div>
+
+
+
+      <!-- Custom Fields Container -->
+      <div style="min-width: 0;">
+        <p-card header="Custom Fields" subheader="Select the custom fields to include in the new incident">
+
+          <!-- Select / Toggle Buttons -->
+          <div>
+            <p-button type="button" label="Select All" (onClick)="onSelectAllCustomFields()" [disabled]="!currentServerApiInit"></p-button>
+
+            <p-button type="button" label="Clear All" (onClick)="onClearAllCustomFields()" [disabled]="!currentServerApiInit"></p-button>
+
+            <p-button type="button" label="Reset Values" (onClick)="onResetAllCustomFieldValues()" [disabled]="!currentServerApiInit"></p-button>
+
+            <p-toggleButton [onLabel]="shortNamesLabel" [offLabel]="longNamesLabel" [(ngModel)]="displayCustomFieldShortNames" name="shortCustomNames" [disabled]="!currentServerApiInit"></p-toggleButton>
+
+            <p-button type="button" label="Reload Definitions" name="createIncident" (onClick)="onReloadFieldDefinitions()" [disabled]="!currentServerApiInit"></p-button>
+
+          </div >
+
+          <!-- Custom Fields -->
+          <div class="fieldContainer">
+
+            <div></div>
+
+            <header>Name</header>
+
+            <header>Type</header>
+
+            <header>Value</header>
+
+            <ng-container *ngFor="let field of _customFields | keyvalue">
+
+              <field-display *ngIf="![undefined, null].includes(field.value.value)" [field]="_customFields[field.key]" (fieldChange)="onCustomFieldChanged(field.key, $event)" [displayShortNames]="displayCustomFieldShortNames"></field-display>
+
+            </ng-container>
+          </div>
+
+        </p-card>
+      </div>
+
+
+
+      <!-- Submit Button -->
+      <div style="margin-top: 1em;">
+        &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onCreateIncident()" [disabled]="!fileData || countEnabledFields() === 0"></button>
+      </div>
+
+
+
+    </div>

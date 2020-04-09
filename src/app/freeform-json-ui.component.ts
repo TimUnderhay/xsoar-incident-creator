@@ -6,10 +6,10 @@ import { ConfirmationService } from 'primeng/api';
 @Component({
     // tslint:disable-next-line: component-selector
     selector: 'freeform-json',
-    templateUrl: './freeform-json.component.html'
+    templateUrl: './freeform-json-ui.component.html'
   })
 
-export class FreeformJsonComponent implements OnInit {
+export class FreeformJsonUIComponent implements OnInit {
 
     constructor(
         private fetcherService: FetcherService, // import our URL fetcher

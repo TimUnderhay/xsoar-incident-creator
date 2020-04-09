@@ -9,7 +9,8 @@ import { AppComponent } from './app.component';
 import { FieldDisplayComponent } from './field-display.component';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { JsonViewerComponent } from './json-viewer/json-viewer.component';
-import { FreeformJsonComponent } from './freeform-json.component';
+import { IncidentFieldsUIComponent } from './incident-fields-ui.component';
+import { FreeformJsonUIComponent } from './freeform-json-ui.component';
 
 // PrimeNG Imports
 import { ListboxModule } from 'primeng/listbox';
@@ -42,7 +43,8 @@ import { AceEditorModule } from 'ng2-ace-editor';
     FieldDisplayComponent,
     JsonEditorComponent,
     JsonViewerComponent,
-    FreeformJsonComponent
+    IncidentFieldsUIComponent,
+    FreeformJsonUIComponent
   ],
   imports: [
     BrowserModule,
