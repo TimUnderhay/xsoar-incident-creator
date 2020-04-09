@@ -5,7 +5,7 @@ import { ConfirmationService } from 'primeng/api';
 import { SelectItem } from 'primeng/api';
 import { FieldDisplayComponent } from './field-display.component';
 import { IncidentField, IncidentFields } from './types/incident-fields';
-import { DemistoIncidentField, DemistoIncidentFieldDefinitions } from './types/demisto-incident-field';
+import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
 import { AppComponent } from './app.component';
 import { PMessageOption } from './types/message-options';
 
@@ -26,11 +26,11 @@ export class IncidentFieldsUIComponent implements OnInit {
 
   @ViewChildren(FieldDisplayComponent) fieldDisplayComponents: FieldDisplayComponent[];
 
-  @Input() fileData: any; // parsed json
+  @Input() parsedIncidentJson: any; // parsed json
   @Input() loadedConfigName: string; // must clear when loaded from json or when current config is deleted
   @Input() currentDemistoApiName: string;
   @Input() currentServerApiInit: boolean;
-  @Input() demistoIncidentFieldDefinitions: DemistoIncidentFieldDefinitions; // the fields taken from Demisto
+  @Input() fetchedIncidentFieldDefinitions: FetchedIncidentFieldDefinitions; // the fields taken from Demisto
 
   @Input() incidentFields: IncidentFields;
   @Output() incidentFieldsChange: EventEmitter<IncidentFields> = new EventEmitter();
@@ -125,7 +125,7 @@ export class IncidentFieldsUIComponent implements OnInit {
     */
     console.log('onReloadFieldDefinitions()');
     try {
-      let success = await this.parentComponent.getDemistoIncidentFieldDefinitions(serverId);
+      let success = await this.parentComponent.fetchIncidentFieldDefinitions(serverId);
       if (!success) {
         console.log('onReloadFieldDefinitions(): incident fields fetch was unsuccessful.  Aborting.');
         return;
@@ -137,12 +137,12 @@ export class IncidentFieldsUIComponent implements OnInit {
       Object.values(this.customFields).forEach(field => {
         // re-evaluate fields based on new defs
 
-        const fieldFound = field.shortName in this.demistoIncidentFieldDefinitions;
+        const fieldFound = field.shortName in this.fetchedIncidentFieldDefinitions;
         let fieldTypesMatch;
         let fieldLongNamesMatch;
         if (fieldFound) {
-          fieldTypesMatch = field.fieldType === this.demistoIncidentFieldDefinitions[field.shortName].type;
-          fieldLongNamesMatch = field.longName === this.demistoIncidentFieldDefinitions[field.shortName].name;
+          fieldTypesMatch = field.fieldType === this.fetchedIncidentFieldDefinitions[field.shortName].type;
+          fieldLongNamesMatch = field.longName === this.fetchedIncidentFieldDefinitions[field.shortName].name;
         }
 
         if (!fieldFound) {
@@ -159,8 +159,8 @@ export class IncidentFieldsUIComponent implements OnInit {
           // look for fields that have changed in the feed definition
           console.log(`Field ${field.shortName} has changed in the Demisto field definitions`);
           console.log(`fieldTypesMatch: ${fieldTypesMatch}, fieldLongNamesMatch: ${fieldLongNamesMatch}`);
-          field.fieldType = this.demistoIncidentFieldDefinitions[field.shortName].type;
-          field.longName = this.demistoIncidentFieldDefinitions[field.shortName].name;
+          field.fieldType = this.fetchedIncidentFieldDefinitions[field.shortName].type;
+          field.longName = this.fetchedIncidentFieldDefinitions[field.shortName].name;
           field.locked = false;
           delete field.lockedReason;
           // field.enabled = false;
@@ -174,8 +174,8 @@ export class IncidentFieldsUIComponent implements OnInit {
           if ('lockedReason' in field) {
             delete field.lockedReason;
           }
-          field.fieldType = this.demistoIncidentFieldDefinitions[field.shortName].type;
-          field.longName = this.demistoIncidentFieldDefinitions[field.shortName].name;
+          field.fieldType = this.fetchedIncidentFieldDefinitions[field.shortName].type;
+          field.longName = this.fetchedIncidentFieldDefinitions[field.shortName].name;
         }
 
         if (fieldFound && field.fieldType === 'attachments') {

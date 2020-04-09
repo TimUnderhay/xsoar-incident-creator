@@ -1,5 +1,5 @@
 // For fields pulled from Demisto
-export interface DemistoIncidentField {
+export interface FetchedIncidentField {
   associatedToAll: boolean;
   associatedTypes: string[];
   breachScript: string;
@@ -43,6 +43,6 @@ export interface DemistoIncidentField {
   version: 3;
 }
 
-export interface DemistoIncidentFieldDefinitions {
-  [index: string]: DemistoIncidentField;
+export interface FetchedIncidentFieldDefinitions {
+  [index: string]: FetchedIncidentField;
 }

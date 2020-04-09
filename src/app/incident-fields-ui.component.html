@@ -8,7 +8,7 @@
 
 
     <!-- Create Investigation Container -->
-    <p-card *ngIf="fileData" header="Create Investigation" subheader="If enabled, this option will cause an investigation to be created along with this incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so.">
+    <p-card *ngIf="parsedIncidentJson" header="Create Investigation" subheader="If enabled, this option will cause an investigation to be created along with this incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so.">
 
       <div style="margin-top: 1em;">
         <p-selectButton name="createInvestigation" [options]="createInvestigationButtonOptions" [ngModel]="createInvestigation" (ngModelChange)="createInvestigationChange.emit($event)"></p-selectButton>
@@ -103,7 +103,7 @@
 
       <!-- Submit Button -->
       <div style="margin-top: 1em;">
-        &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onCreateIncident()" [disabled]="!fileData || countEnabledFields() === 0"></button>
+        &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onCreateIncident()" [disabled]="!parsedIncidentJson || countEnabledFields() === 0"></button>
       </div>
 
 

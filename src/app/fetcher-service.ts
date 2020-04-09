@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpHeaders, HttpClient } from '@angular/common/http';
 import { User } from './types/user';
 import { ApiStatus } from './types/api-status';
-import { DemistoIncidentField } from './types/demisto-incident-field';
+import { FetchedIncidentField } from './types/fetched-incident-field';
 import { FieldConfig, FieldsConfig } from './types/fields-config';
 import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
 import { DefaultApiServer } from './types/default-api-server';
@@ -160,7 +160,7 @@ export class FetcherService {
 
 
 
-  getIncidentFieldDefinitions(serverId): Promise<DemistoIncidentField[]> {
+  getIncidentFieldDefinitions(serverId): Promise<FetchedIncidentField[]> {
     serverId = encodeURIComponent(serverId);
     let headers = this.buildHeaders();
     return this.http.get(`${this.apiPath}/incidentfields/${serverId}`, { headers } )
