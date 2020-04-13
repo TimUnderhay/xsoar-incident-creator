@@ -31,7 +31,7 @@ export class AppComponent implements OnInit {
 
 
 
-  private investigationFields = ['id', 'account', 'created', 'modified', 'ShardID', 'account', 'activated', 'autime', 'canvases', 'closeNotes', 'closeReason', 'closed', 'closingUserId', 'created', 'droppedCount', 'dueDate', 'hasRole', 'id', 'investigationId', 'isPlayground', 'lastOpen', 'linkedCount', 'linkedIncidents', 'modified', 'notifyTime', 'openDuration', 'parent', 'playbookId', 'previousRoles', 'rawCategory', 'rawCloseReason', 'rawJSON', 'rawName', 'rawPhase', 'rawType', 'reason', 'runStatus', 'sla', 'sortValues', 'sourceBrand', 'sourceInstance', 'status', 'version' ]; // it may become necessary to permit some of these fields in the future
+  private investigationFields = ['id', 'account', 'created', 'modified', 'ShardID', 'account', 'activated', 'autime', 'canvases', 'closeNotes', 'closeReason', 'closed', 'closingUserId', 'created', 'droppedCount', 'dueDate', 'hasRole', 'id', 'investigationId', 'isPlayground', 'lastOpen', 'linkedCount', 'linkedIncidents', 'modified', 'notifyTime', 'openDuration', 'parent', 'playbookId', 'previousRoles', 'rawCategory', 'rawCloseReason', 'rawJSON', 'rawName', 'rawPhase', 'rawType', 'reason', 'runStatus', 'sla', 'sortValues', 'sourceBrand', 'sourceInstance', 'status', 'version', 'lastJobRunTime', 'feedBased', 'changeStatus', 'insights', 'dbotCreatedBy' ]; // it may become necessary to permit some of these fields in the future
   loggedInUser: User;
 
   // API Properties
@@ -43,9 +43,9 @@ export class AppComponent implements OnInit {
 
   // Incident Properties
   parsedIncidentJson: any; // parsed incident json.
-  fetchedIncidentFieldDefinitions: FetchedIncidentFieldDefinitions; // the field definitions loaded from Demisto
   incidentFields: IncidentFields; // the fields of our imported or loaded JSON
   customFields: IncidentFields; // the custom fields of our imported or loaded json
+  fetchedIncidentFieldDefinitions: FetchedIncidentFieldDefinitions; // the field definitions loaded from Demisto
   createInvestigation = true;
 
   // For PrimeNG
@@ -502,7 +502,7 @@ export class AppComponent implements OnInit {
       tmpCustomFields[shortName] = tmpField;
     });
     this.customFields = tmpCustomFields;
-    console.log('customFields:', this.customFields);
+    console.log('buildCustomFields(): customFields:', this.customFields);
   }
 
 
@@ -511,13 +511,15 @@ export class AppComponent implements OnInit {
     /*
     Called from onIncidentJsonUploaded(), getSampleIncident(), onConfigOpened()
     */
+    console.log('buildIncidentFields(): incidentJson:', incidentJson);
     let incidentFields: IncidentFields = {};
+    let skippedInvestigationFields = [];
     Object.keys(incidentJson).forEach( shortName => {
       // console.log('shortName:', shortName);
       let value = incidentJson[shortName];
 
       if (this.investigationFields.includes(shortName)) {
-        console.log(`Skipping field '${shortName}' as it is an investigation field`);
+        skippedInvestigationFields.push(shortName);
         return;
       }
 
@@ -527,7 +529,7 @@ export class AppComponent implements OnInit {
       }
 
       if (this.fetchedIncidentFieldDefinitions && !(shortName in this.fetchedIncidentFieldDefinitions)) {
-        console.error('Field not found:', shortName);
+        console.error(`Incident field not found: ${shortName}.  It's probably an investigation field and this can safely be ignored.`);
         return;
       }
 
@@ -558,6 +560,7 @@ export class AppComponent implements OnInit {
 
     });
     this.incidentFields = incidentFields;
+    console.log(`Skipped investigation fields:`, skippedInvestigationFields);
     console.log('buildIncidentFields(): incidentFields:', this.incidentFields);
   }
 
@@ -1409,6 +1412,7 @@ export class AppComponent implements OnInit {
   async onLoadFromDemistoAccepted() {
     console.log('onLoadFromDemistoAccepted()');
     this.showLoadFromDemistoDialog = false;
+    this.destroyIncidentFieldsComponent();
 
     try {
       const res = await this.fetcherService.demistoIncidentImport(this.demistoIncidentToLoad, this.demistoApiToLoadFrom);

@@ -1,4 +1,4 @@
-export interface BulkCreateResult {
+export interface BulkCreateResult extends Object {
   configName: string;
   skippedFields?: string[];
   success: boolean;

@@ -74,7 +74,7 @@
 
             <p-toggleButton [onLabel]="shortNamesLabel" [offLabel]="longNamesLabel" [(ngModel)]="displayCustomFieldShortNames" name="shortCustomNames" [disabled]="!currentServerApiInit"></p-toggleButton>
 
-            <p-button type="button" label="Reload Definitions" name="createIncident" (onClick)="onReloadFieldDefinitions()" [disabled]="!currentServerApiInit"></p-button>
+            <p-button type="button" label="Reload Definitions" name="createIncident" (onClick)="onReloadFieldDefinitions()" [disabled]="!currentServerApiInit" pTooltip="Reload the field definitions from XSOAR"></p-button>
 
           </div >
 

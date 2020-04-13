@@ -76,9 +76,19 @@
     </p-card>
 
 
-
     <!-- Incident Fields UI -->
-    <incident-fields-ui *ngIf="parsedIncidentJson" [parsedIncidentJson]="parsedIncidentJson" [loadedConfigName]="loadedConfigName" [currentDemistoApiName]="currentDemistoApiName" [(incidentFields)]="incidentFields" [(customFields)]="customFields" [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions" [(createInvestigation)]="createInvestigation" [(messages)]="messages" [currentServerApiInit]="currentServerApiInit"></incident-fields-ui>
+    <incident-fields-ui
+      *ngIf="incidentFields && customFields && parsedIncidentJson && fetchedIncidentFieldDefinitions"
+        [parsedIncidentJson]="parsedIncidentJson"
+        [loadedConfigName]="loadedConfigName"
+        [currentDemistoApiName]="currentDemistoApiName"
+        [currentServerApiInit]="currentServerApiInit"
+        [(incidentFields)]="incidentFields"
+        [(customFields)]="customFields"
+        [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
+        [(createInvestigation)]="createInvestigation"
+        [(messages)]="messages">
+    </incident-fields-ui>
     
     <div>&nbsp;</div>
 

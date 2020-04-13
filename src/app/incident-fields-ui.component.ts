@@ -70,9 +70,9 @@ export class IncidentFieldsUIComponent implements OnInit {
 
 
   onSelectAllFields() {
-    Object.keys(this.incidentFields).forEach( shortName => {
-      if (!this.incidentFields[shortName].locked) {
-        this.incidentFields[shortName].enabled = true;
+    Object.keys(this._incidentFields).forEach( shortName => {
+      if (!this._incidentFields[shortName].locked) {
+        this._incidentFields[shortName].enabled = true;
       }
     });
   }
@@ -80,8 +80,8 @@ export class IncidentFieldsUIComponent implements OnInit {
 
 
   onClearAllFields() {
-    Object.keys(this.incidentFields).forEach( shortName => {
-      this.incidentFields[shortName].enabled = false;
+    Object.keys(this._incidentFields).forEach( shortName => {
+      this._incidentFields[shortName].enabled = false;
     });
   }
 
@@ -94,9 +94,9 @@ export class IncidentFieldsUIComponent implements OnInit {
 
 
   onSelectAllCustomFields() {
-    Object.keys(this.customFields).forEach( shortName => {
-      if (!this.customFields[shortName].locked) {
-        this.customFields[shortName].enabled = true;
+    Object.keys(this._customFields).forEach( shortName => {
+      if (!this._customFields[shortName].locked) {
+        this._customFields[shortName].enabled = true;
       }
     });
   }
@@ -104,8 +104,8 @@ export class IncidentFieldsUIComponent implements OnInit {
 
 
   onClearAllCustomFields() {
-    Object.keys(this.customFields).forEach( shortName => {
-      this.customFields[shortName].enabled = false;
+    Object.keys(this._customFields).forEach( shortName => {
+      this._customFields[shortName].enabled = false;
     });
   }
 
@@ -131,10 +131,10 @@ export class IncidentFieldsUIComponent implements OnInit {
         return;
       }
 
-      if (!this.customFields) {
+      if (!this._customFields) {
         return;
       }
-      Object.values(this.customFields).forEach(field => {
+      Object.values(this._customFields).forEach(field => {
         // re-evaluate fields based on new defs
 
         const fieldFound = field.shortName in this.fetchedIncidentFieldDefinitions;
@@ -196,8 +196,8 @@ export class IncidentFieldsUIComponent implements OnInit {
 
 
   async onCreateIncident() {
-    // console.log('onCreateIncident(): incidentFields:', this.incidentFields);
-    // console.log('onCreateIncident(): customFields:', this.customFields);
+    // console.log('onCreateIncident(): incidentFields:', this._incidentFields);
+    // console.log('onCreateIncident(): customFields:', this._customFields);
 
     let incident: any = {
       serverId: this.currentDemistoApiName
@@ -205,14 +205,14 @@ export class IncidentFieldsUIComponent implements OnInit {
     if (this.createInvestigation) {
       incident['createInvestigation'] = true;
     }
-    Object.values(this.incidentFields).forEach( (field: IncidentField) => {
+    Object.values(this._incidentFields).forEach( (field: IncidentField) => {
       if (field.enabled) {
         incident[field.shortName] = field.value;
       }
     });
     // console.log('incident:', incident);
     let customFields = {};
-    Object.values(this.customFields).forEach( (field: IncidentField) => {
+    Object.values(this._customFields).forEach( (field: IncidentField) => {
       if (field.enabled) {
         customFields[field.shortName] = field.value;
       }
@@ -236,16 +236,16 @@ export class IncidentFieldsUIComponent implements OnInit {
   }
 
   countEnabledFields(): number {
-    if (!this.incidentFields) {
+    if (!this._incidentFields) {
       return;
     }
     let enabledFields = 0;
-    Object.values(this.incidentFields).forEach( field => {
+    Object.values(this._incidentFields).forEach( field => {
       if (field.enabled) {
         enabledFields += 1;
       }
     } );
-    Object.values(this.customFields).forEach( field => {
+    Object.values(this._customFields).forEach( field => {
       if (field.enabled) {
         enabledFields += 1;
       }
