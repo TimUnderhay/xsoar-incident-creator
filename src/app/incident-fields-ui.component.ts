@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChildren, ChangeDetectorRef, Input, Inject, forwardRef, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnChanges, ViewChildren, ChangeDetectorRef, Input, Inject, forwardRef, Output, EventEmitter, SimpleChanges } from '@angular/core';
 import { FetcherService } from './fetcher-service';
 import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
 import { ConfirmationService } from 'primeng/api';
@@ -15,7 +15,7 @@ import { PMessageOption } from './types/message-options';
     templateUrl: './incident-fields-ui.component.html'
   })
 
-export class IncidentFieldsUIComponent implements OnInit {
+export class IncidentFieldsUIComponent implements OnInit, OnChanges {
 
   constructor(
       private fetcherService: FetcherService, // import our URL fetcher
@@ -24,7 +24,8 @@ export class IncidentFieldsUIComponent implements OnInit {
       @Inject(forwardRef(() => AppComponent )) private parentComponent: AppComponent
   ) {}
 
-  @ViewChildren(FieldDisplayComponent) fieldDisplayComponents: FieldDisplayComponent[];
+  @ViewChildren('incidentField') fieldDisplayComponents: FieldDisplayComponent[];
+  @ViewChildren('customField') customFieldDisplayComponents: FieldDisplayComponent[];
 
   @Input() parsedIncidentJson: any; // parsed json
   @Input() loadedConfigName: string; // must clear when loaded from json or when current config is deleted
@@ -35,12 +36,10 @@ export class IncidentFieldsUIComponent implements OnInit {
   @Input() incidentFields: IncidentFields;
   @Output() incidentFieldsChange: EventEmitter<IncidentFields> = new EventEmitter();
   // tslint:disable-next-line:variable-name
-  _incidentFields: IncidentFields;
 
   @Input() customFields: IncidentFields; // the custom fields of our imported or loaded json
   @Output() customFieldsChange: EventEmitter<IncidentFields> = new EventEmitter();
   // tslint:disable-next-line:variable-name
-  _customFields: IncidentFields;
 
   @Input() createInvestigation: boolean; // sets createInvestigation: true in json when submitting an incident
   @Output() createInvestigationChange: EventEmitter<boolean> = new EventEmitter();
@@ -59,29 +58,45 @@ export class IncidentFieldsUIComponent implements OnInit {
   ];
   longNamesLabel = 'Short Names';
   shortNamesLabel = 'Long Names';
+  incidentFieldsSelectAllState = false;
+  customFieldsSelectAllState = false;
 
 
 
-  ngOnInit() {
-    this._incidentFields = this.incidentFields;
-    this._customFields = this.customFields;
+  ngOnInit() {}
+
+
+
+  ngOnChanges(values: SimpleChanges) {
+    // console.log('ngOnChanges(): values:', values);
+    const incidentFieldsFound = 'incidentFields' in values;
+    const isFirstChange = incidentFieldsFound && values.incidentFields.isFirstChange();
+    const sameIdentity = incidentFieldsFound && !isFirstChange && values.incidentFields.currentValue === values.incidentFields.previousValue;
+    if (incidentFieldsFound && !isFirstChange && !sameIdentity) {
+      this.incidentFieldsSelectAllState = false;
+      this.customFieldsSelectAllState = false;
+    }
   }
 
 
 
-  onSelectAllFields() {
-    Object.keys(this._incidentFields).forEach( shortName => {
-      if (!this._incidentFields[shortName].locked) {
-        this._incidentFields[shortName].enabled = true;
+  onToggleAllIncidentFields() {
+    // console.log('onToggleAllIncidentFields()')
+    Object.keys(this.incidentFields).forEach( shortName => {
+      if (!this.incidentFields[shortName].locked) {
+        this.incidentFields[shortName].enabled = this.incidentFieldsSelectAllState;
       }
     });
   }
 
 
 
-  onClearAllFields() {
-    Object.keys(this._incidentFields).forEach( shortName => {
-      this._incidentFields[shortName].enabled = false;
+  onToggleAllCustomFields() {
+    // console.log('onToggleAllCustomFields()')
+    Object.keys(this.customFields).forEach( shortName => {
+      if (!this.customFields[shortName].locked) {
+        this.customFields[shortName].enabled = this.customFieldsSelectAllState;
+      }
     });
   }
 
@@ -93,26 +108,8 @@ export class IncidentFieldsUIComponent implements OnInit {
 
 
 
-  onSelectAllCustomFields() {
-    Object.keys(this._customFields).forEach( shortName => {
-      if (!this._customFields[shortName].locked) {
-        this._customFields[shortName].enabled = true;
-      }
-    });
-  }
-
-
-
-  onClearAllCustomFields() {
-    Object.keys(this._customFields).forEach( shortName => {
-      this._customFields[shortName].enabled = false;
-    });
-  }
-
-
-
   onResetAllCustomFieldValues() {
-    this.fieldDisplayComponents.forEach( component => component.onResetValue(true) );
+    this.customFieldDisplayComponents.forEach( component => component.onResetValue(true) );
   }
 
 
@@ -131,10 +128,10 @@ export class IncidentFieldsUIComponent implements OnInit {
         return;
       }
 
-      if (!this._customFields) {
+      if (!this.customFields) {
         return;
       }
-      Object.values(this._customFields).forEach(field => {
+      Object.values(this.customFields).forEach(field => {
         // re-evaluate fields based on new defs
 
         const fieldFound = field.shortName in this.fetchedIncidentFieldDefinitions;
@@ -196,8 +193,8 @@ export class IncidentFieldsUIComponent implements OnInit {
 
 
   async onCreateIncident() {
-    // console.log('onCreateIncident(): incidentFields:', this._incidentFields);
-    // console.log('onCreateIncident(): customFields:', this._customFields);
+    // console.log('onCreateIncident(): incidentFields:', this.incidentFields);
+    // console.log('onCreateIncident(): customFields:', this.customFields);
 
     let incident: any = {
       serverId: this.currentDemistoApiName
@@ -205,14 +202,14 @@ export class IncidentFieldsUIComponent implements OnInit {
     if (this.createInvestigation) {
       incident['createInvestigation'] = true;
     }
-    Object.values(this._incidentFields).forEach( (field: IncidentField) => {
+    Object.values(this.incidentFields).forEach( (field: IncidentField) => {
       if (field.enabled) {
         incident[field.shortName] = field.value;
       }
     });
     // console.log('incident:', incident);
     let customFields = {};
-    Object.values(this._customFields).forEach( (field: IncidentField) => {
+    Object.values(this.customFields).forEach( (field: IncidentField) => {
       if (field.enabled) {
         customFields[field.shortName] = field.value;
       }
@@ -236,16 +233,16 @@ export class IncidentFieldsUIComponent implements OnInit {
   }
 
   countEnabledFields(): number {
-    if (!this._incidentFields) {
+    if (!this.incidentFields) {
       return;
     }
     let enabledFields = 0;
-    Object.values(this._incidentFields).forEach( field => {
+    Object.values(this.incidentFields).forEach( field => {
       if (field.enabled) {
         enabledFields += 1;
       }
     } );
-    Object.values(this._customFields).forEach( field => {
+    Object.values(this.customFields).forEach( field => {
       if (field.enabled) {
         enabledFields += 1;
       }
@@ -258,8 +255,8 @@ export class IncidentFieldsUIComponent implements OnInit {
   onIncidentFieldChanged(key, value) {
     // console.log('onIncidentFieldChanged: key:', key);
     // console.log('onIncidentFieldChanged: value:', value);
-    this._incidentFields[key] = value;
-    this.incidentFieldsChange.emit(this._incidentFields);
+    this.incidentFields[key] = value;
+    this.incidentFieldsChange.emit(this.incidentFields);
   }
 
 
@@ -267,8 +264,8 @@ export class IncidentFieldsUIComponent implements OnInit {
   onCustomFieldChanged(key, value) {
     // console.log('onCustomFieldChanged: key:', key);
     // console.log('onCustomFieldChanged: value:', value);
-    this._customFields[key] = value;
-    this.customFieldsChange.emit(this._customFields);
+    this.customFields[key] = value;
+    this.customFieldsChange.emit(this.customFields);
   }
 
 }

@@ -1450,8 +1450,8 @@ export class AppComponent implements OnInit {
 
 
   destroyIncidentFieldsComponent() {
-    this.parsedIncidentJson = undefined;
-    this.changeDetector.detectChanges();
+    /*this.parsedIncidentJson = undefined;
+    this.changeDetector.detectChanges();*/
   }
 
 

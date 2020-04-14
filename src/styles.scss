@@ -100,6 +100,10 @@ body .ui-dialog-content {
   left: 2em;
   right: 2em;
   z-index: 1200;
+  pointer-events: none; // make container un-clickable by default
+  > p-messages > div {
+    pointer-events: initial; // if visible, make the messages container clickable
+  }
 }
 
 .formContainer {
