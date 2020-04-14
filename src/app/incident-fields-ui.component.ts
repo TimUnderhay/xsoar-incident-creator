@@ -40,6 +40,9 @@ export class IncidentFieldsUIComponent implements OnInit, OnChanges {
   @Input() customFields: IncidentFields; // the custom fields of our imported or loaded json
   @Output() customFieldsChange: EventEmitter<IncidentFields> = new EventEmitter();
   // tslint:disable-next-line:variable-name
+  get customFieldsLen(): number {
+    return Object.keys(this.customFields).length;
+  }
 
   @Input() createInvestigation: boolean; // sets createInvestigation: true in json when submitting an incident
   @Output() createInvestigationChange: EventEmitter<boolean> = new EventEmitter();
