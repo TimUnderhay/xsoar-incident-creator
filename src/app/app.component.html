@@ -247,35 +247,38 @@
 
 
   <!-- XSOAR Import Dialog -->
-  <p-dialog header="Load from XSOAR" [(visible)]="showLoadFromDemistoDialog" [modal]="true" [style]="{width: '50%'}" styleClass="loadFromDemistoDialog">
+  <p-dialog header="Import Incident from XSOAR" [(visible)]="showLoadFromDemistoDialog" [modal]="true" [style]="{width: '50%'}" styleClass="loadFromDemistoDialog">
 
-    <div class="bulkCreateContainer">
+    <form #xsoarImportForm="ngForm">
 
-      <div class="bulkCreateContainerColumn">
+      <div class="bulkCreateContainer">
 
-        <div class="formLabel" style="margin-bottom: .5em;">Incident number to load</div>
+        <div class="bulkCreateContainerColumn">
 
-        <input pInputText type="url" id="url" required [(ngModel)]="demistoIncidentToLoad" name="url" class="inputDisplay">
+          <div class="formLabel" style="margin-bottom: .5em;">Incident number to import</div>
+
+          <input pInputText name="demistoIncidentToLoad" type="url" id="url" required [(ngModel)]="demistoIncidentToLoad" name="url" class="inputDisplay">
+
+        </div>
+
+        <div class="bulkCreateContainerColumn">
+
+          <div class="formLabel" style="margin-bottom: .5em;">Select an XSOAR server</div>
+
+          <p-listbox name="demistoApiToLoadFrom" [options]="demistoApiEndpointsOptions" [(ngModel)]="demistoApiToLoadFrom" [style]="{'width':'100%'}" [multiple]="false" [checkbox]="true" [filter]="false"></p-listbox>
+
+        </div>
 
       </div>
 
-      <div class="bulkCreateContainerColumn">
+      <div style="margin-top: .5em; float: right;">
 
-        <div class="formLabel" style="margin-bottom: .5em;">Select a XSOAR server</div>
+        <p-button type="submit" label="Load Incident" (onClick)="onLoadFromDemistoAccepted()" [disabled]="importFromDemistoAcceptDisabled"></p-button>
 
-        <p-listbox [options]="demistoApiEndpointsOptions" [(ngModel)]="demistoApiToLoadFrom" [style]="{'width':'100%'}" [multiple]="false" [checkbox]="true" [filter]="false"></p-listbox>
+        <p-button label="Cancel" (onClick)="onLoadFromDemistoCanceled()"></p-button>
 
       </div>
-
-    </div>
-
-    <div style="margin-top: .5em; float: right;">
-
-      <p-button label="Load Incident" (onClick)="onLoadFromDemistoAccepted()" [disabled]="importFromDemistoAcceptDisabled"></p-button>
-
-      <p-button label="Cancel" (onClick)="onLoadFromDemistoCanceled()"></p-button>
-
-    </div>
+    </form>
 
   </p-dialog>
   

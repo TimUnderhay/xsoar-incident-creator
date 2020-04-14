@@ -1,4 +1,5 @@
-import { Component, OnInit, ViewChildren, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { NgForm } from '@angular/forms';
 import { FetcherService } from './fetcher-service';
 import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
 import { User } from './types/user';
