@@ -3,6 +3,7 @@ import { HttpHeaders, HttpClient } from '@angular/common/http';
 import { User } from './types/user';
 import { ApiStatus } from './types/api-status';
 import { FetchedIncidentField } from './types/fetched-incident-field';
+import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FieldConfig, FieldsConfig } from './types/fields-config';
 import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
 import { DefaultApiServer } from './types/default-api-server';
@@ -34,6 +35,13 @@ export class FetcherService {
       headers = headers.set('Authorization', authUser);
     }
     return headers;
+  }
+
+
+
+  logResult(res): any {
+    console.log('logResult:', res);
+    return res;
   }
 
 
@@ -166,6 +174,17 @@ export class FetcherService {
     return this.http.get(`${this.apiPath}/incidentfields/${serverId}`, { headers } )
                     .toPromise()
                     .then( (res: any) => res.incident_fields );
+  }
+
+
+
+  getIncidentTypes(serverId): Promise<FetchedIncidentType[]> {
+    serverId = encodeURIComponent(serverId);
+    let headers = this.buildHeaders();
+    return this.http.get(`${this.apiPath}/incidenttype/${serverId}`, { headers } )
+                    .toPromise()
+                    // .then( (res: any) => this.logResult(res) )
+                    .then( (res: any) => res.incident_types as FetchedIncidentType[] );
   }
 
 

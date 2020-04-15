@@ -1,108 +1,108 @@
-    <!-- Loaded Configuration Name Container -->
-    <p-card *ngIf="loadedConfigName" header="Loaded Configuration Name">
-      <div style="margin-top: 1em;">
-        <span class="formLabel" style="font-size: 18px;">{{loadedConfigName}}</span>
+<!-- Loaded Configuration Name Container -->
+<p-card *ngIf="loadedIncidentConfigName" header="Loaded Configuration Name">
+  <div style="margin-top: 1em;">
+    <span class="formLabel" style="font-size: 18px;">{{loadedIncidentConfigName}}</span>
+  </div>
+</p-card>
+
+
+
+<!-- Create Investigation Container -->
+<p-card *ngIf="parsedIncidentJson" header="Create Investigation" subheader="If enabled, this option will cause an investigation to be created along with a new incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so.">
+
+  <div style="margin-top: 1em;">
+    <p-selectButton name="createInvestigation" [options]="createInvestigationButtonOptions" [ngModel]="createInvestigation" (ngModelChange)="createInvestigationChange.emit($event)"></p-selectButton>
+  </div>
+
+</p-card>
+
+
+
+<div class="fieldsForm">
+
+
+
+  <!-- Incident Fields Container -->
+  <div style="min-width: 0;">
+    <p-card header="Incident Fields" subheader="Select the main incident fields to include in the new incident">
+
+      <!-- Select / Toggle Buttons -->
+      <div>
+
+        <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()" [disabled]="!currentServerApiInit"></p-button>
+
+      </div >
+
+      <!-- Incident Fields -->
+      <div class="fieldContainer">
+
+        <div>
+          <p-checkbox [(ngModel)]="incidentFieldsSelectAllState" [binary]="true" (onChange)="onToggleAllIncidentFields()"></p-checkbox>
+        </div>
+
+        <header>Name</header>
+
+        <header>Type</header>
+
+        <header>Value</header>
+
+        <ng-container *ngFor="let field of incidentFields | keyvalue">
+
+          <field-display #incidentField *ngIf="![undefined, null].includes(field.value.value)" [field]="incidentFields[field.key]" (fieldChange)="onIncidentFieldChanged(field.key, $event)" [displayShortNames]="displayIncidentFieldShortNames"></field-display>
+
+        </ng-container>
       </div>
+
     </p-card>
+  </div>
 
 
 
-    <!-- Create Investigation Container -->
-    <p-card *ngIf="parsedIncidentJson" header="Create Investigation" subheader="If enabled, this option will cause an investigation to be created along with a new incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so.">
+  <!-- Custom Fields Container -->
+  <div style="min-width: 0;">
+    <p-card header="Custom Fields" subheader="Select the custom fields to include in the new incident">
 
-      <div style="margin-top: 1em;">
-        <p-selectButton name="createInvestigation" [options]="createInvestigationButtonOptions" [ngModel]="createInvestigation" (ngModelChange)="createInvestigationChange.emit($event)"></p-selectButton>
+      <!-- Select / Toggle Buttons -->
+      <div>
+
+        <p-button type="button" label="Reset Values" (onClick)="onResetAllCustomFieldValues()" [disabled]="!currentServerApiInit"></p-button>
+
+        <p-toggleButton [onLabel]="shortNamesLabel" [offLabel]="longNamesLabel" [(ngModel)]="displayCustomFieldShortNames" name="shortCustomNames" [disabled]="!currentServerApiInit"></p-toggleButton>
+
+        <p-button type="button" label="Reload Definitions" name="createIncident" (onClick)="onReloadFieldDefinitions()" [disabled]="!currentServerApiInit" pTooltip="Reload the field definitions from XSOAR"></p-button>
+
+      </div >
+
+      <!-- Custom Fields -->
+      <div class="fieldContainer">
+
+        <div>
+          <p-checkbox [(ngModel)]="customFieldsSelectAllState" [binary]="true" (onChange)="onToggleAllCustomFields()" [disabled]="!customFields || (!customFields && customFieldsLen === 0)"></p-checkbox>
+        </div>
+
+        <header>Name</header>
+
+        <header>Type</header>
+
+        <header>Value</header>
+
+        <ng-container *ngFor="let field of customFields | keyvalue">
+
+          <field-display #customField *ngIf="![undefined, null].includes(field.value.value)" [field]="customFields[field.key]" (fieldChange)="onCustomFieldChanged(field.key, $event)" [displayShortNames]="displayCustomFieldShortNames"></field-display>
+
+        </ng-container>
       </div>
 
     </p-card>
+  </div>
 
 
 
-    <div class="fieldsForm">
+  <!-- Submit Button -->
+  <div style="margin-top: 1em;">
+    &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onCreateIncident()" [disabled]="!parsedIncidentJson || countEnabledFields() === 0"></button>
+  </div>
 
 
 
-      <!-- Incident Fields Container -->
-      <div style="min-width: 0;">
-        <p-card header="Incident Fields" subheader="Select the main incident fields to include in the new incident">
-
-          <!-- Select / Toggle Buttons -->
-          <div>
-
-            <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()" [disabled]="!currentServerApiInit"></p-button>
-
-          </div >
-
-          <!-- Incident Fields -->
-          <div class="fieldContainer">
-
-            <div>
-              <p-checkbox [(ngModel)]="incidentFieldsSelectAllState" [binary]="true" (onChange)="onToggleAllIncidentFields()"></p-checkbox>
-            </div>
-
-            <header>Name</header>
-
-            <header>Type</header>
-
-            <header>Value</header>
-
-            <ng-container *ngFor="let field of incidentFields | keyvalue">
-
-              <field-display #incidentField *ngIf="![undefined, null].includes(field.value.value)" [field]="incidentFields[field.key]" (fieldChange)="onIncidentFieldChanged(field.key, $event)" [displayShortNames]="displayIncidentFieldShortNames"></field-display>
-
-            </ng-container>
-          </div>
-
-        </p-card>
-      </div>
-
-
-
-      <!-- Custom Fields Container -->
-      <div style="min-width: 0;">
-        <p-card header="Custom Fields" subheader="Select the custom fields to include in the new incident">
-
-          <!-- Select / Toggle Buttons -->
-          <div>
- 
-            <p-button type="button" label="Reset Values" (onClick)="onResetAllCustomFieldValues()" [disabled]="!currentServerApiInit"></p-button>
-
-            <p-toggleButton [onLabel]="shortNamesLabel" [offLabel]="longNamesLabel" [(ngModel)]="displayCustomFieldShortNames" name="shortCustomNames" [disabled]="!currentServerApiInit"></p-toggleButton>
-
-            <p-button type="button" label="Reload Definitions" name="createIncident" (onClick)="onReloadFieldDefinitions()" [disabled]="!currentServerApiInit" pTooltip="Reload the field definitions from XSOAR"></p-button>
-
-          </div >
-
-          <!-- Custom Fields -->
-          <div class="fieldContainer">
-
-            <div>
-              <p-checkbox [(ngModel)]="customFieldsSelectAllState" [binary]="true" (onChange)="onToggleAllCustomFields()" [disabled]="!customFields || (!customFields && customFieldsLen === 0)"></p-checkbox>
-            </div>
-
-            <header>Name</header>
-
-            <header>Type</header>
-
-            <header>Value</header>
-
-            <ng-container *ngFor="let field of customFields | keyvalue">
-
-              <field-display #customField *ngIf="![undefined, null].includes(field.value.value)" [field]="customFields[field.key]" (fieldChange)="onCustomFieldChanged(field.key, $event)" [displayShortNames]="displayCustomFieldShortNames"></field-display>
-
-            </ng-container>
-          </div>
-
-        </p-card>
-      </div>
-
-
-
-      <!-- Submit Button -->
-      <div style="margin-top: 1em;">
-        &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onCreateIncident()" [disabled]="!parsedIncidentJson || countEnabledFields() === 0"></button>
-      </div>
-
-
-
-    </div>
+</div>

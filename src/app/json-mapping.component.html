@@ -1,0 +1,29 @@
+<!-- Loaded Configuration Name Container -->
+<p-card *ngIf="loadedJsonMappingConfigName" header="Loaded Mapping Name">
+  
+  <div style="margin-top: 1em;">
+    <span class="formLabel" style="font-size: 18px;">{{loadedJsonMappingConfigName}}</span>
+  </div>
+
+</p-card>
+
+
+
+
+<!-- Select Incident Type Container -->
+<p-card *ngIf="fetchedIncidentFieldDefinitions" header="Incident Type" subheader="Select an incident type on which to map JSON data.">
+
+  <div style="margin-top: 1em;">
+    
+    <p-dropdown
+      [options]="incidentTypeOptions"
+      [(ngModel)]="selectedIncidentType"
+      (onChange)="onIncidentTypeChanged($event.value)"
+      [filter]="true"
+      placeholder="Select an incident type"
+      [style]="{'width': '40em'}">
+    </p-dropdown>
+  
+  </div>
+
+</p-card>

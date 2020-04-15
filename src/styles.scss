@@ -226,6 +226,17 @@ body .ui-listbox .ui-listbox-list {
 
 
 
+/* p-dropdown */
+body .ui-dropdown { //.ui-dropdown-list
+  // background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgb(27, 39, 49);
+
+  .ui-dropdown-item {
+    color: rgb(175, 180, 183);
+  }
+}
+
+
 /////////////////// PrimeNG ///////////////////
 
 * {

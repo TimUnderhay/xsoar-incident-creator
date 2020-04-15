@@ -1,4 +1,4 @@
-// For fields pulled from Demisto
+// For fields fetched from Demisto
 export interface FetchedIncidentField {
   associatedToAll: boolean;
   associatedTypes: string[];

@@ -28,7 +28,7 @@ export class IncidentFieldsUIComponent implements OnInit, OnChanges {
   @ViewChildren('customField') customFieldDisplayComponents: FieldDisplayComponent[];
 
   @Input() parsedIncidentJson: any; // parsed json
-  @Input() loadedConfigName: string; // must clear when loaded from json or when current config is deleted
+  @Input() loadedIncidentConfigName: string; // must clear when loaded from json or when current config is deleted
   @Input() currentDemistoApiName: string;
   @Input() currentServerApiInit: boolean;
   @Input() fetchedIncidentFieldDefinitions: FetchedIncidentFieldDefinitions; // the fields taken from Demisto

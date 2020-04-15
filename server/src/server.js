@@ -524,6 +524,47 @@ async function getIncidentFields(demistoUrl) {
 
 
 
+async function getIncidentTypes(demistoUrl) {
+// This method will get incident type definitions from a Demisto server
+
+let demistoServerConfig = getDemistoApiConfig(demistoUrl);
+
+console.log(`Fetching incident types from '${demistoServerConfig.url}'`);
+
+let result;
+let options = {
+  url: demistoServerConfig.url + '/incidenttype',
+  method: 'GET',
+  headers: {
+    Authorization: decrypt(demistoServerConfig.apiKey),
+    Accept: 'application/json',
+    'Content-Type': 'application/json'
+  },
+  rejectUnauthorized: !demistoServerConfig.trustAny,
+  resolveWithFullResponse: true,
+  json: true
+}
+
+try {
+  // send request to Demisto
+  result = await request( options );
+
+  // console.log(fields);
+
+  console.log(`Successfully fetched incident types from '${demistoServerConfig.url}'`);
+  return result.body;
+}
+catch (error) {
+  if ('message' in error) {
+    console.error('Caught error fetching Demisto types configuration:', error.message);
+    return;
+  }
+  console.error('Caught error fetching Demisto types configuration:', error);
+}
+}
+
+
+
 app.get(apiPath + '/sampleincident', async (req, res) => {
   let data;
   const fileName = 'testIncidentFields.json';
@@ -555,6 +596,14 @@ app.get(apiPath + '/incidentfields/:serverId', async (req, res) => {
   const fields = await getIncidentFields(serverId);
   incident_fields[serverId] = fields;
   res.json( {id: serverId, incident_fields: fields} );
+} );
+
+
+
+app.get(apiPath + '/incidenttype/:serverId', async (req, res) => {
+  const serverId = decodeURIComponent(req.params.serverId);
+  const incident_types = await getIncidentTypes(serverId);
+  res.json( {id: serverId, incident_types} );
 } );
 
 

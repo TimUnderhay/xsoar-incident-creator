@@ -52,11 +52,14 @@
         <!-- Upload Incident JSON -->
         <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Incident JSON" [customUpload]="true" (uploadHandler)="onIncidentJsonUploaded($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true" pTooltip="Import an incident from a JSON file" showDelay="750"></p-fileUpload>
 
+        <!-- New JSON Mapping -->
+        <p-button label="New JSON Mapping" (onClick)="onNewJsonMappingClicked()"></p-button>
+
         <!-- Upload Freeform JSON -->
-        <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Freeform JSON" [customUpload]="true" (uploadHandler)="onFreeformJsonUploaded($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true" pTooltip="Import a JSON file of any type.  Incident fields must be mapped by the user" showDelay="750"></p-fileUpload>
+        <!--<p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Freeform JSON" [customUpload]="true" (uploadHandler)="onFreeformJsonUploaded($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true" pTooltip="Import a JSON file of any type.  Incident fields must be mapped by the user" showDelay="750"></p-fileUpload>-->
 
         <!-- Save -->
-        <p-button label="Save" (onClick)="onSaveClicked()" [disabled]="!(loadedConfigId && loadedConfigName)"></p-button>
+        <p-button label="Save" (onClick)="onSaveClicked()" [disabled]="!(loadedIncidentConfigId && loadedIncidentConfigName)"></p-button>
 
         <!-- Save As -->
         <p-button label="Save As" (onClick)="onSaveAsClicked()" [disabled]="!parsedIncidentJson"></p-button>
@@ -80,7 +83,7 @@
     <incident-fields-ui
       *ngIf="incidentFields && customFields && parsedIncidentJson && fetchedIncidentFieldDefinitions"
         [parsedIncidentJson]="parsedIncidentJson"
-        [loadedConfigName]="loadedConfigName"
+        [loadedIncidentConfigName]="loadedIncidentConfigName"
         [currentDemistoApiName]="currentDemistoApiName"
         [currentServerApiInit]="currentServerApiInit"
         [(incidentFields)]="incidentFields"
@@ -89,6 +92,17 @@
         [(createInvestigation)]="createInvestigation"
         [(messages)]="messages">
     </incident-fields-ui>
+
+
+
+    <json-mapping-ui
+      *ngIf="showJsonMappingUI && fetchedIncidentFieldDefinitions && fetchedIncidentTypes"
+        [loadedJsonMappingConfigName]="loadedJsonMappingConfigName"
+        [currentDemistoApiName]="currentDemistoApiName"
+        [currentServerApiInit]="currentServerApiInit"
+        [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
+        [fetchedIncidentTypes]="fetchedIncidentTypes">
+    </json-mapping-ui>
     
     <div>&nbsp;</div>
 
