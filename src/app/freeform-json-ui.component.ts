@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChildren, ChangeDetectorRef } from '@angular/core';
 import { FetcherService } from './fetcher-service';
-import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
+import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
 import { ConfirmationService } from 'primeng/api';
 
 @Component({

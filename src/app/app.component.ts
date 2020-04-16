@@ -1,15 +1,14 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { NgForm } from '@angular/forms';
 import { FetcherService } from './fetcher-service';
-import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
+import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
 import { User } from './types/user';
-import { ApiStatus } from './types/api-status';
-import { SelectItem } from 'primeng/api';
+import { DemistoEndpointStatus } from './types/demisto-endpoint-status';
+import { SelectItem, ConfirmationService } from 'primeng/api';
 import { IncidentField, IncidentFields } from './types/incident-fields';
 import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
 import { FieldConfig, FieldsConfig, IncidentFieldsConfig } from './types/fields-config';
-import { ConfirmationService } from 'primeng/api';
 import { PMessageOption } from './types/message-options';
 import { BulkCreateResult } from './types/bulk-create-result';
 import { InvestigationFields as investigationFields } from './investigation-fields';
@@ -33,27 +32,26 @@ export class AppComponent implements OnInit {
 
   loggedInUser: User;
 
-  // API Properties
-  demistoApiEndpoints: DemistoAPIEndpoints = {};
-  get demistoApiEndpointsLen() { return Object.keys(this.demistoApiEndpoints).length; }
-  defaultDemistoApiName: string;
-  currentDemistoApiName: string;
-  currentServerApiInit = false;
+  // Endpoint Properties
+  demistoEndpoints: DemistoEndpoints = {};
+  get demistoEndpointsLen() { return Object.keys(this.demistoEndpoints).length; }
+  defaultDemistoEndpointName: string;
+  currentDemistoEndpointName: string;
+  currentDemistoEndpointInit = false;
+  fetchedIncidentFieldDefinitions: FetchedIncidentFieldDefinitions; // the field definitions loaded from Demisto
+  fetchedIncidentTypes: FetchedIncidentType[];
 
   // Incident Properties
   parsedIncidentJson: any; // parsed incident json.
   incidentFields: IncidentFields; // the fields of our imported or loaded JSON
   customFields: IncidentFields; // the custom fields of our imported or loaded json
-  fetchedIncidentFieldDefinitions: FetchedIncidentFieldDefinitions; // the field definitions loaded from Demisto
   createInvestigation = true;
-  fetchedIncidentTypes: FetchedIncidentType[]
-
 
   // For PrimeNG
   messages: PMessageOption[] = [];
   messagesClearTimeout: ReturnType<typeof setTimeout> = null;
-  demistoApiEndpointsOptions: SelectItem[]; // holds list of API endpoints for PrimeNG
-  fieldsConfigOptions: SelectItem[] = []; // dropdown/listbox options object for all field configs
+  demistoEndpointsItems: SelectItem[]; // holds list of endpoints for PrimeNG
+  fieldsConfigItems: SelectItem[] = []; // dropdown/listbox options object for all field configs
 
   // Saved Incident Configurations
   savedIncidentConfigurations: FieldsConfig = {};
@@ -81,27 +79,27 @@ export class AppComponent implements OnInit {
   // Bulk create dialog
   showBulkCreateDialog = false;
   selectedBulkCreateConfigs: string[] = [];
-  selectedBulkCreateApiServers: string[] = [];
+  selectedBulkCreateEndpoints: string[] = [];
 
   // Bulk results dialog
   showBulkResultsDialog = false;
   bulkCreateResults: BulkCreateResult[] = [];
 
-  // Select Demisto api server dialog
-  showDemistoApiServerOpenDialog = false;
-  selectedDemistoApiName: string;
+  // Select Demisto endpoint dialog
+  showDemistoEndpointOpenDialog = false;
+  selectedDemistoEndpointName: string;
 
-  // New / edit Demisto api server dialog
-  showNewDemistoApiServerDialog = false;
+  // New / edit Demisto endpoint dialog
+  showNewDemistoEndpointDialog = false;
   newDemistoServerUrl = '';
   newDemistoServerApiKey = '';
   newDemistoServerTrustAny = true;
   get newDemistoServerSaveDisabled() {
     if (this.newDemistoServerDialogMode === 'new') {
-      return this.newDemistoServerUrl in this.demistoApiEndpoints;
+      return this.newDemistoServerUrl in this.demistoEndpoints;
     }
     // edit mode
-    return this.selectedDemistoApiName !== this.newDemistoServerUrl && this.newDemistoServerUrl in this.demistoApiEndpoints;
+    return this.selectedDemistoEndpointName !== this.newDemistoServerUrl && this.newDemistoServerUrl in this.demistoEndpoints;
   }
   newDemistoServerDialogMode: DemistoServerEditMode = 'new';
   get newEditTestButtonDisabled(): boolean {
@@ -112,9 +110,9 @@ export class AppComponent implements OnInit {
     return !this.newDemistoServerUrl;
   }
 
-  // Delete Demisto api server dialog
-  showDeleteDemistoApiServerDialog = false;
-  demistoApiServerToDelete: string;
+  // Delete Demisto endpoint dialog
+  showDeleteDemistoEndpointDialog = false;
+  demistoEndpointToDelete: string;
 
 
   get saveAsButtonDisabled(): boolean {
@@ -124,9 +122,9 @@ export class AppComponent implements OnInit {
   // Import from Demisto dialog
   showLoadFromDemistoDialog = false;
   demistoIncidentToLoad = '';
-  demistoApiToLoadFrom = '';
+  demistoEndpointToLoadFrom = '';
   get importFromDemistoAcceptDisabled(): boolean {
-    return this.demistoApiToLoadFrom === '' || this.demistoIncidentToLoad.match(/^\d+$/) === null;
+    return this.demistoEndpointToLoadFrom === '' || this.demistoIncidentToLoad.match(/^\d+$/) === null;
   }
 
   // Json Mapping UI
@@ -149,35 +147,37 @@ export class AppComponent implements OnInit {
     // Encryption
     await this.fetcherService.initEncryption();
 
-    // API Init
-    await this.demistoApiInit(); // sets currentServerApiInit
+    // Demisto Endpoint Init
+    await this.demistoEndpointInit(); // sets currentDemistoEndpointInit
 
-    if (this.currentServerApiInit) {
+    if (this.currentDemistoEndpointInit) {
+      
       // Demisto Incident Fields
       try {
-        await this.fetchIncidentFieldDefinitions(this.currentDemistoApiName);
+        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName);
       }
       catch (error) {
         console.error('AppComponent: ngOnInit(): Caught error fetching Demisto incident fields:', error);
       }
+
       // Demisto Incident Types
       try {
-        await this.fetchIncidentTypes(this.currentDemistoApiName);
+        await this.fetchIncidentTypes(this.currentDemistoEndpointName);
       }
       catch (error) {
         console.error('AppComponent: ngOnInit(): Caught error fetching Demisto incident types:', error);
       }
     }
 
-    if (this.demistoApiEndpointsLen === 0) {
-      setTimeout(() => this.onNewDemistoApiServer(), 0);
+    if (this.demistoEndpointsLen === 0) {
+      setTimeout(() => this.onNewDemistoEndpoint(), 0);
     }
 
     // Fields Configurations
     try {
-      this.savedIncidentConfigurations = await this.getAllFieldConfigurations();
+      this.savedIncidentConfigurations = await this.fetcherService.getSavedIncidentConfigurations();
       console.log('AppComponent: ngOnInit(): savedIncidentConfigurations:', this.savedIncidentConfigurations);
-      this.fieldsConfigOptions = this.buildFieldsConfigOptions(this.savedIncidentConfigurations);
+      this.fieldsConfigItems = this.buildFieldsConfigItems(this.savedIncidentConfigurations);
     }
     catch (error) {
       console.error('AppComponent: ngOnInit(): Caught error fetching fields configuration:', error);
@@ -185,12 +185,6 @@ export class AppComponent implements OnInit {
 
     // Fetch Sample Incident -- Comment out before committing to master
     // await this.getSampleIncident();
-  }
-
-
-
-  async getAllFieldConfigurations() {
-    return this.fetcherService.getAllFieldConfigurations();
   }
 
 
@@ -217,158 +211,158 @@ export class AppComponent implements OnInit {
 
 
 
-  async demistoApiInit() {
+  async demistoEndpointInit() {
     /*
-    Loads the list of Demisto API server configs.
-    Gets the default API server
-    If there are no server configs, set currentServerApiInit = false and display a message and do nothing else
+    Loads the list of Demisto endpoint configs.
+    Gets the default Demisto endpoint
+    If there are no server configs, set currentDemistoEndpointInit = false and display a message and do nothing else
     If the server as serts that a default server is defined:
-      Set defaultDemistoApiName
-      Set currentDemistoApiName
-      Test the current/default API server.
+      Set defaultDemistoEndpointName
+      Set currentDemistoEndpointName
+      Test the current/default Demisto endpoint.
         If successful, display a success message
         If unsuccessful, display a failure message
       Finally, build the options for the server selection PrimeNG widget from our updated server list
 
     Called only from ngOnInit()
     */
-    console.log('demistoApiInit()');
+    console.log('AppComponent: demistoEndpointInit()');
     try {
 
-      this.demistoApiEndpoints = await this.fetcherService.getDemistoApi(); // obtain saved Demisto API endpoints
-      console.log('demistoApiInit(): demistoApiEndpoints:', this.demistoApiEndpoints);
+      this.demistoEndpoints = await this.fetcherService.getDemistoEndpoints(); // obtain saved Demisto endpoints
+      console.log('AppComponent: demistoEndpointInit(): demistoEndpoints:', this.demistoEndpoints);
 
-      const defaultApiResult = await this.fetcherService.getDemistoDefaultApi();
-      console.log('demistoApiInit(): defaultApiResult:', defaultApiResult);
+      const defaultEndpointResult = await this.fetcherService.getDefaultDemistoEndpoint();
+      console.log('AppComponent: demistoEndpointInit(): defaultEndpointResult:', defaultEndpointResult);
 
-      const configsAreEmpty = this.demistoApiEndpointsLen === 0;
-      const defaultDemistoApiDefinedButMissing = !configsAreEmpty && defaultApiResult.defined && !(defaultApiResult.serverId in this.demistoApiEndpoints);
-      const defaultDemistoApiIsDefined = !configsAreEmpty && defaultApiResult.defined && defaultApiResult.serverId in this.demistoApiEndpoints;
+      const configsAreEmpty = this.demistoEndpointsLen === 0;
+      const defaultDemistoEndpointDefinedButMissing = !configsAreEmpty && defaultEndpointResult.defined && !(defaultEndpointResult.serverId in this.demistoEndpoints);
+      const defaultDemistoEndpointIsDefined = !configsAreEmpty && defaultEndpointResult.defined && defaultEndpointResult.serverId in this.demistoEndpoints;
 
       if (configsAreEmpty) {
-        this.currentServerApiInit = false;
-        this.currentDemistoApiName = undefined;
-        this.defaultDemistoApiName = undefined;
+        this.currentDemistoEndpointInit = false;
+        this.currentDemistoEndpointName = undefined;
+        this.defaultDemistoEndpointName = undefined;
         this.messageWithAutoClear( { severity: 'info', summary: 'Info', detail: `No Demisto servers are defined.  Configure one below`} );
       }
 
-      else if (defaultDemistoApiDefinedButMissing) {
-        this.messageWithAutoClear( { severity: 'error', summary: 'Error', detail: `The default Demisto server ${this.defaultDemistoApiName} is not defined.  This shouldn't happen.`} );
-        this.currentServerApiInit = false;
-        this.currentDemistoApiName = undefined;
-        this.defaultDemistoApiName = undefined;
+      else if (defaultDemistoEndpointDefinedButMissing) {
+        this.messageWithAutoClear( { severity: 'error', summary: 'Error', detail: `The default Demisto server ${this.defaultDemistoEndpointName} is not defined.  This shouldn't happen.`} );
+        this.currentDemistoEndpointInit = false;
+        this.currentDemistoEndpointName = undefined;
+        this.defaultDemistoEndpointName = undefined;
       }
 
-      else if (defaultDemistoApiIsDefined) {
+      else if (defaultDemistoEndpointIsDefined) {
 
-        this.defaultDemistoApiName = defaultApiResult.serverId;
-        this.currentDemistoApiName = this.defaultDemistoApiName;
+        this.defaultDemistoEndpointName = defaultEndpointResult.serverId;
+        this.currentDemistoEndpointName = this.defaultDemistoEndpointName;
 
-        let testRes = await this.fetcherService.testApiServer(this.defaultDemistoApiName);
+        let testRes = await this.fetcherService.testDemistoEndpointById(this.defaultDemistoEndpointName);
 
-        this.currentServerApiInit = testRes.success;
+        this.currentDemistoEndpointInit = testRes.success;
 
-        if (this.currentServerApiInit) {
-          this.messageWithAutoClear( { severity: 'success', summary: 'Success', detail: `XSOAR API communication to ${this.currentDemistoApiName} is initialised`});
+        if (this.currentDemistoEndpointInit) {
+          this.messageWithAutoClear( { severity: 'success', summary: 'Success', detail: `Communication to XSOAR endpoint ${this.currentDemistoEndpointName} is initialised`});
         }
         else {
-          this.messageWithAutoClear( { severity: 'error', summary: 'Failure', detail: `XSOAR API communication is not initialised to ${this.currentDemistoApiName}`} );
+          this.messageWithAutoClear( { severity: 'error', summary: 'Failure', detail: `Communication to XSOAR endpoint ${this.currentDemistoEndpointName} is not initialised`} );
         }
 
-        this.buildDemistoApiConfigOptions();
+        this.buildDemistoEndpointItems();
       }
 
 
     }
     catch (err) {
-      console.log('Caught error fetching Demisto server API status:', err);
+      console.log('AppComponent: demistoEndpointInit(): Caught error fetching Demisto endpoint status:', err);
     }
   }
 
 
 
-  buildDemistoApiConfigOptions() {
-    console.log('buildDemistoApiConfigOptions()');
-    this.demistoApiEndpointsOptions = Object.keys(this.demistoApiEndpoints).map( key => ({ value: key, label: this.defaultDemistoApiName && key === this.defaultDemistoApiName ? `${key} (default)` : key}
+  buildDemistoEndpointItems() {
+    console.log('AppComponent: buildDemistoEndpointItems()');
+    this.demistoEndpointsItems = Object.keys(this.demistoEndpoints).map( key => ({ value: key, label: this.defaultDemistoEndpointName && key === this.defaultDemistoEndpointName ? `${key} (default)` : key}
     ) );
-    console.log('buildDemistoApiConfigOptions(): demistoApiEndpointsOptions:', this.demistoApiEndpointsOptions);
+    console.log('AppComponent: buildDemistoEndpointItems(): demistoEndpointsItems:', this.demistoEndpointsItems);
   }
 
 
 
-  async refreshDemistoApi(setDefault = false) {
+  async refreshDemistoEndpoints(setDefault = false) {
     /*
-    Called from onNewDemistoApiServerSaved(), onDeleteDemistoApiServerConfirmed(), onSetDefaultDemistoApiServer(), onRefreshDemistoApiServers(), and onDemistoApiServerUpdated()
+    Called from onNewDemistoEndpointSaved(), onDeleteDemistoEndpointConfirmed(), onSetDefaultDemistoEndpoint(), onRefreshDemistoEndpoints(), and onDemistoEndpointUpdated()
 
-    Loads the list of Demisto API server configs.
-    Gets the default API server, as it may have changed.
-    If there are no configs, set currentServerApiInit = false and currentDemistoApiName = undefined
-    If the server says the default Demisto API is defined, set defaultDemistoApiName to be the default Demisto API
-    if the current server no longer exists after the refresh, then set currentDemistoApiName to undefined
-    If a server is selected (currentDemistoApiName), test it and save result to currentServerApiInit
+    Loads the list of Demisto endpoint configs.
+    Gets the default Demisto endpoint, as it may have changed.
+    If there are no configs, set currentDemistoEndpointInit = false and currentDemistoEndpointName = undefined
+    If the server says the default Demisto endpoint is defined, set defaultDemistoEndpointName to be the default Demisto endpoint
+    if the current server no longer exists after the refresh, then set currentDemistoEndpointName to undefined
+    If a server is selected (currentDemistoEndpointName), test it and save result to currentDemistoEndpointInit
     Finally, build the options for the server selection PrimeNG widget from our updated server list
 
-    setDefault = true means that demistoDefaultApi should be set automatically if this is the first server to be added, typically only upon a create or delete operation.  Only used when called from onNewDemistoApiServerSaved()
+    setDefault = true means that defaultDemistoEndpointName should be set automatically if this is the first server to be added, typically only upon a create or delete operation.  Only used when called from onNewDemistoEndpointSaved()
     */
 
-    console.log('AppComponent: refreshDemistoApi()');
-    const lastdemistoApiEndpointsLen = this.demistoApiEndpointsLen;
-    const lastCurrentDemistoApiName = this.currentDemistoApiName;
+    console.log('AppComponent: refreshDemistoEndpoints()');
+    const lastDemistoEndpointsLen = this.demistoEndpointsLen;
+    const lastCurrentDemistoEndpointName = this.currentDemistoEndpointName;
 
-    this.demistoApiEndpoints = await this.fetcherService.getDemistoApi(); // obtain saved Demisto API endpoints
+    this.demistoEndpoints = await this.fetcherService.getDemistoEndpoints(); // obtain saved Demisto endpoints
 
-    // console.log('refreshDemistoApi(): demistoApiEndpoints:', this.demistoApiEndpoints);
+    // console.log('AppComponent: refreshDemistoEndpoints(): demistoEndpoints:', this.demistoEndpoints);
 
-    const firstDefinedServer = setDefault && lastdemistoApiEndpointsLen === 0 && this.demistoApiEndpointsLen !== 0;
+    const firstDefinedServer = setDefault && lastDemistoEndpointsLen === 0 && this.demistoEndpointsLen !== 0;
 
     if (firstDefinedServer) {
-      // if no api servers were previously defined, make the first API to be added, the default
-      const firstServerId = Object.keys(this.demistoApiEndpoints)[0];
-      await this.fetcherService.setDemistoDefaultApi(firstServerId);
-      this.switchCurrentDemistoApiServer(firstServerId);
+      // if no endpoints were previously defined, make the first endpoint to be added, the default
+      const firstServerId = Object.keys(this.demistoEndpoints)[0];
+      await this.fetcherService.setDefaultDemistoEndpoint(firstServerId);
+      this.switchCurrentDemistoEndpoint(firstServerId);
     }
 
-    // Gets the default API server, as it may have changed.
-    const defaultApiResult = await this.fetcherService.getDemistoDefaultApi();
+    // Gets the default Demisto endpoint, as it may have changed.
+    const defaultEndpointResult = await this.fetcherService.getDefaultDemistoEndpoint();
 
-    const configsAreEmpty = this.demistoApiEndpointsLen === 0;
+    const configsAreEmpty = this.demistoEndpointsLen === 0;
 
-    const defaultDemistoApiIsDefined = !configsAreEmpty && defaultApiResult.defined && defaultApiResult.serverId in this.demistoApiEndpoints;
+    const defaultDemistoEndpointIsDefined = !configsAreEmpty && defaultEndpointResult.defined && defaultEndpointResult.serverId in this.demistoEndpoints;
 
     if (configsAreEmpty) {
-      this.currentServerApiInit = false;
-      this.currentDemistoApiName = undefined;
+      this.currentDemistoEndpointInit = false;
+      this.currentDemistoEndpointName = undefined;
     }
-    else if (defaultDemistoApiIsDefined) {
-      this.defaultDemistoApiName = defaultApiResult.serverId;
-    }
-
-    const currentApiStillDefined = this.currentDemistoApiName && this.currentDemistoApiName in this.demistoApiEndpoints; // make sure the currently selected API hasn't been deleted
-
-    if (!currentApiStillDefined) {
-      // clear selected api
-      this.currentDemistoApiName = undefined;
+    else if (defaultDemistoEndpointIsDefined) {
+      this.defaultDemistoEndpointName = defaultEndpointResult.serverId;
     }
 
-    if (this.currentDemistoApiName) {
+    const currentEndpointStillDefined = this.currentDemistoEndpointName && this.currentDemistoEndpointName in this.demistoEndpoints; // make sure the currently selected Demisto endpoint hasn't been deleted
+
+    if (!currentEndpointStillDefined) {
+      // clear selected endpoint
+      this.currentDemistoEndpointName = undefined;
+    }
+
+    if (this.currentDemistoEndpointName) {
       // test the currently selected server
-      let testRes = await this.fetcherService.testApiServer(this.currentDemistoApiName);
+      let testRes = await this.fetcherService.testDemistoEndpointById(this.currentDemistoEndpointName);
 
-      this.currentServerApiInit = testRes.success;
+      this.currentDemistoEndpointInit = testRes.success;
     }
 
-    this.buildDemistoApiConfigOptions();
+    this.buildDemistoEndpointItems();
 
     /*
-    const currentDemistoServerChanged = this.currentServerApiInit && lastCurrentDemistoApiName !== this.currentDemistoApiName; // the current api server may have changed if it was edited
+    const currentDemistoServerChanged = this.currentDemistoEndpointInit && lastCurrentDemistoEndpointName !== this.currentDemistoEndpointName; // the current endpoint may have changed if it was edited
 
     if (currentDemistoServerChanged) {
       // Refresh Demisto Incident Fields
       try {
-        await this.fetchIncidentFieldDefinitions(this.currentDemistoApiName);
+        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName);
       }
       catch (error) {
-        console.error('AppComponent: refreshDemistoApi(): Caught error fetching Demisto incident fields:', error);
+        console.error('AppComponent: refreshDemistoEndpoints(): Caught error fetching Demisto incident fields:', error);
       }
     }
     */
@@ -389,17 +383,17 @@ export class AppComponent implements OnInit {
 
   async fetchIncidentFieldDefinitions(serverId): Promise<boolean> {
     /*
-    Called from ngOnInit(), onReloadFieldDefinitions(), refreshDemistoApi(), switchCurrentDemistoApiServer()
+    Called from ngOnInit(), onReloadFieldDefinitions(), refreshDemistoEndpoints(), switchCurrentDemistoEndpoint()
     Fetches incident field definitions from Demisto
     Saves them to fetchedIncidentFieldDefinitions
     */
-    console.log('fetchIncidentFieldDefinitions()');
+    console.log('AppComponent: fetchIncidentFieldDefinitions()');
     try {
       const fetchedIncidentFieldDefinitions: FetchedIncidentField[] = await this.fetcherService.getIncidentFieldDefinitions(serverId);
 
       this.fetchedIncidentFieldDefinitions = this.parseFetchedIncidentFieldDefinitions(fetchedIncidentFieldDefinitions);
 
-      console.log('fetchedIncidentFieldDefinitions:', this.fetchedIncidentFieldDefinitions);
+      console.log('AppComponent: fetchedIncidentFieldDefinitions:', this.fetchedIncidentFieldDefinitions);
       return true;
 
       // for identification purposes, output all the field types
@@ -409,10 +403,10 @@ export class AppComponent implements OnInit {
         }
         return result;
       }, []);
-      console.log('fieldTypes:', fieldTypes);*/
+      console.log('AppComponent: fetchIncidentFieldDefinitions(): fieldTypes:', fieldTypes);*/
     }
     catch (err) {
-      console.log('Caught error fetching Demisto incident fields:', err);
+      console.log('AppComponent: fetchIncidentFieldDefinitions(): Caught error fetching Demisto incident fields:', err);
       return false;
     }
   }
@@ -424,44 +418,44 @@ export class AppComponent implements OnInit {
     Called from ngOnInit()
     Fetches incident types from Demisto
     */
-    console.log('fetchIncidentTypes()');
+    console.log('AppComponent: fetchIncidentTypes()');
     try {
       const fetchedIncidentTypes: FetchedIncidentType[] = await this.fetcherService.getIncidentTypes(serverId);
-      console.log('fetchIncidentTypes(): ', fetchedIncidentTypes);
+      console.log('AppComponent: fetchIncidentTypes():', fetchedIncidentTypes);
       this.fetchedIncidentTypes = fetchedIncidentTypes;
 
     }
     catch (err) {
-      console.log('Caught error fetching Demisto incident types:', err);
+      console.log('AppComponent: fetchIncidentTypes(): Caught error fetching Demisto incident types:', err);
       return false;
     }
   }
 
 
 
-  async testDemistoApi(url: string, apiKey: string, trustAny: boolean): Promise<boolean> {
-    // performs an ad hoc test of a Demisto API endpoint
-    console.log('testDemistoApi()');
+  async testDemistoEndpointAdHoc(url: string, apiKey: string, trustAny: boolean): Promise<boolean> {
+    // performs an ad hoc test of a Demisto endpoint
+    console.log('AppComponent: testDemistoEndpointAdHoc()');
     let testResult: string;
     const useServerId = this.newDemistoServerDialogMode === 'edit' && this.newDemistoServerApiKey === '';
     try {
       let result;
       if (!useServerId) {
-        result = await this.fetcherService.testApiServerAdhoc({url, apiKey, trustAny});
+        result = await this.fetcherService.testDemistoEndpointAdhoc({url, apiKey, trustAny});
       }
       else {
-        result = await this.fetcherService.testApiServerAdhoc({url, trustAny, serverId: this.selectedDemistoApiName});
+        result = await this.fetcherService.testDemistoEndpointAdhoc({url, trustAny, serverId: this.selectedDemistoEndpointName});
       }
       if (this.messagesClearTimeout) {
         clearTimeout(this.messagesClearTimeout);
         this.messagesClearTimeout = null;
       }
-      console.log('testCredentials() result:', result);
+      console.log('AppComponent: testCredentials() result:', result);
       if ( 'success' in result && result.success ) {
         // test successful
         testResult = 'Test successful';
-        // this.currentServerApiInit = true;
-        this.messageWithAutoClear({ severity: 'success', summary: 'Success', detail: 'XSOAR API communication test success'});
+        // this.currentDemistoEndpointInit = true;
+        this.messageWithAutoClear({ severity: 'success', summary: 'Success', detail: 'XSOAR endpoint communication test success'});
         return true;
       }
       else if ( 'success' in result && !result.success ) {
@@ -476,9 +470,9 @@ export class AppComponent implements OnInit {
         this.messages = [{
           severity: 'error',
           summary: 'Failure',
-          detail: `XSOAR API communication is not initialised. ${testResult}`
+          detail: `XSOAR endpoint communication is not initialised. ${testResult}`
         }];
-        // this.currentServerApiInit = false;
+        // this.currentDemistoEndpointInit = false;
         return false;
       }
     }
@@ -487,9 +481,9 @@ export class AppComponent implements OnInit {
       this.messages = [{
         severity: 'error',
         summary: 'Failure',
-        detail: `XSOAR API communication is not initialised. ${testResult}`
+        detail: `XSOAR endpoint communication is not initialised. ${testResult}`
       }];
-      // this.currentServerApiInit = false;
+      // this.currentDemistoEndpointInit = false;
       return false;
     }
   }
@@ -500,7 +494,7 @@ export class AppComponent implements OnInit {
     /*
     Called from buildIncidentFields()
     */
-    // console.log('buildCustomFields(): customFields:', customFields);
+    // console.log('AppComponent: buildCustomFields(): customFields:', customFields);
     let tmpCustomFields: IncidentFields = {};
     Object.keys(customFields).forEach( shortName => {
       let value = customFields[shortName];
@@ -535,7 +529,7 @@ export class AppComponent implements OnInit {
       tmpCustomFields[shortName] = tmpField;
     });
     this.customFields = tmpCustomFields;
-    console.log('buildCustomFields(): customFields:', this.customFields);
+    console.log('AppComponent: buildCustomFields(): customFields:', this.customFields);
   }
 
 
@@ -544,11 +538,11 @@ export class AppComponent implements OnInit {
     /*
     Called from onIncidentJsonUploaded(), getSampleIncident(), onConfigOpened()
     */
-    console.log('buildIncidentFields(): incidentJson:', incidentJson);
+    console.log('AppComponent: buildIncidentFields(): incidentJson:', incidentJson);
     let incidentFields: IncidentFields = {};
     let skippedInvestigationFields = [];
     Object.keys(incidentJson).forEach( shortName => {
-      // console.log('shortName:', shortName);
+      // console.log('AppComponent: buildIncidentFields(): shortName:', shortName);
       let value = incidentJson[shortName];
 
       if (investigationFields.includes(shortName)) {
@@ -562,7 +556,7 @@ export class AppComponent implements OnInit {
       }
 
       if (this.fetchedIncidentFieldDefinitions && !(shortName in this.fetchedIncidentFieldDefinitions)) {
-        console.error(`Incident field not found: ${shortName}.  It's probably an investigation field and this can safely be ignored.`);
+        console.warn(`Incident field not found: ${shortName}.  It's probably an investigation field and this can safely be ignored.`);
         return;
       }
 
@@ -594,19 +588,19 @@ export class AppComponent implements OnInit {
     });
     this.incidentFields = incidentFields;
     console.log(`Skipped investigation fields:`, skippedInvestigationFields);
-    console.log('buildIncidentFields(): incidentFields:', this.incidentFields);
+    console.log('AppComponent: buildIncidentFields(): incidentFields:', this.incidentFields);
   }
 
 
 
   mergeAndKeepLoadedFieldConfig() {
-    console.log('mergeAndKeepLoadedFieldConfig()');
+    console.log('AppComponent: mergeAndKeepLoadedFieldConfig()');
     // Attempts to keep current field selections and values
     const incidentFieldsDefined = this.incidentFields;
     const customFieldsDefined = this.customFields;
 
     if (!incidentFieldsDefined) {
-      console.log('mergeAndKeepLoadedFieldConfig(): incidentFields not defined.  Returning');
+      console.log('AppComponent: mergeAndKeepLoadedFieldConfig(): incidentFields not defined.  Returning');
       return;
     }
 
@@ -657,8 +651,8 @@ export class AppComponent implements OnInit {
 
   mergeLoadedFieldConfig(savedIncidentConfig: FieldConfig) {
     /*
-    Takes a saved incident field configuration and compares it with the config from the current API server.
-    Called from onConfigOpened(), switchCurrentDemistoApiServer(), onDemistoApiServerUpdated()
+    Takes a saved incident field configuration and compares it with the config from the current Demisto endpoint.
+    Called from onConfigOpened(), switchCurrentDemistoEndpoint(), onDemistoEndpointUpdated()
     Does not need to be called from onIncidentJsonUploaded() because uploaded JSON...
     doesn't contain info on which fields to enable
     */
@@ -681,7 +675,7 @@ export class AppComponent implements OnInit {
       this.customFields[shortName].originalValue = field.value;
     } );
 
-    console.log('mergeLoadedFieldConfig(): incidentFields:', this.incidentFields);
+    console.log('AppComponent: mergeLoadedFieldConfig(): incidentFields:', this.incidentFields);
     // this.incidentFields = JSON.parse(JSON.stringify(this.incidentFields)); // hack deep copy to trigger change detection
     // this.customFields = JSON.parse(JSON.stringify(this.customFields)); // hack deep copy to trigger change detection
   }
@@ -690,13 +684,13 @@ export class AppComponent implements OnInit {
 
   onIncidentJsonUploaded(data: { files: File }, uploadRef) {
     let file = data.files[0];
-    console.log('onIncidentJsonUploaded(): file:', file);
+    console.log('AppComponent: onIncidentJsonUploaded(): file:', file);
 
     try {
       let reader = new FileReader();
       reader.onloadend = (error: any) => {
         this.parsedIncidentJson = JSON.parse(reader.result as string);
-        console.log('onIncidentJsonUploaded(): parsedIncidentJson:', this.parsedIncidentJson);
+        console.log('AppComponent: onIncidentJsonUploaded(): parsedIncidentJson:', this.parsedIncidentJson);
         this.buildIncidentFields(this.parsedIncidentJson);
         this.loadedIncidentConfigName = undefined;
         this.loadedIncidentConfigId = undefined;
@@ -716,13 +710,13 @@ export class AppComponent implements OnInit {
 
   /*onFreeformJsonUploaded(data: { files: File }, uploadRef) {
     let file = data.files[0];
-    console.log('onFreeformJsonUploaded(): file:', file);
+    console.log('AppComponent: onFreeformJsonUploaded(): file:', file);
 
     try {
       let reader = new FileReader();
       reader.onloadend = (error: any) => {
         this.parsedIncidentJson = JSON.parse(reader.result as string);
-        console.log('onFreeformJsonUploaded(): parsedIncidentJson:', this.parsedIncidentJson);
+        console.log('AppComponent: onFreeformJsonUploaded(): parsedIncidentJson:', this.parsedIncidentJson);
         this.buildIncidentFields(this.parsedIncidentJson);
         this.loadedIncidentConfigName = undefined;
         this.loadedIncidentConfigId = undefined;
@@ -743,7 +737,7 @@ export class AppComponent implements OnInit {
   async getSampleIncident() {
     let res = await this.fetcherService.getSampleIncident();
     this.parsedIncidentJson = res;
-    console.log('getSampleIncident(): parsedIncidentJson:', this.parsedIncidentJson);
+    console.log('AppComponent: getSampleIncident(): parsedIncidentJson:', this.parsedIncidentJson);
     this.buildIncidentFields(this.parsedIncidentJson);
   }
 
@@ -762,7 +756,7 @@ export class AppComponent implements OnInit {
 
 
   onSaveAsClicked() {
-    console.log('onSaveAsClicked()');
+    console.log('AppComponent: onSaveAsClicked()');
     this.showSaveAsDialog = true;
     setTimeout( () => {
       // focus input element
@@ -788,7 +782,7 @@ export class AppComponent implements OnInit {
 
 
 
-  buildFieldsConfigOptions(configs: FieldsConfig): SelectItem[] {
+  buildFieldsConfigItems(configs: FieldsConfig): SelectItem[] {
     let items: SelectItem[] = Object.values(configs).map( (config: FieldConfig) =>
       ({ label: config.name, value: config.name })
     );
@@ -798,8 +792,9 @@ export class AppComponent implements OnInit {
 
 
   async onSaveAsAccepted() {
-    console.log('onSaveAsAccepted()');
-    let config: FieldConfig = {
+    console.log('AppComponent: onSaveAsAccepted()');
+
+    const incident_config: FieldConfig = {
       name: this.saveAsConfigName,
       incident: this.parsedIncidentJson,
       incidentFieldsConfig: this.buildFieldConfig(this.incidentFields),
@@ -807,21 +802,21 @@ export class AppComponent implements OnInit {
       createInvestigation: this.createInvestigation
     };
     try {
-      let res = await this.fetcherService.saveNewFieldConfiguration(config);
+      let res = await this.fetcherService.saveNewIncidentConfiguration(incident_config);
       this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration '${this.saveAsConfigName}' has been saved`});
       this.loadedIncidentConfigName = this.saveAsConfigName;
       this.saveAsConfigName = '';
     }
     catch (error) {
-      console.error('onSaveAsAccepted(): caught error saving field config:', error);
+      console.error('AppComponent: onSaveAsAccepted(): caught error saving field config:', error);
       return;
     }
 
-    // Fields Configurations
+    // Update Fields Configurations
     try {
-      this.savedIncidentConfigurations = await this.getAllFieldConfigurations();
+      this.savedIncidentConfigurations = await this.fetcherService.getSavedIncidentConfigurations();
       console.log('AppComponent: onSaveAsAccepted(): savedIncidentConfigurations:', this.savedIncidentConfigurations);
-      this.fieldsConfigOptions = this.buildFieldsConfigOptions(this.savedIncidentConfigurations);
+      this.fieldsConfigItems = this.buildFieldsConfigItems(this.savedIncidentConfigurations);
       this.loadedIncidentConfigId = this.savedIncidentConfigurations[this.loadedIncidentConfigName].id;
     }
     catch (error) {
@@ -833,7 +828,7 @@ export class AppComponent implements OnInit {
 
 
   onSaveAsCanceled() {
-    console.log('onSaveAsCanceled()');
+    console.log('AppComponent: onSaveAsCanceled()');
     this.showSaveAsDialog = false;
     this.saveAsConfigName = '';
   }
@@ -841,7 +836,7 @@ export class AppComponent implements OnInit {
 
 
   onDeleteClicked() {
-    console.log('onDeleteClicked()');
+    console.log('AppComponent: onDeleteClicked()');
     this.showDeleteDialog = true;
     setTimeout( () => {
       // focus input element
@@ -853,20 +848,20 @@ export class AppComponent implements OnInit {
 
 
   onDeleteCanceled() {
-    console.log('onDeleteCanceled()');
+    console.log('AppComponent: onDeleteCanceled()');
     this.showDeleteDialog = false;
   }
 
 
 
-  onDeleteDemistoApiServerHidden() {
-    this.showDemistoApiServerOpenDialog = true;
+  onDeleteDemistoEndpointHidden() {
+    this.showDemistoEndpointOpenDialog = true;
   }
 
 
 
   onDeleteAccepted() {
-    console.log('onDeleteAccepted()');
+    console.log('AppComponent: onDeleteAccepted()');
     this.showDeleteDialog = false;
     this.confirmDialogHeader = 'Confirm Deletion';
     let message = `Are you sure that you would like to delete the configurations: ${this.selectedDeleteConfigs.join(', ')} ?`;
@@ -883,11 +878,11 @@ export class AppComponent implements OnInit {
 
 
   async onDeleteConfirmed() {
-    console.log('onDeleteConfirmed()');
+    console.log('AppComponent: onDeleteConfirmed()');
 
     this.selectedDeleteConfigs.forEach( async configName => {
       try {
-        await this.fetcherService.deleteFieldConfiguration(configName);
+        await this.fetcherService.deleteIncidentConfiguration(configName);
       }
       catch (error) {
         console.error(`onDeleteConfirmed(): caught error whilst deleting configuration ${configName}`);
@@ -897,9 +892,9 @@ export class AppComponent implements OnInit {
 
     // fetch fields config
     try {
-      this.savedIncidentConfigurations = await this.getAllFieldConfigurations();
+      this.savedIncidentConfigurations = await this.fetcherService.getSavedIncidentConfigurations();
       console.log('AppComponent: onDeleteConfirmed(): savedIncidentConfigurations:', this.savedIncidentConfigurations);
-      this.fieldsConfigOptions = this.buildFieldsConfigOptions(this.savedIncidentConfigurations);
+      this.fieldsConfigItems = this.buildFieldsConfigItems(this.savedIncidentConfigurations);
       this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration ${this.selectedOpenConfig} was successfully deleted`});
 
       // handle when we've deleted the loaded config
@@ -918,7 +913,7 @@ export class AppComponent implements OnInit {
 
 
   async onSaveClicked() {
-    console.log('onSaveClicked()');
+    console.log('AppComponent: onSaveClicked()');
     let config: FieldConfig = {
       name: this.loadedIncidentConfigName,
       incident: this.parsedIncidentJson,
@@ -927,9 +922,9 @@ export class AppComponent implements OnInit {
       createInvestigation: this.createInvestigation,
       id: this.loadedIncidentConfigId
     };
-    // console.log('onSaveClicked(): config:', config);
+    // console.log('AppComponent: onSaveClicked(): config:', config);
     try {
-      let res = await this.fetcherService.saveFieldConfiguration(config);
+      let res = await this.fetcherService.saveIncidentConfiguration(config);
       this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration '${this.selectedOpenConfig}' has been saved`});
     }
     catch (error) {
@@ -939,9 +934,9 @@ export class AppComponent implements OnInit {
 
     // Get Fields Configurations
     try {
-      this.savedIncidentConfigurations = await this.getAllFieldConfigurations();
+      this.savedIncidentConfigurations = await this.fetcherService.getSavedIncidentConfigurations();
       // console.log('AppComponent: onSaveClicked(): savedIncidentConfigurations:', this.savedIncidentConfigurations);
-      this.fieldsConfigOptions = this.buildFieldsConfigOptions(this.savedIncidentConfigurations);
+      this.fieldsConfigItems = this.buildFieldsConfigItems(this.savedIncidentConfigurations);
     }
     catch (error) {
       console.error('AppComponent: onSaveClicked(): Caught error fetching fields configuration:', error);
@@ -951,7 +946,7 @@ export class AppComponent implements OnInit {
 
 
   onOpenClicked() {
-    console.log('onOpenClicked()');
+    console.log('AppComponent: onOpenClicked()');
     this.showOpenDialog = true;
     setTimeout( () => {
       // focus input element
@@ -963,12 +958,12 @@ export class AppComponent implements OnInit {
 
 
   onConfigOpened() {
-    console.log('onConfigOpened()');
+    console.log('AppComponent: onConfigOpened()');
     this.showOpenDialog = false;
     const selectedConfig = this.savedIncidentConfigurations[this.selectedOpenConfig];
 
     this.parsedIncidentJson = selectedConfig.incident;
-    console.log('onConfigOpened(): parsedIncidentJson:', this.parsedIncidentJson);
+    console.log('AppComponent: onConfigOpened(): parsedIncidentJson:', this.parsedIncidentJson);
     this.buildIncidentFields(selectedConfig.incident);
     this.mergeLoadedFieldConfig(selectedConfig);
     this.loadedIncidentConfigName = selectedConfig.name;
@@ -980,14 +975,14 @@ export class AppComponent implements OnInit {
 
 
   onOpenCanceled() {
-    console.log('onOpenCancelled()');
+    console.log('AppComponent: onOpenCancelled()');
     this.showOpenDialog = false;
   }
 
 
 
   onBulkCreateClicked() {
-    console.log('onBulkCreateClicked()');
+    console.log('AppComponent: onBulkCreateClicked()');
     this.showBulkCreateDialog = true;
     setTimeout( () => {
       // focus input element
@@ -999,21 +994,21 @@ export class AppComponent implements OnInit {
 
 
   onBulkCreateCanceled() {
-    console.log('onBulkCreateCanceled()');
+    console.log('AppComponent: onBulkCreateCanceled()');
     this.showBulkCreateDialog = false;
   }
 
 
 
   async onCreateBulkIncidents() {
-    console.log('onCreateBulkIncidents()');
+    console.log('AppComponent: onCreateBulkIncidents()');
     this.showBulkCreateDialog = false;
     this.showBulkResultsDialog = true;
     this.changeDetector.detectChanges(); // trigger change detection
 
     this.bulkCreateResults = [];
 
-    console.log('selectedBulkCreateConfigs:', this.selectedBulkCreateConfigs);
+    console.log('AppComponent: selectedBulkCreateConfigs:', this.selectedBulkCreateConfigs);
 
     /*
     Steps to complete:
@@ -1031,9 +1026,9 @@ export class AppComponent implements OnInit {
     let testResults = [];
     let serverFieldDefinitions = {};
 
-    let serverTestPromises: Promise<any>[] = this.selectedBulkCreateApiServers.map( async serverId => {
+    let serverTestPromises: Promise<any>[] = this.selectedBulkCreateEndpoints.map( async serverId => {
       console.log(`onCreateBulkIncidents(): Testing Demisto server ${serverId}`);
-      const testResult  = await this.fetcherService.testApiServer(serverId);
+      const testResult  = await this.fetcherService.testDemistoEndpointById(serverId);
 
       testResults.push({serverId, testResult});
 
@@ -1046,8 +1041,8 @@ export class AppComponent implements OnInit {
     } );
 
     await Promise.all(serverTestPromises);
-    console.log('Server tests and field fetching complete');
-    console.log('serverFieldDefinitions:', serverFieldDefinitions);
+    console.log('AppComponent: selectedBulkCreateConfigs: Server tests and field fetching complete');
+    console.log('AppComponent: selectedBulkCreateConfigs: serverFieldDefinitions:', serverFieldDefinitions);
 
     for (const configName of this.selectedBulkCreateConfigs) {
 
@@ -1068,7 +1063,7 @@ export class AppComponent implements OnInit {
           return;
         }
 
-        console.log('onCreateBulkIncidents(): configName:', configName);
+        console.log('AppComponent: onCreateBulkIncidents(): configName:', configName);
         let selectedConfig = this.savedIncidentConfigurations[configName];
         let skippedFields: string[] = [];
 
@@ -1108,7 +1103,7 @@ export class AppComponent implements OnInit {
           newIncident['CustomFields'][fieldName] = incidentFieldConfig.value;
         });
 
-        console.log('onCreateBulkIncidents(): newIncident:', newIncident);
+        console.log('AppComponent: onCreateBulkIncidents(): newIncident:', newIncident);
 
         // now submit the incident
         createIncidentPromises.push((async () => {
@@ -1127,18 +1122,18 @@ export class AppComponent implements OnInit {
 
 
     await Promise.all(createIncidentPromises);
-    console.log('Incident creation complete');
+    console.log('AppComponent: onCreateBulkIncidents(): Incident creation complete');
 
-    console.log('onCreateBulkIncidents(): bulkCreateResults:', this.bulkCreateResults);
+    console.log('AppComponent: onCreateBulkIncidents(): bulkCreateResults:', this.bulkCreateResults);
 
     this.selectedBulkCreateConfigs = []; // reset selection
-    this.selectedBulkCreateApiServers = [];
+    this.selectedBulkCreateEndpoints = [];
   }
 
 
 
   async onClickDemistoInvestigateUrl(incidentId: number, serverId: string) {
-    console.log('onClickDemistoInvestigateUrl(): id:', incidentId);
+    console.log('AppComponent: onClickDemistoInvestigateUrl(): id:', incidentId);
     await this.fetcherService.createInvestigation(incidentId, serverId);
     const url = `${serverId}/#/incident/${incidentId}`;
     window.open(url, '_blank');
@@ -1146,51 +1141,51 @@ export class AppComponent implements OnInit {
 
 
 
-  async testDemistoApiServer(serverId: string): Promise<boolean> {
-    const testRes = await this.fetcherService.testApiServer(serverId);
+  async testDemistoEndpointById(serverId: string): Promise<boolean> {
+    const testRes = await this.fetcherService.testDemistoEndpointById(serverId);
     return testRes.success;
   }
 
 
 
-  async switchCurrentDemistoApiServer(serverId: string): Promise<void> {
+  async switchCurrentDemistoEndpoint(serverId: string): Promise<void> {
     /*
-    Called from onDemistoApiServerSelected()
+    Called from onDemistoEndpointSelected()
     Tests selected server
-    Sets currentDemistoApiName and currentServerApiInit
+    Sets currentDemistoEndpointName and currentDemistoEndpointInit
     */
-    console.log('switchCurrentDemistoApiServer(): serverId:', serverId);
+    console.log('AppComponent: switchCurrentDemistoEndpoint(): serverId:', serverId);
 
-    const currentDemistoApiNameReselected = this.currentDemistoApiName === serverId;
-    const noServerPreviouslySelected = !this.currentDemistoApiName;
+    const currentDemistoEndpointNameReselected = this.currentDemistoEndpointName === serverId;
+    const noServerPreviouslySelected = !this.currentDemistoEndpointName;
 
-    if (currentDemistoApiNameReselected) {
-      console.log('switchCurrentDemistoApiServer(): currentDemistoApiName was reselected.  Returning');
+    if (currentDemistoEndpointNameReselected) {
+      console.log('AppComponent: switchCurrentDemistoEndpoint(): currentDemistoEndpointName was reselected.  Returning');
       return;
     }
 
-    // this is the procedure to load a demistoApiServer
+    // this is the procedure to load a demistoEndpoint
     // test it and then 'load' it
     let testRes;
     try {
-      testRes = await this.fetcherService.testApiServer(serverId);
-      this.currentDemistoApiName = serverId;
-      this.currentServerApiInit = testRes.success;
+      testRes = await this.fetcherService.testDemistoEndpointById(serverId);
+      this.currentDemistoEndpointName = serverId;
+      this.currentDemistoEndpointInit = testRes.success;
     }
     catch (error) {
-      this.currentServerApiInit = false;
+      this.currentDemistoEndpointInit = false;
       if (testRes) {
-        console.error('Error loading API server:', testRes);
+        console.error('AppComponent: switchCurrentDemistoEndpoint(): Error loading Demisto endpoint:', testRes);
       }
       else {
-        console.error('Error loading API server:', error);
+        console.error('AppComponent: switchCurrentDemistoEndpoint(): Error loading Demisto endpoint:', error);
       }
     }
 
-    if (this.currentServerApiInit) {
+    if (this.currentDemistoEndpointInit) {
       // Refresh Demisto Incident Fields
       try {
-        await this.fetchIncidentFieldDefinitions(this.currentDemistoApiName);
+        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName);
 
         if (this.loadedIncidentConfigName && !noServerPreviouslySelected) {
           const message = `Do you want to attempt to keep your current field values and selections, or reset them to their saved state?`;
@@ -1210,54 +1205,63 @@ export class AppComponent implements OnInit {
         }
       }
       catch (error) {
-        console.error('AppComponent: switchCurrentDemistoApiServer(): Caught error fetching Demisto incident fields:', error);
+        console.error('AppComponent: switchCurrentDemistoEndpoint(): Caught error fetching Demisto incident fields:', error);
       }
+
+      // Refresh Demisto Incident Types
+      try {
+        await this.fetchIncidentTypes(this.currentDemistoEndpointName);
+      }
+      catch (error) {
+        console.error('AppComponent: switchCurrentDemistoEndpoint(): Caught error fetching Demisto incident types:', error);
+      }
+
     }
 
   }
 
 
 
-  async onDemistoApiServerSelected() {
-    console.log('onDemistoApiServerSelected(): selectedDemistoApiName:', this.selectedDemistoApiName);
-    await this.switchCurrentDemistoApiServer(this.selectedDemistoApiName);
-    this.showDemistoApiServerOpenDialog = false;
+  async onDemistoEndpointSelected() {
+    console.log('AppComponent: onDemistoEndpointSelected(): selectedDemistoEndpointName:', this.selectedDemistoEndpointName);
+    await this.switchCurrentDemistoEndpoint(this.selectedDemistoEndpointName);
+    this.showDemistoEndpointOpenDialog = false;
   }
 
 
 
   async onOpenDemistoServersClicked() {
-    console.log('onOpenDemistoServersClicked()');
-    this.showDemistoApiServerOpenDialog = true;
+    console.log('AppComponent: onOpenDemistoServersClicked()');
+    this.showDemistoEndpointOpenDialog = true;
   }
 
 
 
-  async onNewDemistoApiServer() {
-    console.log('onNewDemistoApiServer()');
+  async onNewDemistoEndpoint() {
+    console.log('AppComponent: onNewDemistoEndpoint()');
     this.newDemistoServerDialogMode = 'new';
-    this.showDemistoApiServerOpenDialog = false;
-    this.showNewDemistoApiServerDialog = true;
+    this.showDemistoEndpointOpenDialog = false;
+    this.showNewDemistoEndpointDialog = true;
     this.newDemistoServerUrl = '';
     this.newDemistoServerApiKey = '';
     this.newDemistoServerTrustAny = true;
     setTimeout( () =>
-      document.getElementsByClassName('newDemistoApiServerDialog')[0].getElementsByTagName('input')[0].focus()
+      document.getElementsByClassName('newDemistoEndpointDialog')[0].getElementsByTagName('input')[0].focus()
       , 100);
   }
 
 
 
-  async onNewDemistoApiServerSaved() {
-    console.log('onNewDemistoApiServerSaved()');
-    this.showNewDemistoApiServerDialog = false;
-    this.showDemistoApiServerOpenDialog = true;
+  async onNewDemistoEndpointSaved() {
+    console.log('AppComponent: onNewDemistoEndpointSaved()');
+    this.showNewDemistoEndpointDialog = false;
+    this.showDemistoEndpointOpenDialog = true;
 
-    const success = await this.fetcherService.createDemistoApi(this.newDemistoServerUrl, this.newDemistoServerApiKey, this.newDemistoServerTrustAny);
-    console.log('onNewDemistoApiServerSaved(): success:', success);
+    const success = await this.fetcherService.createDemistoEndpoint(this.newDemistoServerUrl, this.newDemistoServerApiKey, this.newDemistoServerTrustAny);
+    console.log('AppComponent: onNewDemistoEndpointSaved(): success:', success);
 
     // refresh servers
-    await this.refreshDemistoApi(true);
+    await this.refreshDemistoEndpoints(true);
 
     this.newDemistoServerUrl = '';
     this.newDemistoServerApiKey = '';
@@ -1266,46 +1270,46 @@ export class AppComponent implements OnInit {
 
 
 
-  onNewDemistoApiServerCanceled() {
-    this.showNewDemistoApiServerDialog = false;
-    this.showDemistoApiServerOpenDialog = true;
+  onNewDemistoEndpointCanceled() {
+    this.showNewDemistoEndpointDialog = false;
+    this.showDemistoEndpointOpenDialog = true;
   }
 
 
 
-  async onDeleteDemistoApiServer() {
-    console.log(`onDeleteDemistoApiServer(): ${this.demistoApiServerToDelete}`);
-    this.showDemistoApiServerOpenDialog = false;
-    this.showDeleteDemistoApiServerDialog = true;
-    this.demistoApiServerToDelete = this.selectedDemistoApiName;
+  async onDeleteDemistoEndpoint() {
+    console.log(`onDeleteDemistoEndpoint(): ${this.demistoEndpointToDelete}`);
+    this.showDemistoEndpointOpenDialog = false;
+    this.showDeleteDemistoEndpointDialog = true;
+    this.demistoEndpointToDelete = this.selectedDemistoEndpointName;
   }
 
 
 
-  async onDeleteDemistoApiServerConfirmed() {
-    console.log('onDeleteDemistoApiServerConfirmed()');
-    this.showDemistoApiServerOpenDialog = true;
-    this.showDeleteDemistoApiServerDialog = false;
+  async onDeleteDemistoEndpointConfirmed() {
+    console.log('AppComponent: onDeleteDemistoEndpointConfirmed()');
+    this.showDemistoEndpointOpenDialog = true;
+    this.showDeleteDemistoEndpointDialog = false;
     let res;
     try {
-      res = await this.fetcherService.deleteDemistoApi(this.demistoApiServerToDelete);
-      await this.refreshDemistoApi();
+      res = await this.fetcherService.deleteDemistoEndpoint(this.demistoEndpointToDelete);
+      await this.refreshDemistoEndpoints();
 
-      console.log('demistoApiEndpoints:', this.demistoApiEndpoints);
+      console.log('AppComponent: onDeleteDemistoEndpointConfirmed(): demistoEndpoints:', this.demistoEndpoints);
 
-      // handle deletion of current API
-      if (this.demistoApiServerToDelete === this.currentDemistoApiName) {
-        this.currentDemistoApiName = undefined;
-        this.currentServerApiInit = false;
-        // default api logic will be handled by the server and refreshDemistoApi()
+      // handle deletion of current Demisto endpoint
+      if (this.demistoEndpointToDelete === this.currentDemistoEndpointName) {
+        this.currentDemistoEndpointName = undefined;
+        this.currentDemistoEndpointInit = false;
+        // default endpoint logic will be handled by the server and refreshDemistoEndpoints()
       }
     }
     catch (error) {
       //  do something if there's an error
-      console.error(`Caught error deleting ${this.demistoApiServerToDelete}`, res.error);
+      console.error(`Caught error deleting ${this.demistoEndpointToDelete}`, res.error);
     }
 
-    if (!this.currentServerApiInit) {
+    if (!this.currentDemistoEndpointInit) {
       // Clear Demisto Incident Field Definitions
       this.fetchedIncidentFieldDefinitions = undefined;
       this.mergeAndKeepLoadedFieldConfig();
@@ -1315,43 +1319,43 @@ export class AppComponent implements OnInit {
 
 
 
-  async onSetDefaultDemistoApiServer() {
-    console.log('onSetDefaultDemistoApiServer()');
-    await this.fetcherService.setDemistoDefaultApi(this.selectedDemistoApiName);
-    await this.refreshDemistoApi();
+  async onSetDefaultDemistoEndpoint() {
+    console.log('AppComponent: onSetDefaultDemistoEndpoint()');
+    await this.fetcherService.setDefaultDemistoEndpoint(this.selectedDemistoEndpointName);
+    await this.refreshDemistoEndpoints();
   }
 
 
 
-  async onRefreshDemistoApiServers() {
-    console.log('onRefreshDemistoApiServers()');
-    await this.refreshDemistoApi();
+  async onRefreshDemistoEndpoints() {
+    console.log('AppComponent: onRefreshDemistoEndpoints()');
+    await this.refreshDemistoEndpoints();
   }
 
 
 
-  async onTestDemistoApiServer() {
-    console.log('onTestDemistoApiServer()');
-    const success = await this.testDemistoApiServer(this.selectedDemistoApiName);
+  async onTestDemistoEndpoint() {
+    console.log('AppComponent: onTestDemistoEndpoint(): selectedDemistoEndpointName:', this.selectedDemistoEndpointName);
+    const success = await this.testDemistoEndpointById(this.selectedDemistoEndpointName);
     if (success) {
-      this.messagesReplace( [{ severity: 'success', summary: 'Success', detail: `Demisto API test success for ${this.defaultDemistoApiName}`}] );
+      this.messagesReplace( [{ severity: 'success', summary: 'Success', detail: `XSOAR endpoint ${this.selectedDemistoEndpointName} test success`}] );
     }
     else {
-      this.messagesReplace( [{ severity: 'error', summary: 'Failure', detail: `Demisto API test failure for ${this.defaultDemistoApiName}`}] );
+      this.messagesReplace( [{ severity: 'error', summary: 'Failure', detail: `XSOAR endpoint ${this.selectedDemistoEndpointName} test failure`}] );
     }
   }
 
 
 
-  async onEditDemistoApiServer() {
-    console.log('onEditDemistoApiServer()');
+  async onEditDemistoEndpoint() {
+    console.log('AppComponent: onEditDemistoEndpoint()');
     this.newDemistoServerDialogMode = 'edit';
-    this.showNewDemistoApiServerDialog = true;
-    this.showDemistoApiServerOpenDialog = false;
+    this.showNewDemistoEndpointDialog = true;
+    this.showDemistoEndpointOpenDialog = false;
 
     // get Demisto server details and stick them in
     // newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny
-    const demistoServer = this.demistoApiEndpoints[this.selectedDemistoApiName];
+    const demistoServer = this.demistoEndpoints[this.selectedDemistoEndpointName];
     this.newDemistoServerUrl = demistoServer.url;
     this.newDemistoServerApiKey = '';
     this.newDemistoServerTrustAny = demistoServer.trustAny;
@@ -1359,37 +1363,37 @@ export class AppComponent implements OnInit {
 
 
 
-  async onDemistoApiServerUpdated(updatedServerUrl: string) {
-    console.log('onDemistoApiServerUpdated()');
+  async onDemistoEndpointUpdated(updatedServerUrl: string) {
+    console.log('AppComponent: onDemistoEndpointUpdated()');
 
-    this.showNewDemistoApiServerDialog = false;
-    this.showDemistoApiServerOpenDialog = true;
+    this.showNewDemistoEndpointDialog = false;
+    this.showDemistoEndpointOpenDialog = true;
 
-    const oldSelectedDemistoApiName = this.selectedDemistoApiName;
+    const oldSelectedDemistoApiName = this.selectedDemistoEndpointName;
 
-    const currentDemistoApiServerUpdated = oldSelectedDemistoApiName === this.currentDemistoApiName;
+    const currentDemistoEndpointUpdated = oldSelectedDemistoApiName === this.currentDemistoEndpointName;
 
     let res: any;
     if (this.newDemistoServerApiKey === '') {
-      res = await this.fetcherService.updateDemistoApi(this.selectedDemistoApiName, this.newDemistoServerUrl, this.newDemistoServerTrustAny );
+      res = await this.fetcherService.updateDemistoEndpoint(this.selectedDemistoEndpointName, this.newDemistoServerUrl, this.newDemistoServerTrustAny );
     }
     else {
-      res = await this.fetcherService.updateDemistoApi(this.selectedDemistoApiName, this.newDemistoServerUrl, this.newDemistoServerTrustAny, this.newDemistoServerApiKey);
+      res = await this.fetcherService.updateDemistoEndpoint(this.selectedDemistoEndpointName, this.newDemistoServerUrl, this.newDemistoServerTrustAny, this.newDemistoServerApiKey);
     }
 
-    if (oldSelectedDemistoApiName === this.currentDemistoApiName) {
-      // it's necessary to fix currentDemistoApiName if it has been edited
-      // before running refreshDemistoApi()
-      this.currentDemistoApiName = this.newDemistoServerUrl;
+    if (oldSelectedDemistoApiName === this.currentDemistoEndpointName) {
+      // it's necessary to fix currentDemistoEndpointName if it has been edited
+      // before running refreshDemistoEndpoints()
+      this.currentDemistoEndpointName = this.newDemistoServerUrl;
     }
 
     // refresh servers
-    await this.refreshDemistoApi();
+    await this.refreshDemistoEndpoints();
 
-    if (currentDemistoApiServerUpdated && this.currentServerApiInit) {
+    if (currentDemistoEndpointUpdated && this.currentDemistoEndpointInit) {
       // Refresh Demisto Incident Fields, if current server is initialised
       try {
-        await this.fetchIncidentFieldDefinitions(this.currentDemistoApiName);
+        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName);
 
         if (this.loadedIncidentConfigName) {
           const message = `Do you want to attempt to keep your current field values and selections, or reset them to their saved state?`;
@@ -1404,7 +1408,15 @@ export class AppComponent implements OnInit {
         }
       }
       catch (error) {
-        console.error('AppComponent: onDemistoApiServerUpdated(): Caught error fetching Demisto incident fields:', error);
+        console.error('AppComponent: onDemistoEndpointUpdated(): Caught error fetching Demisto incident fields:', error);
+      }
+
+      // Refresh Demisto Incident Types
+      try {
+        await this.fetchIncidentTypes(this.currentDemistoEndpointName);
+      }
+      catch (error) {
+        console.error('AppComponent: onDemistoEndpointUpdated(): Caught error fetching Demisto incident types:', error);
       }
     }
 
@@ -1415,16 +1427,16 @@ export class AppComponent implements OnInit {
 
 
 
-  onNewEditDemistoApiServerHidden() {
-    this.showDemistoApiServerOpenDialog = true;
+  onNewEditDemistoEndpointHidden() {
+    this.showDemistoEndpointOpenDialog = true;
   }
 
 
 
   onLoadFromDemistoClicked() {
     this.showLoadFromDemistoDialog = true;
-    if (this.currentDemistoApiName !== '') {
-      this.demistoApiToLoadFrom = this.currentDemistoApiName;
+    if (this.currentDemistoEndpointName !== '') {
+      this.demistoEndpointToLoadFrom = this.currentDemistoEndpointName;
     }
     setTimeout( () => {
       // focus input element
@@ -1442,30 +1454,30 @@ export class AppComponent implements OnInit {
 
 
   async onLoadFromDemistoAccepted() {
-    console.log('onLoadFromDemistoAccepted()');
+    console.log('AppComponent: onLoadFromDemistoAccepted()');
     this.showLoadFromDemistoDialog = false;
 
     try {
-      const res = await this.fetcherService.demistoIncidentImport(this.demistoIncidentToLoad, this.demistoApiToLoadFrom);
-      console.log('onLoadFromDemistoAccepted(): res:', res);
+      const res = await this.fetcherService.demistoIncidentImport(this.demistoIncidentToLoad, this.demistoEndpointToLoadFrom);
+      console.log('AppComponent: onLoadFromDemistoAccepted(): res:', res);
 
       if (res.success) {
         this.parsedIncidentJson = res.incident;
         this.buildIncidentFields(this.parsedIncidentJson);
-        this.messageWithAutoClear( { severity: 'success', summary: 'Success', detail: `Incident ${this.demistoIncidentToLoad} was successfully loaded from ${this.demistoApiToLoadFrom}`} );
+        this.messageWithAutoClear( { severity: 'success', summary: 'Success', detail: `Incident ${this.demistoIncidentToLoad} was successfully loaded from ${this.demistoEndpointToLoadFrom}`} );
         this.loadedIncidentConfigName = undefined;
         this.loadedIncidentConfigId = undefined;
         this.createInvestigation = true;
       }
 
       else if (res.error === `Query returned 0 results`) {
-        this.messagesReplace( [{ severity: 'error', summary: 'Failure', detail: `Incident ${this.demistoIncidentToLoad} was not found on Demisto server ${this.demistoApiToLoadFrom}`}] );
+        this.messagesReplace( [{ severity: 'error', summary: 'Failure', detail: `Incident ${this.demistoIncidentToLoad} was not found on Demisto server ${this.demistoEndpointToLoadFrom}`}] );
       }
 
       else {
         this.messagesReplace( [{ severity: 'error', summary: 'Error', detail: `Error returned fetching incident ${this.demistoIncidentToLoad}: ${res.error}`}] );
       }
-      this.demistoApiToLoadFrom = '';
+      this.demistoEndpointToLoadFrom = '';
       this.demistoIncidentToLoad = '';
     }
 
@@ -1482,7 +1494,13 @@ export class AppComponent implements OnInit {
 
   onNewJsonMappingClicked() {
     this.showJsonMappingUI = true;
-
+    this.parsedIncidentJson = undefined;
+    this.loadedIncidentConfigName = undefined;
+    this.incidentFields = undefined;
+    this.customFields = undefined;
+    this.loadedIncidentConfigId = undefined;
+    this.loadedIncidentConfigName = undefined;
+    this.createInvestigation = true;
   }
 
 

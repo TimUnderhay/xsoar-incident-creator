@@ -152,7 +152,7 @@ async function testApi(url, apiKey, trustAny) {
 
 
 
-app.post(apiPath + '/demistoApi/test/adhoc', async (req, res) => {
+app.post(apiPath + '/demistoEndpoint/test/adhoc', async (req, res) => {
   // Tests for good connectivity to Demisto server by fetching user settings.
   // Does not save settings.  Another call will handle that.
 
@@ -214,7 +214,7 @@ app.post(apiPath + '/demistoApi/test/adhoc', async (req, res) => {
 
 
 
-app.get(apiPath + '/demistoApi/test/:serverId', async (req, res) => {
+app.get(apiPath + '/demistoEndpoint/test/:serverId', async (req, res) => {
   // Tests for good connectivity to Demisto server by fetching user settings.
   // Does not save settings.  Another call will handle that.
 
@@ -261,7 +261,7 @@ app.get(apiPath + '/demistoApi/test/:serverId', async (req, res) => {
 
 
 
-app.post(apiPath + '/demistoApi/default', async (req, res) => {
+app.post(apiPath + '/demistoEndpoint/default', async (req, res) => {
   // sets the default Demisto API endpoint
   let serverId;
 
@@ -284,7 +284,7 @@ app.post(apiPath + '/demistoApi/default', async (req, res) => {
 
 
 
-app.get(apiPath + '/demistoApi/default', async (req, res) => {
+app.get(apiPath + '/demistoEndpoint/default', async (req, res) => {
   // fetch the default Demisto API endpoint
   if (defaultDemistoApiName) {
     res.status(200).json({defined: true, serverId: defaultDemistoApiName});
@@ -296,7 +296,7 @@ app.get(apiPath + '/demistoApi/default', async (req, res) => {
 
 
 
-app.post(apiPath + '/demistoApi', async (req, res) => {
+app.post(apiPath + '/demistoEndpoint', async (req, res) => {
     // add a new Demisto API server config
     // will overwrite existing config for url
 
@@ -327,7 +327,7 @@ app.post(apiPath + '/demistoApi', async (req, res) => {
 
 
 
-app.post(apiPath + '/demistoApi/update', async (req, res) => {
+app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
     // saves Demisto API config
     // will overwrite existing config for url
 
@@ -380,7 +380,7 @@ app.post(apiPath + '/demistoApi/update', async (req, res) => {
 
 
 
-app.delete(apiPath + '/demistoApi/:serverId', async (req, res) => {
+app.delete(apiPath + '/demistoEndpoint/:serverId', async (req, res) => {
   // deletes a Demisto server from the API config
   const serverId = decodeURIComponent(req.params.serverId);
   if (serverId in demistoApiConfigs) {
@@ -400,7 +400,7 @@ app.delete(apiPath + '/demistoApi/:serverId', async (req, res) => {
 
 
 
-app.get(apiPath + '/demistoApi', async (req, res) => {
+app.get(apiPath + '/demistoEndpoint', async (req, res) => {
   // return all demisto API configs to the client, minus their apiKeys
   let tmpDemistoApiConfigs = JSON.parse(JSON.stringify(demistoApiConfigs));
   Object.values(tmpDemistoApiConfigs).forEach( apiConfig => {
@@ -565,7 +565,7 @@ catch (error) {
 
 
 
-app.get(apiPath + '/sampleincident', async (req, res) => {
+app.get(apiPath + '/sampleIncident', async (req, res) => {
   let data;
   const fileName = 'testIncidentFields.json';
   const filePath = `${incidentsDir}/${fileName}`;
@@ -591,7 +591,7 @@ app.get(apiPath + '/sampleincident', async (req, res) => {
 
 
 
-app.get(apiPath + '/incidentfields/:serverId', async (req, res) => {
+app.get(apiPath + '/incidentFields/:serverId', async (req, res) => {
   const serverId = decodeURIComponent(req.params.serverId);
   const fields = await getIncidentFields(serverId);
   incident_fields[serverId] = fields;
@@ -600,7 +600,7 @@ app.get(apiPath + '/incidentfields/:serverId', async (req, res) => {
 
 
 
-app.get(apiPath + '/incidenttype/:serverId', async (req, res) => {
+app.get(apiPath + '/incidentType/:serverId', async (req, res) => {
   const serverId = decodeURIComponent(req.params.serverId);
   const incident_types = await getIncidentTypes(serverId);
   res.json( {id: serverId, incident_types} );
@@ -672,7 +672,7 @@ function saveFieldsConfig() {
 
 
 
-app.post(apiPath + '/fieldConfig', async (req, res) => {
+app.post(apiPath + '/incidentConfig', async (req, res) => {
   // save a new field config
   let body = req.body;
   const requiredFields = ['name', 'incident', 'customFieldsConfig', 'incidentFieldsConfig', 'createInvestigation'];
@@ -713,7 +713,7 @@ app.post(apiPath + '/fieldConfig', async (req, res) => {
 
 
 
-app.post(apiPath + '/fieldConfig/update', async (req, res) => {
+app.post(apiPath + '/incidentConfig/update', async (req, res) => {
   // update an existing field config
   const body = req.body;
   const requiredFields = ['name', 'id', 'incident', 'customFieldsConfig', 'incidentFieldsConfig', 'createInvestigation'];
@@ -752,14 +752,14 @@ app.post(apiPath + '/fieldConfig/update', async (req, res) => {
 
 
 
-app.get(apiPath + '/fieldConfig/all', async (req, res) => {
-  // retrieve all field configs -- must come before /fieldConfig/:name
+app.get(apiPath + '/incidentConfig/all', async (req, res) => {
+  // retrieve all field configs -- must come before /incidentConfig/:name
   res.status(200).json(fieldsConfig);
 } );
 
 
 
-app.get(apiPath + '/fieldConfig/:name', async (req, res) => {
+app.get(apiPath + '/incidentConfig/:name', async (req, res) => {
   // get a particular field config
   const name = req.params.name;
   if (name in fieldsConfig) {
@@ -775,7 +775,7 @@ app.get(apiPath + '/fieldConfig/:name', async (req, res) => {
 
 
 
-app.delete(apiPath + '/fieldConfig/:name', async (req, res) => {
+app.delete(apiPath + '/incidentConfig/:name', async (req, res) => {
   // delete a field config
   const name = req.params.name;
   if (name in fieldsConfig) {

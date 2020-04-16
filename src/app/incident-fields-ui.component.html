@@ -29,7 +29,7 @@
       <!-- Select / Toggle Buttons -->
       <div>
 
-        <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()" [disabled]="!currentServerApiInit"></p-button>
+        <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()" [disabled]="!currentDemistoEndpointInit"></p-button>
 
       </div >
 
@@ -65,11 +65,11 @@
       <!-- Select / Toggle Buttons -->
       <div>
 
-        <p-button type="button" label="Reset Values" (onClick)="onResetAllCustomFieldValues()" [disabled]="!currentServerApiInit"></p-button>
+        <p-button type="button" label="Reset Values" (onClick)="onResetAllCustomFieldValues()" [disabled]="!currentDemistoEndpointInit"></p-button>
 
-        <p-toggleButton [onLabel]="shortNamesLabel" [offLabel]="longNamesLabel" [(ngModel)]="displayCustomFieldShortNames" name="shortCustomNames" [disabled]="!currentServerApiInit"></p-toggleButton>
+        <p-toggleButton [onLabel]="shortNamesLabel" [offLabel]="longNamesLabel" [(ngModel)]="displayCustomFieldShortNames" name="shortCustomNames" [disabled]="!currentDemistoEndpointInit"></p-toggleButton>
 
-        <p-button type="button" label="Reload Definitions" name="createIncident" (onClick)="onReloadFieldDefinitions()" [disabled]="!currentServerApiInit" pTooltip="Reload the field definitions from XSOAR"></p-button>
+        <p-button type="button" label="Reload Definitions" name="createIncident" (onClick)="onReloadFieldDefinitions()" [disabled]="!currentDemistoEndpointInit" pTooltip="Reload the field definitions from XSOAR"></p-button>
 
       </div >
 

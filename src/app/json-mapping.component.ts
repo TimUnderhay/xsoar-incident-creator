@@ -1,6 +1,6 @@
 import { Component, OnInit, Input, ChangeDetectorRef } from '@angular/core';
 import { FetcherService } from './fetcher-service';
-import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
+import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
 import { ConfirmationService } from 'primeng/api';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
 import { IncidentField, IncidentFields } from './types/incident-fields';
@@ -22,8 +22,8 @@ export class JsonMappingUIComponent implements OnInit {
   ) {}
 
   @Input() loadedJsonMappingConfigName: string; // must clear when loaded from json or when current config is deleted
-  @Input() currentDemistoApiName: string;
-  @Input() currentServerApiInit: boolean;
+  @Input() currentDemistoEndpointName: string;
+  @Input() currentDemistoEndpointInit: boolean;
   @Input() fetchedIncidentFieldDefinitions: FetchedIncidentFieldDefinitions; // the fields taken from Demisto
   @Input() fetchedIncidentTypes: FetchedIncidentType[]; // the incident types taken from Demisto
 
@@ -36,7 +36,7 @@ export class JsonMappingUIComponent implements OnInit {
 
 
   ngOnInit() {
-    console.log('ngOnInit(): fetchedIncidentFieldDefinitions:', this.fetchedIncidentFieldDefinitions);
+    console.log('JsonMappingUIComponent: ngOnInit(): fetchedIncidentFieldDefinitions:', this.fetchedIncidentFieldDefinitions);
 
     if (this.fetchedIncidentTypes && this.fetchedIncidentFieldDefinitions) {
       this.buildIncidentTypeOptions();
@@ -46,10 +46,10 @@ export class JsonMappingUIComponent implements OnInit {
 
 
   buildIncidentTypeOptions() {
-    console.log('buildIncidentTypeOptions()');
+    console.log('JsonMappingUIComponent: buildIncidentTypeOptions()');
     let items: SelectItem[] = [];
     for (let incidentType of this.fetchedIncidentTypes) {
-      // console.log('buildIncidentTypeOptions(): incidentType:', incidentType);
+      // console.log('JsonMappingUIComponent: buildIncidentTypeOptions(): incidentType:', incidentType);
       const item: SelectItem = { label: incidentType.name, value: incidentType.name };
       items.push(item);
     }
@@ -59,14 +59,14 @@ export class JsonMappingUIComponent implements OnInit {
 
 
   onIncidentTypeChanged(incidentType) {
-    console.log('onIncidentTypeChanged(): incidentType:', incidentType);
+    console.log('JsonMappingUIComponent: onIncidentTypeChanged(): incidentType:', incidentType);
     this.buildIncidentFieldOptions(incidentType);
   }
 
 
 
   buildIncidentFieldOptions(incidentType) {
-    console.log('buildIncidentFieldOptions(): incidentType:', incidentType);
+    console.log('JsonMappingUIComponent: buildIncidentFieldOptions(): incidentType:', incidentType);
 
     for (let field of Object.values(this.fetchedIncidentFieldDefinitions)  ) {
       const cliName = field.cliName;
@@ -74,7 +74,7 @@ export class JsonMappingUIComponent implements OnInit {
       const associatedToAll = field.associatedToAll;
       const system = field.system;
       /*if (system) {
-        console.log('system field:', cliName);
+        console.log('JsonMappingUIComponent: buildIncidentFieldOptions(): system field:', cliName);
       }*/
     }
   }

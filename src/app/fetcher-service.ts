@@ -1,13 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpHeaders, HttpClient } from '@angular/common/http';
 import { User } from './types/user';
-import { ApiStatus } from './types/api-status';
+import { DemistoEndpointStatus } from './types/demisto-endpoint-status';
 import { FetchedIncidentField } from './types/fetched-incident-field';
 import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FieldConfig, FieldsConfig } from './types/fields-config';
-import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
-import { DefaultApiServer } from './types/default-api-server';
-import { ImportFromDemisto } from './types/import-from-demisto';
+import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
+import { DefaultDemistoEndpoint } from './types/default-demisto-endpoint';
+import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
 import * as JSEncrypt from 'jsencrypt';
 
 @Injectable({providedIn: 'root'})
@@ -40,7 +40,7 @@ export class FetcherService {
 
 
   logResult(res): any {
-    console.log('logResult:', res);
+    console.log('FetcherService: logResult:', res);
     return res;
   }
 
@@ -60,78 +60,78 @@ export class FetcherService {
 
 
 
-  testApiServer(serverId: string): Promise<ApiStatus> {
+  testDemistoEndpointById(serverId: string): Promise<DemistoEndpointStatus> {
     let headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
-    return this.http.get(`${this.apiPath}/demistoApi/test/${encodeURIComponent(serverId)}`, { headers } )
+    return this.http.get(`${this.apiPath}/demistoEndpoint/test/${encodeURIComponent(serverId)}`, { headers } )
                     .toPromise()
-                    .then( (status: ApiStatus) => status );
+                    .then( (status: DemistoEndpointStatus) => status );
   }
 
 
 
-  testApiServerAdhoc(serverParams: DemistoAPI): Promise<ApiStatus> {
+  testDemistoEndpointAdhoc(serverParams: DemistoEndpoint): Promise<DemistoEndpointStatus> {
     if ('apiKey' in serverParams) {
       serverParams.apiKey = this.encrypt(serverParams.apiKey);
     }
     let headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
-    return this.http.post(`${this.apiPath}/demistoApi/test/adhoc`, serverParams, { headers } )
+    return this.http.post(`${this.apiPath}/demistoEndpoint/test/adhoc`, serverParams, { headers } )
                     .toPromise()
-                    .then( (status: ApiStatus) => status );
+                    .then( (status: DemistoEndpointStatus) => status );
   }
 
 
 
-  getDemistoApi(): Promise<DemistoAPIEndpoints> {
+  getDemistoEndpoints(): Promise<DemistoEndpoints> {
     let headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
-    return this.http.get(this.apiPath + '/demistoApi', { headers } )
+    return this.http.get(this.apiPath + '/demistoEndpoint', { headers } )
                     .toPromise()
-                    .then( (endpoints: DemistoAPIEndpoints) => endpoints );
+                    .then( (endpoints: DemistoEndpoints) => endpoints );
   }
 
 
 
-  setDemistoDefaultApi(serverId): Promise<ApiStatus> {
+  setDefaultDemistoEndpoint(serverId): Promise<DemistoEndpointStatus> {
     let headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
     const body = { serverId };
-    return this.http.post(this.apiPath + '/demistoApi/default', body, { headers } )
+    return this.http.post(this.apiPath + '/demistoEndpoint/default', body, { headers } )
                     .toPromise()
-                    .then( res => res as ApiStatus );
+                    .then( res => res as DemistoEndpointStatus );
   }
 
 
 
-  getDemistoDefaultApi(): Promise<DefaultApiServer> {
+  getDefaultDemistoEndpoint(): Promise<DefaultDemistoEndpoint> {
     let headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
-    return this.http.get(this.apiPath + '/demistoApi/default', { headers } )
+    return this.http.get(this.apiPath + '/demistoEndpoint/default', { headers } )
                     .toPromise()
-                    .then( res => res as DefaultApiServer);
+                    .then( res => res as DefaultDemistoEndpoint);
   }
 
 
 
-  createDemistoApi(url, apiKey, trustAny): Promise<ApiStatus> {
+  createDemistoEndpoint(url, apiKey, trustAny): Promise<DemistoEndpointStatus> {
     let headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
     let body = { url, apiKey: this.encrypt(apiKey), trustAny };
-    return this.http.post(this.apiPath + '/demistoApi', body, { headers } )
+    return this.http.post(this.apiPath + '/demistoEndpoint', body, { headers } )
                     .toPromise()
-                    .then( res => res as ApiStatus );
+                    .then( res => res as DemistoEndpointStatus );
   }
 
 
 
-  updateDemistoApi(serverId, url, trustAny, apiKey?): Promise<ApiStatus> {
+  updateDemistoEndpoint(serverId, url, trustAny, apiKey?): Promise<DemistoEndpointStatus> {
     let headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
@@ -139,29 +139,29 @@ export class FetcherService {
     if (apiKey) {
       body['apiKey'] = this.encrypt(apiKey);
     }
-    return this.http.post(this.apiPath + '/demistoApi/update', body, { headers } )
+    return this.http.post(this.apiPath + '/demistoEndpoint/update', body, { headers } )
                     .toPromise()
-                    .then( res => res as ApiStatus );
+                    .then( res => res as DemistoEndpointStatus );
   }
 
 
 
-  deleteDemistoApi(serverId): Promise<ApiStatus> {
+  deleteDemistoEndpoint(serverId): Promise<DemistoEndpointStatus> {
     let headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
     serverId = encodeURIComponent(serverId);
-    console.log('deleteDemistoApi(): serverId:', serverId);
-    return this.http.delete(`${this.apiPath}/demistoApi/${serverId}`, { headers } )
+    console.log('FetcherService: deleteDemistoEndpoint(): serverId:', serverId);
+    return this.http.delete(`${this.apiPath}/demistoEndpoint/${serverId}`, { headers } )
                     .toPromise()
-                    .then( res => res as ApiStatus );
+                    .then( res => res as DemistoEndpointStatus );
   }
 
 
 
   createDemistoIncident( params: any ): Promise<any> {
     let headers = this.buildHeaders(this.currentUser.username);
-    console.log('Current User: ', this.currentUser.username);
+    console.log('FetcherService: createDemistoIncident(): Current User: ', this.currentUser.username);
     return this.http.post(this.apiPath + '/createDemistoIncident', params, { headers } )
                     .toPromise();
   }
@@ -171,7 +171,7 @@ export class FetcherService {
   getIncidentFieldDefinitions(serverId): Promise<FetchedIncidentField[]> {
     serverId = encodeURIComponent(serverId);
     let headers = this.buildHeaders();
-    return this.http.get(`${this.apiPath}/incidentfields/${serverId}`, { headers } )
+    return this.http.get(`${this.apiPath}/incidentFields/${serverId}`, { headers } )
                     .toPromise()
                     .then( (res: any) => res.incident_fields );
   }
@@ -181,7 +181,7 @@ export class FetcherService {
   getIncidentTypes(serverId): Promise<FetchedIncidentType[]> {
     serverId = encodeURIComponent(serverId);
     let headers = this.buildHeaders();
-    return this.http.get(`${this.apiPath}/incidenttype/${serverId}`, { headers } )
+    return this.http.get(`${this.apiPath}/incidentType/${serverId}`, { headers } )
                     .toPromise()
                     // .then( (res: any) => this.logResult(res) )
                     .then( (res: any) => res.incident_types as FetchedIncidentType[] );
@@ -191,40 +191,40 @@ export class FetcherService {
 
   getSampleIncident(): Promise<any> {
     let headers = this.buildHeaders();
-    return this.http.get(this.apiPath + '/sampleincident', { headers } )
+    return this.http.get(this.apiPath + '/sampleIncident', { headers } )
                     .toPromise();
   }
 
 
 
-  getAllFieldConfigurations(): Promise<FieldsConfig> {
+  getSavedIncidentConfigurations(): Promise<FieldsConfig> {
     let headers = this.buildHeaders();
-    return this.http.get(this.apiPath + '/fieldConfig/all', { headers } )
+    return this.http.get(this.apiPath + '/incidentConfig/all', { headers } )
                     .toPromise()
                     .then(value => value as FieldsConfig);
   }
 
 
 
-  saveNewFieldConfiguration(config: FieldConfig): Promise<any> {
+  saveNewIncidentConfiguration(config: FieldConfig): Promise<any> {
     let headers = this.buildHeaders();
-    return this.http.post(this.apiPath + '/fieldConfig', config, { headers } )
+    return this.http.post(this.apiPath + '/incidentConfig', config, { headers } )
                     .toPromise();
   }
 
 
 
-  saveFieldConfiguration(config: FieldConfig): Promise<any> {
+  saveIncidentConfiguration(config: FieldConfig): Promise<any> {
     let headers = this.buildHeaders();
-    return this.http.post(this.apiPath + '/fieldConfig/update', config, { headers } )
+    return this.http.post(this.apiPath + '/incidentConfig/update', config, { headers } )
                     .toPromise();
   }
 
 
 
-  deleteFieldConfiguration(name: string): Promise<any> {
+  deleteIncidentConfiguration(name: string): Promise<any> {
     let headers = this.buildHeaders();
-    return this.http.delete(this.apiPath + `/fieldConfig/${name}`, { headers } )
+    return this.http.delete(this.apiPath + `/incidentConfig/${name}`, { headers } )
                     .toPromise();
   }
 
@@ -239,11 +239,11 @@ export class FetcherService {
 
 
 
-  demistoIncidentImport(incidentId, serverId): Promise<ImportFromDemisto> {
+  demistoIncidentImport(incidentId, serverId): Promise<DemistoIncidentImportResult> {
     let headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/demistoIncidentImport', {incidentId, serverId}, { headers } )
                     .toPromise()
-                    .then( (res: ImportFromDemisto) => res);
+                    .then( (res: DemistoIncidentImportResult) => res);
   }
 
 

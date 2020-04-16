@@ -18,15 +18,15 @@
     <!-- XSOAR Servers-->
     <p-card header="XSOAR Servers">
 
-      <h3 style="margin-top: .5em; text-decoration: underline; color: white;">{{currentDemistoApiName ? currentDemistoApiName : 'No XSOAR servers are defined'}}</h3>
+      <h3 style="margin-top: .5em; text-decoration: underline; color: white;">{{currentDemistoEndpointName ? currentDemistoEndpointName : 'No XSOAR servers are defined'}}</h3>
 
 
       <div style="margin-top: 1em;">
 
         <p-button label="Select" (onClick)="onOpenDemistoServersClicked()" styleClass="alignButton"></p-button>
 
-        <p-message *ngIf="currentServerApiInit" severity="success" text="API Initialised"></p-message>
-        <p-message *ngIf="!currentServerApiInit" severity="error" text="API Not Initialised"></p-message>
+        <p-message *ngIf="currentDemistoEndpointInit" severity="success" text="Endpoint Initialised"></p-message>
+        <p-message *ngIf="!currentDemistoEndpointInit" severity="error" text="Endpoint Not Initialised"></p-message>
 
 
 
@@ -47,7 +47,7 @@
         <p-button label="Open" (onClick)="onOpenClicked()" styleClass="alignButton" [disabled]="savedIncidentConfigurationsLen === 0" pTooltip="Open a saved incident configuration" showDelay="750"></p-button>
         
         <!-- Load From XSOAR -->
-        <p-button label="XSOAR Import" (onClick)="onLoadFromDemistoClicked()" [disabled]="currentServerApiInit === false" pTooltip="Import an incident directly from XSOAR" showDelay="750"></p-button>
+        <p-button label="XSOAR Import" (onClick)="onLoadFromDemistoClicked()" [disabled]="currentDemistoEndpointInit === false" pTooltip="Import an incident directly from XSOAR" showDelay="750"></p-button>
         
         <!-- Upload Incident JSON -->
         <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Incident JSON" [customUpload]="true" (uploadHandler)="onIncidentJsonUploaded($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true" pTooltip="Import an incident from a JSON file" showDelay="750"></p-fileUpload>
@@ -68,7 +68,7 @@
         <p-button label="Delete" (onClick)="onDeleteClicked()" [disabled]="savedIncidentConfigurationsLen === 0"></p-button>
 
         <!-- Bulk Create -->
-        <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="savedIncidentConfigurationsLen === 0 || demistoApiEndpointsLen === 0" pTooltip="Create incidents of one or more types, and on one or more XSOAR servers" showDelay="750"></p-button>
+        <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="savedIncidentConfigurationsLen === 0 || demistoEndpointsLen === 0" pTooltip="Create incidents of one or more types, and on one or more XSOAR servers" showDelay="750"></p-button>
 
         <!-- Bulk Create Results -->
         <p-button *ngIf="this.bulkCreateResults.length !== 0"  label="Bulk Create Results" (onClick)="showBulkResultsDialog = true"></p-button>
@@ -84,8 +84,8 @@
       *ngIf="incidentFields && customFields && parsedIncidentJson && fetchedIncidentFieldDefinitions"
         [parsedIncidentJson]="parsedIncidentJson"
         [loadedIncidentConfigName]="loadedIncidentConfigName"
-        [currentDemistoApiName]="currentDemistoApiName"
-        [currentServerApiInit]="currentServerApiInit"
+        [currentDemistoEndpointName]="currentDemistoEndpointName"
+        [currentDemistoEndpointInit]="currentDemistoEndpointInit"
         [(incidentFields)]="incidentFields"
         [(customFields)]="customFields"
         [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
@@ -98,8 +98,8 @@
     <json-mapping-ui
       *ngIf="showJsonMappingUI && fetchedIncidentFieldDefinitions && fetchedIncidentTypes"
         [loadedJsonMappingConfigName]="loadedJsonMappingConfigName"
-        [currentDemistoApiName]="currentDemistoApiName"
-        [currentServerApiInit]="currentServerApiInit"
+        [currentDemistoEndpointName]="currentDemistoEndpointName"
+        [currentDemistoEndpointInit]="currentDemistoEndpointInit"
         [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
         [fetchedIncidentTypes]="fetchedIncidentTypes">
     </json-mapping-ui>
@@ -112,61 +112,61 @@
 
 
   
-  <!--------------API SERVER MODAL DIALOGS SECTION-------------->
+  <!--------------DEMISTO ENDPOINT MODAL DIALOGS SECTION-------------->
 
-  <!-- Select XSOAR API Server Dialog -->
-  <p-dialog header="XSOAR API Servers" [(visible)]="showDemistoApiServerOpenDialog" [modal]="true" [style]="{width: '50%'}" styleClass="bulkCreateDialog">
+  <!-- Select XSOAR Endpoint Dialog -->
+  <p-dialog header="XSOAR Servers" [(visible)]="showDemistoEndpointOpenDialog" [modal]="true" [style]="{width: '50%'}" styleClass="bulkCreateDialog">
 
     <!-- header bar -->
     <div>
 
       <!-- New -->
-      <p-button label="New" (onClick)="onNewDemistoApiServer()" styleClass="alignButton"></p-button>
+      <p-button label="New" (onClick)="onNewDemistoEndpoint()" styleClass="alignButton"></p-button>
 
       <!-- Edit -->
-      <p-button *ngIf="demistoApiEndpointsLen !== 0" label="Edit" (onClick)="onEditDemistoApiServer()" styleClass="alignButton" [disabled]="!selectedDemistoApiName"></p-button>
+      <p-button *ngIf="demistoEndpointsLen !== 0" label="Edit" (onClick)="onEditDemistoEndpoint()" styleClass="alignButton" [disabled]="!selectedDemistoEndpointName"></p-button>
 
       <!-- Delete -->
-      <p-button *ngIf="demistoApiEndpointsLen !== 0" label="Delete" (onClick)="onDeleteDemistoApiServer()" styleClass="alignButton" [disabled]="!selectedDemistoApiName"></p-button>
+      <p-button *ngIf="demistoEndpointsLen !== 0" label="Delete" (onClick)="onDeleteDemistoEndpoint()" styleClass="alignButton" [disabled]="!selectedDemistoEndpointName"></p-button>
 
       <!-- Test -->
-      <p-button *ngIf="demistoApiEndpointsLen !== 0" label="Test" (onClick)="onTestDemistoApiServer()" styleClass="alignButton" [disabled]="!selectedDemistoApiName"></p-button>
+      <p-button *ngIf="demistoEndpointsLen !== 0" label="Test" (onClick)="onTestDemistoEndpoint()" styleClass="alignButton" [disabled]="!selectedDemistoEndpointName"></p-button>
 
       <!-- Default -->
-      <p-button *ngIf="demistoApiEndpointsLen !== 0" label="Set Default" (onClick)="onSetDefaultDemistoApiServer()" styleClass="alignButton" [disabled]="!selectedDemistoApiName"></p-button>
+      <p-button *ngIf="demistoEndpointsLen !== 0" label="Set Default" (onClick)="onSetDefaultDemistoEndpoint()" styleClass="alignButton" [disabled]="!selectedDemistoEndpointName"></p-button>
 
       <!-- Refresh -->
-      <p-button label="Refresh" (onClick)="onRefreshDemistoApiServers()" styleClass="alignButton"></p-button>
+      <p-button label="Refresh" (onClick)="onRefreshDemistoEndpoints()" styleClass="alignButton"></p-button>
 
-      <p-message *ngIf="currentServerApiInit" severity="success" text="API Initialised"></p-message>
-      <p-message *ngIf="!currentServerApiInit" severity="error" text="API Not Initialised"></p-message>
+      <p-message *ngIf="currentDemistoEndpointInit" severity="success" text="Endpoint Initialised"></p-message>
+      <p-message *ngIf="!currentDemistoEndpointInit" severity="error" text="Endpoint Not Initialised"></p-message>
 
     </div>
 
     <div style="margin-top: 1em;">
       <span class="formLabel">Current XSOAR Server: </span>
-          <span class="formLabel" style="text-decoration: underline;">{{currentDemistoApiName ? currentDemistoApiName : 'No server is selected'}}</span>
+          <span class="formLabel" style="text-decoration: underline;">{{currentDemistoEndpointName ? currentDemistoEndpointName : 'No server is selected'}}</span>
     </div>
 
     <div style="margin-top: 1em;">
 
-      <span *ngIf="demistoApiEndpointsLen === 0; else demistoApiEndpoints" style="font-weight: bold;">No XSOAR servers are defined</span>
+      <span *ngIf="demistoEndpointsLen === 0; else demistoEndpoints" style="font-weight: bold;">No XSOAR servers are defined</span>
 
     </div>
 
-    <ng-template #demistoApiEndpoints>
+    <ng-template #demistoEndpoints>
 
       <div class="formLabel">Select a server</div>
 
-      <p-listbox [options]="demistoApiEndpointsOptions" [(ngModel)]="selectedDemistoApiName" [style]="{'width':'100%'}" (onDblClick)="onDemistoApiServerSelected()" [filter]="true"></p-listbox>
+      <p-listbox [options]="demistoEndpointsItems" [(ngModel)]="selectedDemistoEndpointName" [style]="{'width':'100%'}" (onDblClick)="onDemistoEndpointSelected()" [filter]="true"></p-listbox>
 
     </ng-template>
 
       <div style="margin-top: .5em; float: right;">
 
-        <p-button *ngIf="demistoApiEndpointsLen !== 0" label="Select" (onClick)="onDemistoApiServerSelected()" [disabled]="!selectedDemistoApiName"></p-button>
+        <p-button *ngIf="demistoEndpointsLen !== 0" label="Select" (onClick)="onDemistoEndpointSelected()" [disabled]="!selectedDemistoEndpointName"></p-button>
 
-        <p-button label="Close" (onClick)="showDemistoApiServerOpenDialog = false"></p-button>
+        <p-button label="Close" (onClick)="showDemistoEndpointOpenDialog = false"></p-button>
 
     </div>
 
@@ -174,16 +174,16 @@
 
 
 
-  <!-- Delete API Server Dialog -->
-  <p-dialog header="Delete XSOAR Server" [(visible)]="showDeleteDemistoApiServerDialog" [modal]="true" [style]="{width: '50%'}" styleClass="deleteConfigDialog" (onHide)="onDeleteDemistoApiServerHidden()">
+  <!-- Delete Demisto Endpoint Dialog -->
+  <p-dialog header="Delete XSOAR Server" [(visible)]="showDeleteDemistoEndpointDialog" [modal]="true" [style]="{width: '50%'}" styleClass="deleteConfigDialog" (onHide)="onDeleteDemistoEndpointHidden()">
 
-    <div class="formLabel">Please confirm deletion of XSOAR server "{{demistoApiServerToDelete}}"</div>
+    <div class="formLabel">Please confirm deletion of XSOAR server "{{demistoEndpointToDelete}}"</div>
 
     <div style="margin-top: .5em; float: right;">
 
-      <p-button label="Confirm" (onClick)="onDeleteDemistoApiServerConfirmed()"></p-button>
+      <p-button label="Confirm" (onClick)="onDeleteDemistoEndpointConfirmed()"></p-button>
 
-      <p-button label="Cancel" (onClick)="showDeleteDemistoApiServerDialog = false"></p-button>
+      <p-button label="Cancel" (onClick)="showDeleteDemistoEndpointDialog = false"></p-button>
 
     </div>
 
@@ -191,8 +191,8 @@
 
 
 
-  <!-- New / Edit Demisto API Server Dialog -->
-  <p-dialog [header]="newDemistoServerDialogMode === 'new' ? 'New XSOAR Server' : 'Edit XSOAR Server'" [(visible)]="showNewDemistoApiServerDialog" [modal]="true" [style]="{width: '500px'}" styleClass="newDemistoApiServerDialog" (onHide)="onNewEditDemistoApiServerHidden()">
+  <!-- New / Edit Demisto Endpoint Server Dialog -->
+  <p-dialog [header]="newDemistoServerDialogMode === 'new' ? 'New XSOAR Server' : 'Edit XSOAR Server'" [(visible)]="showNewDemistoEndpointDialog" [modal]="true" [style]="{width: '500px'}" styleClass="newDemistoEndpointDialog" (onHide)="onNewEditDemistoEndpointHidden()">
 
     <!--<div style="margin-bottom: .5em;" class="formLabel">Configuration Name</div>-->
 
@@ -220,15 +220,15 @@
     <div style="margin-top: .5em; float: right;">
 
       <!-- Test Button -->
-      <p-button label="Test" (onClick)="testDemistoApi(newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny)" [disabled]="newEditTestButtonDisabled"></p-button>
+      <p-button label="Test" (onClick)="testDemistoEndpointAdHoc(newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny)" [disabled]="newEditTestButtonDisabled"></p-button>
 
       <!-- Save Button -->
-      <p-button label="Save" *ngIf="newDemistoServerDialogMode === 'new'" (onClick)="onNewDemistoApiServerSaved()" [disabled]="!newDemistoServerUrl || !newDemistoServerApiKey || newDemistoServerSaveDisabled"></p-button>
+      <p-button label="Save" *ngIf="newDemistoServerDialogMode === 'new'" (onClick)="onNewDemistoEndpointSaved()" [disabled]="!newDemistoServerUrl || !newDemistoServerApiKey || newDemistoServerSaveDisabled"></p-button>
 
       <!-- Update Button -->
-      <p-button label="Update" *ngIf="newDemistoServerDialogMode === 'edit'" (onClick)="onDemistoApiServerUpdated(newDemistoServerUrl)" [disabled]="!newDemistoServerUrl || newDemistoServerSaveDisabled"></p-button>
+      <p-button label="Update" *ngIf="newDemistoServerDialogMode === 'edit'" (onClick)="onDemistoEndpointUpdated(newDemistoServerUrl)" [disabled]="!newDemistoServerUrl || newDemistoServerSaveDisabled"></p-button>
 
-      <p-button label="Cancel" (onClick)="onNewDemistoApiServerCanceled()"></p-button>
+      <p-button label="Cancel" (onClick)="onNewDemistoEndpointCanceled()"></p-button>
 
     </div>
 
@@ -242,11 +242,11 @@
   <!--------------INCIDENT FIELD CONFIG MODAL DIALOGS SECTION-------------->
 
   <!-- Open Fields Config Dialog -->
-  <p-dialog header="Select an Incident Configuration" [(visible)]="showOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="openDialog">
+  <p-dialog header="Select a Saved Incident" [(visible)]="showOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="openDialog">
 
     <div class="formLabel">Configuration to open</div>
 
-    <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedOpenConfig" [style]="{'width':'100%'}" (onDblClick)="onConfigOpened()" [filter]="true"></p-listbox>
+    <p-listbox [options]="fieldsConfigItems" [(ngModel)]="selectedOpenConfig" [style]="{'width':'100%'}" (onDblClick)="onConfigOpened()" [filter]="true"></p-listbox>
 
     <div style="margin-top: .5em;">
 
@@ -279,7 +279,7 @@
 
           <div class="formLabel" style="margin-bottom: .5em;">Select an XSOAR server</div>
 
-          <p-listbox name="demistoApiToLoadFrom" [options]="demistoApiEndpointsOptions" [(ngModel)]="demistoApiToLoadFrom" [style]="{'width':'100%'}" [multiple]="false" [checkbox]="true" [filter]="false"></p-listbox>
+          <p-listbox name="demistoEndpointToLoadFrom" [options]="demistoEndpointsItems" [(ngModel)]="demistoEndpointToLoadFrom" [style]="{'width':'100%'}" [multiple]="false" [checkbox]="true" [filter]="false"></p-listbox>
 
         </div>
 
@@ -298,14 +298,14 @@
   
 
 
-  <!-- Fields Config Save As Dialog -->
-  <p-dialog header="Save Configuration As" [(visible)]="showSaveAsDialog" [modal]="true" [style]="{width: '300px'}" styleClass="saveAsDialog">
+  <!-- Incident Save As Dialog -->
+  <p-dialog header="Save Incident As" [(visible)]="showSaveAsDialog" [modal]="true" [style]="{width: '300px'}" styleClass="saveAsDialog">
 
-    <div style="margin-bottom: .5em;" class="formLabel">Configuration Name</div>
+    <div style="margin-bottom: .5em;" class="formLabel">Incident Name</div>
 
     <input pInputText #saveAsInput type="text" [(ngModel)]="saveAsConfigName" class="inputDisplay"/>
 
-    <div style="margin-top: .5em;">{{saveAsButtonDisabled ? 'This name is already taken' : '&nbsp;'}}</div>
+    <div style="margin-top: .5em;">{{saveAsButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
 
     <div style="margin-top: .5em; float: right;">
 
@@ -319,12 +319,12 @@
 
 
 
-  <!-- Delete Fields Config Dialog -->
-  <p-dialog header="Delete Configuration" [(visible)]="showDeleteDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="deleteConfigDialog">
+  <!-- Delete Saved Incident Dialog -->
+  <p-dialog header="Delete Saved Incident" [(visible)]="showDeleteDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="deleteConfigDialog">
 
     <div class="formLabel">Configurations to delete</div>
 
-    <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedDeleteConfigs" [multiple]="true" [filter]="true" [checkbox]="true" [style]="{'width':'100%'}"></p-listbox>
+    <p-listbox [options]="fieldsConfigItems" [(ngModel)]="selectedDeleteConfigs" [multiple]="true" [filter]="true" [checkbox]="true" [style]="{'width':'100%'}"></p-listbox>
 
     <div style="margin-top: .5em;">
 
@@ -348,7 +348,7 @@
 
         <div class="formLabel">Select configurations to push to XSOAR</div>
 
-        <p-listbox [options]="fieldsConfigOptions" [(ngModel)]="selectedBulkCreateConfigs" [style]="{'width':'100%'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
+        <p-listbox [options]="fieldsConfigItems" [(ngModel)]="selectedBulkCreateConfigs" [style]="{'width':'100%'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
 
       </div>
 
@@ -356,7 +356,7 @@
 
         <div class="formLabel">Select XSOAR servers to push to</div>
 
-        <p-listbox [options]="demistoApiEndpointsOptions" [(ngModel)]="selectedBulkCreateApiServers" [style]="{'width':'100%'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
+        <p-listbox [options]="demistoEndpointsItems" [(ngModel)]="selectedBulkCreateEndpoints" [style]="{'width':'100%'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
 
       </div>
 
@@ -364,7 +364,7 @@
 
     <div style="margin-top: .5em; float: right;">
 
-      <p-button label="Create Incidents" (onClick)="onCreateBulkIncidents()" [disabled]="selectedBulkCreateConfigs.length === 0 || selectedBulkCreateApiServers.length === 0"></p-button>
+      <p-button label="Create Incidents" (onClick)="onCreateBulkIncidents()" [disabled]="selectedBulkCreateConfigs.length === 0 || selectedBulkCreateEndpoints.length === 0"></p-button>
 
       <p-button label="Cancel" (onClick)="onBulkCreateCanceled()"></p-button>
 
@@ -374,7 +374,7 @@
 
 
 
-  <!-- Bulk Create Results Dialog -->
+  <!-- Bulk Create Incidents Results Dialog -->
   <p-dialog header="Bulk Create Incident Results" [(visible)]="showBulkResultsDialog" [modal]="true" [style]="{width: '75%'}">
 
     <div class="bulkCreateResults">

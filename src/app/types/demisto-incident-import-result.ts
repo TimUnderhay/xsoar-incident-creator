@@ -1,4 +1,4 @@
-export interface ImportFromDemisto {
+export interface DemistoIncidentImportResult {
     success: boolean;
     incident?: any;
     error?: string;

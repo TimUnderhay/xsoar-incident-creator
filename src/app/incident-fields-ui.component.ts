@@ -1,6 +1,6 @@
 import { Component, OnInit, OnChanges, ViewChildren, ChangeDetectorRef, Input, Inject, forwardRef, Output, EventEmitter, SimpleChanges } from '@angular/core';
 import { FetcherService } from './fetcher-service';
-import { DemistoAPI, DemistoAPIEndpoints } from './types/demisto-properties';
+import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
 import { ConfirmationService } from 'primeng/api';
 import { SelectItem } from 'primeng/api';
 import { FieldDisplayComponent } from './field-display.component';
@@ -27,26 +27,25 @@ export class IncidentFieldsUIComponent implements OnInit, OnChanges {
   @ViewChildren('incidentField') fieldDisplayComponents: FieldDisplayComponent[];
   @ViewChildren('customField') customFieldDisplayComponents: FieldDisplayComponent[];
 
-  @Input() parsedIncidentJson: any; // parsed json
-  @Input() loadedIncidentConfigName: string; // must clear when loaded from json or when current config is deleted
-  @Input() currentDemistoApiName: string;
-  @Input() currentServerApiInit: boolean;
+  // API Inputs / Outputs
+  @Input() currentDemistoEndpointName: string;
+  @Input() currentDemistoEndpointInit: boolean;
   @Input() fetchedIncidentFieldDefinitions: FetchedIncidentFieldDefinitions; // the fields taken from Demisto
-
+  
+  // Incident Inputs / Outputs
+  @Input() parsedIncidentJson: any; // parsed json
   @Input() incidentFields: IncidentFields;
   @Output() incidentFieldsChange: EventEmitter<IncidentFields> = new EventEmitter();
-  // tslint:disable-next-line:variable-name
-
   @Input() customFields: IncidentFields; // the custom fields of our imported or loaded json
   @Output() customFieldsChange: EventEmitter<IncidentFields> = new EventEmitter();
-  // tslint:disable-next-line:variable-name
   get customFieldsLen(): number {
     return Object.keys(this.customFields).length;
   }
-
+  @Input() loadedIncidentConfigName: string; // must clear when loaded from json or when current config is deleted
   @Input() createInvestigation: boolean; // sets createInvestigation: true in json when submitting an incident
   @Output() createInvestigationChange: EventEmitter<boolean> = new EventEmitter();
 
+  // PrimeNG Messages Popup Inputs / Outputs
   @Input() messages: PMessageOption[] = [];
   @Output() messagesChange: EventEmitter<PMessageOption[]> = new EventEmitter();
 
@@ -71,7 +70,7 @@ export class IncidentFieldsUIComponent implements OnInit, OnChanges {
 
 
   ngOnChanges(values: SimpleChanges) {
-    // console.log('ngOnChanges(): values:', values);
+    // console.log('IncidentFieldsUIComponent: ngOnChanges(): values:', values);
     const incidentFieldsFound = 'incidentFields' in values;
     const isFirstChange = incidentFieldsFound && values.incidentFields.isFirstChange();
     const sameIdentity = incidentFieldsFound && !isFirstChange && values.incidentFields.currentValue === values.incidentFields.previousValue;
@@ -84,7 +83,7 @@ export class IncidentFieldsUIComponent implements OnInit, OnChanges {
 
 
   onToggleAllIncidentFields() {
-    // console.log('onToggleAllIncidentFields()')
+    // console.log('IncidentFieldsUIComponent: onToggleAllIncidentFields()')
     Object.keys(this.incidentFields).forEach( shortName => {
       if (!this.incidentFields[shortName].locked) {
         this.incidentFields[shortName].enabled = this.incidentFieldsSelectAllState;
@@ -95,7 +94,7 @@ export class IncidentFieldsUIComponent implements OnInit, OnChanges {
 
 
   onToggleAllCustomFields() {
-    // console.log('onToggleAllCustomFields()')
+    // console.log('IncidentFieldsUIComponent: onToggleAllCustomFields()')
     Object.keys(this.customFields).forEach( shortName => {
       if (!this.customFields[shortName].locked) {
         this.customFields[shortName].enabled = this.customFieldsSelectAllState;
@@ -117,17 +116,17 @@ export class IncidentFieldsUIComponent implements OnInit, OnChanges {
 
 
 
-  async onReloadFieldDefinitions(serverId = this.currentDemistoApiName) {
+  async onReloadFieldDefinitions(serverId = this.currentDemistoEndpointName) {
     /*
     Reload Demisto Incident Fields and Merge
 
     Called from onCreateBulkIncidents() and "Reload Definitions" button
     */
-    console.log('onReloadFieldDefinitions()');
+    console.log('IncidentFieldsUIComponent: onReloadFieldDefinitions()');
     try {
       let success = await this.parentComponent.fetchIncidentFieldDefinitions(serverId);
       if (!success) {
-        console.log('onReloadFieldDefinitions(): incident fields fetch was unsuccessful.  Aborting.');
+        console.log('IncidentFieldsUIComponent: onReloadFieldDefinitions(): incident fields fetch was unsuccessful.  Aborting.');
         return;
       }
 
@@ -189,18 +188,18 @@ export class IncidentFieldsUIComponent implements OnInit, OnChanges {
 
     }
     catch (err) {
-      console.log('onReloadFieldDefinitions(): Caught error fetching Demisto incident fields:', err);
+      console.log('IncidentFieldsUIComponent: onReloadFieldDefinitions(): Caught error fetching Demisto incident fields:', err);
     }
   }
 
 
 
   async onCreateIncident() {
-    // console.log('onCreateIncident(): incidentFields:', this.incidentFields);
-    // console.log('onCreateIncident(): customFields:', this.customFields);
+    // console.log('IncidentFieldsUIComponent: onCreateIncident(): incidentFields:', this.incidentFields);
+    // console.log('IncidentFieldsUIComponent: onCreateIncident(): customFields:', this.customFields);
 
     let incident: any = {
-      serverId: this.currentDemistoApiName
+      serverId: this.currentDemistoEndpointName
     };
     if (this.createInvestigation) {
       incident['createInvestigation'] = true;
@@ -210,7 +209,7 @@ export class IncidentFieldsUIComponent implements OnInit, OnChanges {
         incident[field.shortName] = field.value;
       }
     });
-    // console.log('incident:', incident);
+    // console.log('IncidentFieldsUIComponent: onCreateIncident():  incident:', incident);
     let customFields = {};
     Object.values(this.customFields).forEach( (field: IncidentField) => {
       if (field.enabled) {
@@ -220,10 +219,10 @@ export class IncidentFieldsUIComponent implements OnInit, OnChanges {
     if (Object.keys(customFields).length !== 0) {
       incident['CustomFields'] = customFields;
     }
-    console.log('incident:', incident);
+    console.log('IncidentFieldsUIComponent: onCreateIncident(): incident:', incident);
 
     let res = await this.fetcherService.createDemistoIncident(incident);
-    // console.log('res:', res);
+    // console.log('IncidentFieldsUIComponent: onCreateIncident(): res:', res);
     if (!res.success) {
       const resultMessage = `Incident creation failed with Demisto status code ${res.statusCode}: "${res.statusMessage}"`;
       this.messagesChange.emit( [{ severity: 'error', summary: 'Failure', detail: resultMessage}] );
@@ -256,8 +255,8 @@ export class IncidentFieldsUIComponent implements OnInit, OnChanges {
 
 
   onIncidentFieldChanged(key, value) {
-    // console.log('onIncidentFieldChanged: key:', key);
-    // console.log('onIncidentFieldChanged: value:', value);
+    // console.log('IncidentFieldsUIComponent: onIncidentFieldChanged: key:', key);
+    // console.log('IncidentFieldsUIComponent: onIncidentFieldChanged: value:', value);
     this.incidentFields[key] = value;
     this.incidentFieldsChange.emit(this.incidentFields);
   }
@@ -265,8 +264,8 @@ export class IncidentFieldsUIComponent implements OnInit, OnChanges {
 
 
   onCustomFieldChanged(key, value) {
-    // console.log('onCustomFieldChanged: key:', key);
-    // console.log('onCustomFieldChanged: value:', value);
+    // console.log('IncidentFieldsUIComponent: onCustomFieldChanged: key:', key);
+    // console.log('IncidentFieldsUIComponent: onCustomFieldChanged: value:', value);
     this.customFields[key] = value;
     this.customFieldsChange.emit(this.customFields);
   }

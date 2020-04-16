@@ -1,4 +1,4 @@
-export interface DefaultApiServer {
+export interface DefaultDemistoEndpoint {
     defined: boolean;
     serverId?: string;
 }
