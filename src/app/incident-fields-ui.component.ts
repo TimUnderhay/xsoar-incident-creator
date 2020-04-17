@@ -52,16 +52,16 @@ export class IncidentFieldsUIComponent implements OnInit, OnChanges {
   // UI State
   displayIncidentFieldShortNames = true; // controls display options
   displayCustomFieldShortNames = true; // controls display options
+  incidentFieldsSelectAllState = false;
+  customFieldsSelectAllState = false;
 
   // UI Labels
-  createInvestigationButtonOptions: SelectItem[] = [
+  createInvestigationButtonItems: SelectItem[] = [
     { value: true, label: 'Enabled' },
     { value: false, label: 'Disabled' }
   ];
   longNamesLabel = 'Short Names';
   shortNamesLabel = 'Long Names';
-  incidentFieldsSelectAllState = false;
-  customFieldsSelectAllState = false;
 
 
 

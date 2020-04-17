@@ -11,7 +11,8 @@ import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { JsonViewerComponent } from './json-viewer/json-viewer.component';
 import { IncidentFieldsUIComponent } from './incident-fields-ui.component';
 // import { FreeformJsonUIComponent } from './freeform-json-ui.component';
-import { JsonMappingUIComponent } from './json-mapping.component';
+import { JsonMappingUIComponent } from './json-mapping-ui.component';
+import { FieldDisplayFreeformComponent } from './field-display-freeform.component';
 
 // PrimeNG Imports
 import { ListboxModule } from 'primeng/listbox';
@@ -42,6 +43,7 @@ import { AceEditorModule } from 'ng2-ace-editor';
   declarations: [
     AppComponent,
     FieldDisplayComponent,
+    FieldDisplayFreeformComponent,
     JsonEditorComponent,
     JsonViewerComponent,
     IncidentFieldsUIComponent,

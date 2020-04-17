@@ -44,7 +44,7 @@ export class AppComponent implements OnInit {
   // Incident Properties
   parsedIncidentJson: any; // parsed incident json.
   incidentFields: IncidentFields; // the fields of our imported or loaded JSON
-  customFields: IncidentFields; // the custom fields of our imported or loaded json
+  customFields: IncidentFields; // the custom fields of our imported or loaded JSON
   createInvestigation = true;
 
   // For PrimeNG

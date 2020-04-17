@@ -1,3 +1,5 @@
+import { FieldType } from './incident-fields';
+
 // For fields fetched from Demisto
 export interface FetchedIncidentField {
   associatedToAll: boolean;
@@ -33,7 +35,7 @@ export interface FetchedIncidentField {
   system: boolean;
   systemAssociatedTypes: any; // is null in my source
   threshold: number;
-  type: string;
+  type: FieldType;
   unmapped: boolean;
   unsearchable: boolean;
   useAsKpi: boolean;

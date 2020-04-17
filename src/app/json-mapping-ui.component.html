@@ -1,0 +1,184 @@
+<!-- Loaded Configuration Name Container -->
+<p-card *ngIf="loadedJsonMappingConfigName" header="Loaded Mapping Name">
+  
+  <div style="margin-top: 1em;">
+    <span class="formLabel" style="font-size: 18px;">{{loadedJsonMappingConfigName}}</span>
+  </div>
+
+</p-card>
+
+
+
+
+<!-- Select Incident Type Container -->
+<p-card *ngIf="fetchedIncidentFieldDefinitions" header="Incident Type" subheader="Select an incident type on which to map JSON data.">
+
+  <div style="margin-top: 1em;">
+    
+    <p-dropdown
+      [options]="incidentTypeItems"
+      [(ngModel)]="selectedIncidentType"
+      (onChange)="onIncidentTypeChanged($event.value)"
+      [filter]="true"
+      placeholder="Select an incident type"
+      [style]="{'width': '40em'}">
+    </p-dropdown>
+  
+  </div>
+
+</p-card>
+
+
+
+<div *ngIf="chosenIncidentFields" class="fieldsForm">
+
+
+  <!-- Incident Fields Container -->
+  <div style="min-width: 0;">
+    <p-card header="Incident Fields" subheader="Select the main incident fields to include in the new incident">
+
+      <!-- Select / Toggle Buttons -->
+      <div>
+
+        <!-- I don't think reset is required for freeform -->
+        <!-- <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()" [disabled]="!currentDemistoEndpointInit"></p-button>--> 
+
+        <!-- Add Field Button -->
+        <p-button type="button" label="Add Field" (onClick)="onAddIncidentFieldClicked()"></p-button>
+
+      </div >
+
+      <!-- Incident Fields -->
+      <div class="fieldContainer">
+
+        <div>
+          <p-checkbox [(ngModel)]="incidentFieldsSelectAllState" [binary]="true" (onChange)="onToggleAllChosenIncidentFields()"></p-checkbox>
+        </div>
+
+        <header>Name</header>
+
+        <header>Type</header>
+
+        <header>Value</header>
+
+        <ng-container *ngFor="let field of chosenIncidentFields | keyvalue">
+
+          <field-display-freeform #incidentField *ngIf="![undefined, null].includes(field.value.value)" [field]="field.value" [displayShortNames]="displayIncidentFieldShortNames">
+            <!-- (fieldChange)="onIncidentFieldChanged(field.key, $event)" -->
+          </field-display-freeform>
+
+        </ng-container>
+      </div>
+
+    </p-card>
+  </div>
+
+
+
+  <!-- Custom Fields Container -->
+  <div style="min-width: 0;">
+    <p-card header="Custom Fields" subheader="Select the custom fields to include in the new incident">
+
+      <!-- Select / Toggle Buttons -->
+      <div>
+
+        <!-- Add Field Button -->
+        <p-button type="button" label="Add Field" (onClick)="onAddCustomFieldClicked()"></p-button>
+
+        <!-- I don't think reset is required for freeform -->
+        <!--<p-button type="button" label="Reset Values" (onClick)="onResetAllCustomFieldValues()" [disabled]="!currentDemistoEndpointInit"></p-button>-->
+
+        <p-toggleButton [onLabel]="shortNamesLabel" [offLabel]="longNamesLabel" [(ngModel)]="displayCustomFieldShortNames" name="shortCustomNames" [disabled]="!currentDemistoEndpointInit"></p-toggleButton>
+
+        <!--
+        <p-button type="button" label="Reload Definitions" name="createIncident" (onClick)="onReloadFieldDefinitions()" [disabled]="!currentDemistoEndpointInit" pTooltip="Reload the field definitions from XSOAR"></p-button>
+        -->
+
+      </div >
+
+      <!-- Custom Fields -->
+      <div class="fieldContainer" *ngIf="chosenCustomFieldsLen !== 0 else noCustomFieldsChosen">
+
+        <div>
+          <p-checkbox [(ngModel)]="customFieldsSelectAllState" [binary]="true" (onChange)="onToggleAllChosenCustomFields()" [disabled]="!chosenCustomFields || (chosenCustomFields && chosenCustomFieldsLen === 0)"></p-checkbox>
+        </div>
+
+        <header>Name</header>
+
+        <header>Type</header>
+
+        <header>Value</header>
+
+        <ng-container *ngFor="let field of chosenCustomFields | keyvalue">
+
+          <field-display-freeform #customField *ngIf="![undefined, null].includes(field.value.value)" [field]="field.value" [displayShortNames]="displayCustomFieldShortNames">
+            <!-- (fieldChange)="onCustomFieldChanged(field.key, $event)" -->
+          </field-display-freeform>
+
+        </ng-container>
+      </div>
+
+    </p-card>
+  </div>
+
+  <ng-template #noCustomFieldsChosen>
+    <h2 style="color: white;">
+      Please add one or more custom fields, if so desired.
+    </h2>
+  </ng-template>
+
+
+
+  <!-- Submit Button -->
+  <!--<div style="margin-top: 1em;">
+    &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onCreateIncident()" [disabled]="!parsedIncidentJson || countEnabledFields() === 0"></button>
+  </div>-->
+
+
+
+</div>
+
+
+
+
+
+
+<!-------------- FIELDS MODAL DIALOGS SECTION -------------->
+
+
+
+<!-- Add Incident Field Dialog -->
+<p-dialog *ngIf="incidentFieldsToAddItems" header="Choose Incident Fields to Add" [(visible)]="displayAddIncidentFieldDialog" [modal]="true" [draggable]="false" [style]="{width: '25em', 'max-height': '75vh'}" styleClass="openDialog">
+
+  <!--<div class="formLabel">Incident Fields to Add</div>-->
+
+  <p-listbox [options]="incidentFieldsToAddItems" [(ngModel)]="selectedFieldsToAdd" [style]="{ 'width': '100%'}" [listStyle]="{'height': '50vh'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
+
+  <div style="margin-top: .5em; float: right;">
+
+    <p-button label="Add" (onClick)="onAddIncidentFieldsAccept()" [disabled]="!selectedFieldsToAdd || selectedFieldsToAddLen === 0"></p-button>
+
+    <p-button label="Cancel" (onClick)="displayAddIncidentFieldDialog = false"></p-button>
+
+  </div>
+
+</p-dialog>
+
+
+
+<!-- Add Custom Field Dialog -->
+<p-dialog *ngIf="customFieldsToAddItems" header="Choose Custom Fields to Add" [(visible)]="displayAddCustomFieldDialog" [modal]="true" [draggable]="false" [style]="{width: '25em', 'max-height': '75vh'}" styleClass="openDialog">
+
+  <!--<div class="formLabel">Custom Fields to Add:</div>-->
+
+  <p-listbox #customFieldListBox [options]="customFieldsToAddItems" [(ngModel)]="selectedCustomFieldsToAdd" [style]="{ 'width': '100%'}" [listStyle]="{'height': '50vh'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
+
+  <div style="margin-top: .5em; float: right;">
+
+    <p-button label="Add" (onClick)="onAddCustomFieldsAccept()" [disabled]="!selectedCustomFieldsToAdd || selectedCustomFieldsToAddLen === 0"></p-button>
+
+    <p-button label="Cancel" (onClick)="displayAddCustomFieldDialog = false"></p-button>
+
+  </div>
+
+</p-dialog>

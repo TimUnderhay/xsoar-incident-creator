@@ -11,7 +11,7 @@
 <p-card *ngIf="parsedIncidentJson" header="Create Investigation" subheader="If enabled, this option will cause an investigation to be created along with a new incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so.">
 
   <div style="margin-top: 1em;">
-    <p-selectButton name="createInvestigation" [options]="createInvestigationButtonOptions" [ngModel]="createInvestigation" (ngModelChange)="createInvestigationChange.emit($event)"></p-selectButton>
+    <p-selectButton name="createInvestigation" [options]="createInvestigationButtonItems" [ngModel]="createInvestigation" (ngModelChange)="createInvestigationChange.emit($event)"></p-selectButton>
   </div>
 
 </p-card>
@@ -77,7 +77,7 @@
       <div class="fieldContainer">
 
         <div>
-          <p-checkbox [(ngModel)]="customFieldsSelectAllState" [binary]="true" (onChange)="onToggleAllCustomFields()" [disabled]="!customFields || (!customFields && customFieldsLen === 0)"></p-checkbox>
+          <p-checkbox [(ngModel)]="customFieldsSelectAllState" [binary]="true" (onChange)="onToggleAllCustomFields()" [disabled]="!customFields || (customFields && customFieldsLen === 0)"></p-checkbox>
         </div>
 
         <header>Name</header>

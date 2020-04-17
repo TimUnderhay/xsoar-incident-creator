@@ -124,8 +124,9 @@ body .ui-dialog-content {
   margin-top: 1em;
 }
 
-field-display {
-  display: contents; // fixes css grid for field-grid components by passing-through content
+field-display,
+field-display-freeform {
+  display: contents; // fixes css grid for field-display components by passing-through content
 }
 
 .inputDisplay {
