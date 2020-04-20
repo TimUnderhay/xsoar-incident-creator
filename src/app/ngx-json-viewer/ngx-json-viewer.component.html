@@ -1,0 +1,43 @@
+
+  <div
+    *ngFor="let segment of segments"
+      [ngClass]="['segment', 'segment-type-' + segment.type]"
+      [attr.jmespath]="segment.path">
+
+    <div
+      (click)="toggle(segment)"
+      [class.segment-main]="true"
+      [class.expandable]="segment.expandable"
+      [class.expanded]="segment.expanded">
+
+        <!-- expand/collapse arrow -->
+        <div
+          *ngIf="segment.expandable"
+            class="toggler pi pi-chevron-right"
+            [class.pi-chevron-right]="!segment.expanded"
+            [class.pi-chevron-down]="segment.expanded">
+        </div>
+
+        <!-- key name -->
+        <span class="segment-key">{{segment.key}}</span>
+
+        <!-- separator -->
+        <span class="segment-separator">: </span>
+
+        <!-- value -->
+        <span *ngIf="!segment.expanded" class="segment-value">{{segment.description}}</span>
+
+    </div>
+
+
+    <!-- If expanded, pop in another ngx-json-viewer -->
+    <ngx-json-viewer
+      *ngIf="segment.expanded && segment.expandable"
+        class="children"
+        [json]="segment.value"
+        [expanded]="expanded"
+        [firstLevel]="false"
+        [path]="segment.path">
+    </ngx-json-viewer>
+
+  </div>

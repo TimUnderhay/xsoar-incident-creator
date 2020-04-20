@@ -30,6 +30,63 @@
 
 
 
+<!-- Upload 3rd-Party JSON -->
+<p-card *ngIf="selectedIncidentType" header="JSON Data" subheader="Upload a JSON file from which to map fields.  The origin can be of any type, as long as it is valid JSON.">
+
+  <div style="margin-top: 1em;">
+    
+     <p-fileUpload #fileUpload
+      name="myfile[]"
+      mode="basic"
+      chooseLabel="Any JSON"
+      [customUpload]="true"
+      (uploadHandler)="onFreeformJsonUploaded($event, fileUpload)"
+      accept=".json,.txt"
+      [multiple]="false"
+      [auto]="true"
+      pTooltip="Import an incident from a JSON file"
+      showDelay="750">
+    </p-fileUpload>
+  
+    <span>
+      
+      &nbsp;
+      
+      <p-button
+        *ngIf="parsedJson"
+          label="View JSON"
+          type="button"
+          (onClick)="onShowBasicJsonViewerClicked()">
+      </p-button>
+
+    </span>
+
+    <span style="color: white;">&nbsp;{{parsedJson ? "Loaded" : "Not Loaded"}}</span>
+
+  </div>
+
+</p-card>
+
+
+
+<!-- Create Investigation Container -->
+<p-card *ngIf="chosenIncidentFields" header="Create Investigation" subheader="If enabled, this option will cause an investigation to be created along with a new incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so.">
+
+  <div style="margin-top: 1em;">
+
+    <p-selectButton
+      name="createInvestigation"
+      [options]="createInvestigationButtonItems"
+      [(ngModel)]="createInvestigation">
+      <!-- (ngModelChange)="createInvestigationChange.emit($event)" -->
+    </p-selectButton>
+
+  </div>
+
+</p-card>
+
+
+
 <div *ngIf="chosenIncidentFields" class="fieldsForm">
 
 
@@ -46,25 +103,38 @@
         <!-- Add Field Button -->
         <p-button type="button" label="Add Field" (onClick)="onAddIncidentFieldClicked()"></p-button>
 
-      </div >
+      </div>
 
       <!-- Incident Fields -->
-      <div class="fieldContainer">
+      <div class="freeformFieldContainer">
 
         <div>
-          <p-checkbox [(ngModel)]="incidentFieldsSelectAllState" [binary]="true" (onChange)="onToggleAllChosenIncidentFields()"></p-checkbox>
+          <p-checkbox
+            [(ngModel)]="incidentFieldsSelectAllState"
+            [binary]="true"
+            (onChange)="onToggleAllChosenIncidentFields()">
+          </p-checkbox>
         </div>
 
         <header>Name</header>
 
         <header>Type</header>
 
+        <header pToolTip="The method by which to map the field's value">Method</header>
+
         <header>Value</header>
+
+        <header><i class="pi pi-times" style="font-size: 2em;" pTooltip="Delete All" showDelay="750" (click)="onDeleteAllIncidentFielsdClicked()"></i></header>
 
         <ng-container *ngFor="let field of chosenIncidentFields | keyvalue">
 
-          <field-display-freeform #incidentField *ngIf="![undefined, null].includes(field.value.value)" [field]="field.value" [displayShortNames]="displayIncidentFieldShortNames">
-            <!-- (fieldChange)="onIncidentFieldChanged(field.key, $event)" -->
+          <field-display-freeform
+            *ngIf="![undefined, null].includes(field.value.value)"
+              #incidentField
+              [field]="field.value"
+              [displayShortNames]="displayIncidentFieldShortNames"
+              (fieldDeleted)="onIncidentFieldRemoved($event)">
+              <!-- (fieldChange)="onIncidentFieldChanged(field.key, $event)" -->
           </field-display-freeform>
 
         </ng-container>
@@ -88,7 +158,7 @@
         <!-- I don't think reset is required for freeform -->
         <!--<p-button type="button" label="Reset Values" (onClick)="onResetAllCustomFieldValues()" [disabled]="!currentDemistoEndpointInit"></p-button>-->
 
-        <p-toggleButton [onLabel]="shortNamesLabel" [offLabel]="longNamesLabel" [(ngModel)]="displayCustomFieldShortNames" name="shortCustomNames" [disabled]="!currentDemistoEndpointInit"></p-toggleButton>
+        <p-toggleButton *ngIf="chosenCustomFieldsLen !== 0" [onLabel]="shortNamesLabel" [offLabel]="longNamesLabel" [(ngModel)]="displayCustomFieldShortNames" name="shortCustomNames" [disabled]="!currentDemistoEndpointInit"></p-toggleButton>
 
         <!--
         <p-button type="button" label="Reload Definitions" name="createIncident" (onClick)="onReloadFieldDefinitions()" [disabled]="!currentDemistoEndpointInit" pTooltip="Reload the field definitions from XSOAR"></p-button>
@@ -97,7 +167,7 @@
       </div >
 
       <!-- Custom Fields -->
-      <div class="fieldContainer" *ngIf="chosenCustomFieldsLen !== 0 else noCustomFieldsChosen">
+      <div class="freeformFieldContainer" *ngIf="chosenCustomFieldsLen !== 0 else noCustomFieldsChosen">
 
         <div>
           <p-checkbox [(ngModel)]="customFieldsSelectAllState" [binary]="true" (onChange)="onToggleAllChosenCustomFields()" [disabled]="!chosenCustomFields || (chosenCustomFields && chosenCustomFieldsLen === 0)"></p-checkbox>
@@ -107,11 +177,15 @@
 
         <header>Type</header>
 
+        <header pToolTip="The method by which to map the field's value">Method</header>
+
         <header>Value</header>
+
+        <header><i class="pi pi-times" style="font-size: 2em;" pTooltip="Delete All" showDelay="750" (click)="onDeleteAllCustomFielsdClicked()"></i></header>
 
         <ng-container *ngFor="let field of chosenCustomFields | keyvalue">
 
-          <field-display-freeform #customField *ngIf="![undefined, null].includes(field.value.value)" [field]="field.value" [displayShortNames]="displayCustomFieldShortNames">
+          <field-display-freeform #customField *ngIf="![undefined, null].includes(field.value.value)" [field]="field.value" [displayShortNames]="displayCustomFieldShortNames" (fieldDeleted)="onCustomIncidentFieldRemoved($event)">
             <!-- (fieldChange)="onCustomFieldChanged(field.key, $event)" -->
           </field-display-freeform>
 
@@ -180,5 +254,14 @@
     <p-button label="Cancel" (onClick)="displayAddCustomFieldDialog = false"></p-button>
 
   </div>
+
+</p-dialog>
+
+
+
+<!-- Freeform JSON Viewer / Selector -->
+<p-dialog header="Freeform JSON Selector" [(visible)]="freeformJsonSelector" [modal]="true" [style]="{width: '75%'}">
+
+  <ngx-json-viewer *ngIf="parsedJson" [json]="parsedJson" [firstLevel]="true"></ngx-json-viewer>
 
 </p-dialog>

@@ -47,15 +47,7 @@ export class JsonMappingUIComponent implements OnInit {
     'type',
   ]
   internalFieldShortNamesToInclude = ['attachment', 'feedbased', 'labels'];
-  
-
-  // PrimeNG
-  incidentTypeItems: SelectItem[];
-  selectedIncidentType: string;
-  displayAddIncidentFieldDialog = false;
-  displayAddCustomFieldDialog = false;
-  chosenTypeItems: SelectItem[];
-  selectedFieldsToAdd: string[];
+  parsedJson: Object;
   get selectedFieldsToAddLen(): number {
     return this.selectedFieldsToAdd.length;
   }
@@ -63,17 +55,30 @@ export class JsonMappingUIComponent implements OnInit {
   get selectedCustomFieldsToAddLen(): number {
     return this.selectedCustomFieldsToAdd.length;
   }
+  
+  // PrimeNG Selected Values
+  selectedIncidentType: string;
+  displayAddIncidentFieldDialog = false;
+  displayAddCustomFieldDialog = false;
+  selectedFieldsToAdd: string[];
+  createInvestigation = true;
+
+  // PrimeNG Items
+  incidentTypeItems: SelectItem[];
+  chosenTypeItems: SelectItem[];
   incidentFieldsToAddItems: SelectItem[];
   customFieldsToAddItems: SelectItem[];
-  
-
-  
+  createInvestigationButtonItems: SelectItem[] = [
+    { value: true, label: 'Enabled' },
+    { value: false, label: 'Disabled' }
+  ];
 
   // UI State
   displayIncidentFieldShortNames = true; // controls display options
   displayCustomFieldShortNames = true; // controls display options
   incidentFieldsSelectAllState = false;
   customFieldsSelectAllState = false;
+  freeformJsonSelector = false;
 
   // UI Labels
   longNamesLabel = 'Short Names';
@@ -233,7 +238,7 @@ export class JsonMappingUIComponent implements OnInit {
 
 
   onResetAllFieldValues() {
-    this.fieldDisplayComponents.forEach( component => component.onResetValue(false) );
+    this.fieldDisplayComponents.forEach( component => component.onResetValueClicked(false) );
   }
 
 
@@ -315,6 +320,97 @@ export class JsonMappingUIComponent implements OnInit {
   /*onChange() {
     console.log('onChange(): selectedCustomFieldsToAdd:', this.selectedCustomFieldsToAdd)
   }*/
+
+
+
+  onDeleteAllIncidentFielsdClicked() {
+    console.log(`JsonMappingUIComponent: onDeleteAllIncidentFielsdClicked()`);
+    this.confirmationService.confirm({
+      message: `Are you sure you want to delete all incident fields?`,
+      accept: () => this.onAllIncidentFieldsRemoved(),
+      icon: 'pi pi-exclamation-triangle'
+    })
+  }
+
+
+
+  onDeleteAllCustomFielsdClicked() {
+    console.log(`JsonMappingUIComponent: onDeleteAllCustomFielsdClicked()`);
+    this.confirmationService.confirm({
+      message: `Are you sure you want to delete all custom fields?`,
+      accept: () => this.onAllCustomFieldsRemoved(),
+      icon: 'pi pi-exclamation-triangle'
+    })
+  }
+
+
+
+  onAllIncidentFieldsRemoved() {
+    console.log('JsonMappingUIComponent: onAllIncidentFieldsRemoved()');
+    for (const cliName of Object.keys(this.chosenIncidentFields)) {
+      if (cliName !== 'type') {
+        delete this.chosenIncidentFields[cliName];
+      }
+    }
+  }
+
+
+
+  onAllCustomFieldsRemoved() {
+    console.log('JsonMappingUIComponent: onAllCustomFieldsRemoved()');
+    for (const cliName of Object.keys(this.chosenCustomFields)) {
+      if (cliName !== 'type') {
+        delete this.chosenCustomFields[cliName];
+      }
+    }
+  }
+
+
+
+  onIncidentFieldRemoved(cliName: string) {
+    console.log('JsonMappingUIComponent: onIncidentFieldRemoved(): cliName:', cliName);
+    delete this.chosenIncidentFields[cliName];
+  }
+
+
+
+  onCustomIncidentFieldRemoved(cliName: string) {
+    console.log('JsonMappingUIComponent: onCustomIncidentFieldRemoved(): cliName:', cliName);
+    delete this.chosenCustomFields[cliName];
+  }
+
+
+
+  onFreeformJsonUploaded(data: { files: File }, uploadRef) {
+    let file = data.files[0];
+    console.log('JsonMappingUIComponent: onFreeformJsonUploaded(): file:', file);
+
+    let reader = new FileReader();
+
+    reader.onloadend = (progressEvent: ProgressEvent) => {
+      try {
+        this.parsedJson = JSON.parse(reader.result as string);
+        console.log('JsonMappingUIComponent: onFreeformJsonUploaded(): parsedIncidentJson:', this.parsedJson);
+        // this.buildIncidentFields(this.parsedJson);
+        // this.loadedIncidentConfigName = undefined;
+        // this.loadedIncidentConfigId = undefined;
+        // this.createInvestigation = true;
+      }
+      catch (error) {
+        console.error('JsonMappingUIComponent: onFreeformJsonUploaded(): onloadend((): Error parsing uploaded JSON:', error);
+      }
+      uploadRef.clear(); // allow future uploads
+    };
+
+    reader.readAsText(data.files[0]); // kick off the read operation (calls onloadend())
+  }
+
+
+
+  onShowBasicJsonViewerClicked() {
+    console.log(`JsonMappingUIComponent: onShowBasicJsonViewerClicked()`);
+    this.freeformJsonSelector = true;
+  }
 
 
 }

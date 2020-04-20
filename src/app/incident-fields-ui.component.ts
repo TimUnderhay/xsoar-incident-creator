@@ -1,8 +1,7 @@
 import { Component, OnInit, OnChanges, ViewChildren, ChangeDetectorRef, Input, Inject, forwardRef, Output, EventEmitter, SimpleChanges } from '@angular/core';
 import { FetcherService } from './fetcher-service';
 import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
-import { ConfirmationService } from 'primeng/api';
-import { SelectItem } from 'primeng/api';
+import { ConfirmationService, SelectItem } from 'primeng/api';
 import { FieldDisplayComponent } from './field-display.component';
 import { IncidentField, IncidentFields } from './types/incident-fields';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
