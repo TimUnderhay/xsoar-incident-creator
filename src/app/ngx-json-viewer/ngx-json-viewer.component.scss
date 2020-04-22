@@ -10,7 +10,11 @@ $type-colors: (
 );
 
 ngx-json-viewer {
-  display: block !important;
+  display: contents;
+}
+
+.ngx-json-viewer {
+  display: block;
   font-family: monospace;
   font-size: 1em;
   width: 100%;
@@ -33,12 +37,6 @@ ngx-json-viewer {
         line-height: 1.2em;
         vertical-align: middle;
         color: #787878;
-
-        /*&::after {
-          display: inline-block;
-          content: "►";
-          transition: transform 0.1s ease-in;
-        }*/
       }
 
       .segment-key {
@@ -58,7 +56,9 @@ ngx-json-viewer {
     }
 
     .children {
-      margin-left: 12px;
+      // margin-left: 12px;
+      margin-left: 6px;
+      margin-left: 0;
     }
   }
 

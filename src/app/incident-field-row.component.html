@@ -1,17 +1,21 @@
 <ng-container *ngIf="field.hasOwnProperty('fieldType')">
   
+  <!-- Field Enabled Checkbox -->
   <div style="vertical-align: top;">
     <p-checkbox [(ngModel)]="field.enabled" (onChange)="onSelectionChanged($event)" [binary]="true" [disabled]="field.locked" standalone></p-checkbox>
   </div>
 
+  <!-- Field Name -->
   <div class="fieldLabel" [class.locked]="field.locked" [pTooltip]="field.lockedReason" [tooltipDisabled]="!field.locked" showDelay="750">
     &nbsp;{{displayShortNames ? field.shortName : (field.longName ? field.longName : field.shortName)}}&nbsp;
   </div>
 
-  <div class="fieldLabel">
-    {{field.fieldType}}
+  <!-- Field Type -->
+  <div>
+    <span class="fieldLabel">{{field.fieldType}}</span>
   </div>
 
+  <!-- Field Value -->
   <div *ngIf="['shortText', 'longText', 'number', 'url', 'boolean', 'html', 'role', 'singleSelect', 'date', 'user', 'multiSelect', 'markdown', 'grid', 'internal', 'timer', 'attachments'].includes(field.fieldType); else notYetSupported" class="valueContainer">
 
     <div style="flex-basis: auto; flex-grow: 1;">

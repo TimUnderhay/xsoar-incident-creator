@@ -1,43 +1,79 @@
+<div class="ngx-json-viewer">
+  
+  <!-- Root Segment -->
+  <div *ngIf="firstLevel else jsonViewer" class="segment" [ngClass]="['segment-type-' + typeOfJson]">
 
-  <div
-    *ngFor="let segment of segments"
-      [ngClass]="['segment', 'segment-type-' + segment.type]"
-      [attr.jmespath]="segment.path">
-
-    <div
-      (click)="toggle(segment)"
-      [class.segment-main]="true"
-      [class.expandable]="segment.expandable"
-      [class.expanded]="segment.expanded">
-
-        <!-- expand/collapse arrow -->
-        <div
-          *ngIf="segment.expandable"
-            class="toggler pi pi-chevron-right"
-            [class.pi-chevron-right]="!segment.expanded"
-            [class.pi-chevron-down]="segment.expanded">
-        </div>
-
-        <!-- key name -->
-        <span class="segment-key">{{segment.key}}</span>
-
-        <!-- separator -->
-        <span class="segment-separator">: </span>
-
-        <!-- value -->
-        <span *ngIf="!segment.expanded" class="segment-value">{{segment.description}}</span>
-
+    <div class="segment-main expandable expanded">
+  
+      <i class="toggler pi pi-chevron-down"></i>
+  
+      <!-- key name -->
+      <span class="segment-key">root</span>
+    
+      <!-- separator -->
+      <span class="segment-separator">: </span>
+    
+      <!-- value -->
+      <span class="segment-value"> {{typeOfJson === 'object' ? '{}' : '[]'}} {{jsonLen}} items</span>
+  
     </div>
 
+    <!-- Project Segments Template Under Root -->
+    <ng-container *ngTemplateOutlet="jsonViewer"></ng-container>
 
-    <!-- If expanded, pop in another ngx-json-viewer -->
-    <ngx-json-viewer
-      *ngIf="segment.expanded && segment.expandable"
-        class="children"
-        [json]="segment.value"
-        [expanded]="expanded"
-        [firstLevel]="false"
-        [path]="segment.path">
-    </ngx-json-viewer>
+</div>
+
+
+<!-- Template for Segments -->
+<ng-template #jsonViewer>
+
+  <div class="ngx-json-viewer" [class.children]="!firstLevel">
+
+    <!-- segments -->
+    <div
+      *ngFor="let segment of segments"
+      [ngClass]="['segment', 'segment-type-' + segment.type]"
+      [attr.jmespath]="segment.path">
+    
+        <!-- make entire row clickable -->
+        <div
+          (click)="toggle(segment)"
+          class="segment-main"
+          [class.expandable]="segment.expandable"
+          [class.expanded]="segment.expanded">
+    
+            <!-- expand/collapse arrow -->
+            <i
+              *ngIf="segment.expandable"
+              class="toggler pi pi-chevron-right"
+              [class.pi-chevron-right]="!segment.expanded"
+              [class.pi-chevron-down]="segment.expanded">
+            </i>
+    
+            <!-- key name -->
+            <span class="segment-key">{{segment.key}}</span>
+    
+            <!-- separator -->
+            <span class="segment-separator">: </span>
+    
+            <!-- value -->
+            <span class="segment-value">{{segment.description}}</span>
+    
+        </div>
+    
+    
+        <!-- If expanded, pop in another ngx-json-viewer -->
+        <ngx-json-viewer
+          *ngIf="segment.expanded && segment.expandable"
+          class="children"
+          [json]="segment.value"
+          [expanded]="expanded"
+          [firstLevel]="false"
+          [path]="segment.path">
+        </ngx-json-viewer>
+    
+    </div>
 
   </div>
+
+</ng-template>

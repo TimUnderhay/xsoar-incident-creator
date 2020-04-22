@@ -132,9 +132,9 @@ body .ui-dialog-content {
   margin-top: 1em;
 }
 
-field-display,
-field-display-freeform {
-  display: contents; // fixes css grid for field-display components by passing-through content
+incident-field-row,
+freeform-json-row {
+  display: contents; // fixes css grid for incident-field-line components by passing-through content
 }
 
 .inputDisplay {
@@ -261,7 +261,8 @@ body .ui-dropdown { //.ui-dropdown-list
 
 .fieldLabel {
   color: rgb(126, 126, 126);
-  vertical-align: top;
+  vertical-align: middle;
+  // span { }
 }
 
 

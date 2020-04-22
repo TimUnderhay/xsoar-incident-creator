@@ -23,10 +23,22 @@
 
       <div style="margin-top: 1em;">
 
-        <p-button label="Select" (onClick)="onOpenDemistoServersClicked()" styleClass="alignButton"></p-button>
+        <p-button
+          label="Select"
+          (onClick)="onOpenDemistoServersClicked()"
+          styleClass="alignButton">
+        </p-button>
 
-        <p-message *ngIf="currentDemistoEndpointInit" severity="success" text="Endpoint Initialised"></p-message>
-        <p-message *ngIf="!currentDemistoEndpointInit" severity="error" text="Endpoint Not Initialised"></p-message>
+        <p-message
+          *ngIf="currentDemistoEndpointInit"
+          severity="success" text="Endpoint Initialised">
+        </p-message>
+
+        <p-message
+          *ngIf="!currentDemistoEndpointInit"
+          severity="error"
+          text="Endpoint Not Initialised">
+        </p-message>
 
 
 
@@ -44,35 +56,81 @@
         <!-- <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span> -->
         
         <!-- Open -->
-        <p-button label="Open" (onClick)="onOpenClicked()" styleClass="alignButton" [disabled]="savedIncidentConfigurationsLen === 0" pTooltip="Open a saved incident configuration" showDelay="750"></p-button>
+        <p-button
+          label="Open"
+          (onClick)="onOpenClicked()"
+          styleClass="alignButton"
+          [disabled]="savedIncidentConfigurationsLen === 0"
+          pTooltip="Open a saved incident configuration"
+          showDelay="750">
+        </p-button>
         
         <!-- Load From XSOAR -->
-        <p-button label="XSOAR Import" (onClick)="onLoadFromDemistoClicked()" [disabled]="currentDemistoEndpointInit === false" pTooltip="Import an incident directly from XSOAR" showDelay="750"></p-button>
+        <p-button
+          label="XSOAR Import"
+          (onClick)="onLoadFromDemistoClicked()"
+          [disabled]="currentDemistoEndpointInit === false"
+          pTooltip="Import an incident directly from XSOAR"
+          showDelay="750">
+        </p-button>
         
         <!-- Upload Incident JSON -->
-        <p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Incident JSON" [customUpload]="true" (uploadHandler)="onIncidentJsonUploaded($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true" pTooltip="Import an incident from a JSON file" showDelay="750"></p-fileUpload>
+        <p-fileUpload
+          #fileUpload
+          name="myfile[]"
+          mode="basic"
+          chooseLabel="Incident JSON"
+          [customUpload]="true"
+          (uploadHandler)="onIncidentJsonUploaded($event, fileUpload)"
+          accept=".json,.txt"
+          [multiple]="false"
+          [auto]="true"
+          pTooltip="Import an incident from a JSON file"
+          showDelay="750">
+        </p-fileUpload>
 
         <!-- New JSON Mapping -->
-        <p-button label="New JSON Mapping" (onClick)="onNewJsonMappingClicked()"></p-button>
-
-        <!-- Upload Freeform JSON -->
-        <!--<p-fileUpload #fileUpload name="myfile[]" mode="basic" chooseLabel="Freeform JSON" [customUpload]="true" (uploadHandler)="onFreeformJsonUploaded($event, fileUpload)" accept=".json,.txt" [multiple]="false" [auto]="true" pTooltip="Import a JSON file of any type.  Incident fields must be mapped by the user" showDelay="750"></p-fileUpload>-->
+        <p-button
+          label="New JSON Mapping"
+          (onClick)="onNewJsonMappingClicked()">
+        </p-button>
 
         <!-- Save -->
-        <p-button label="Save" (onClick)="onSaveClicked()" [disabled]="!(loadedIncidentConfigId && loadedIncidentConfigName)"></p-button>
+        <p-button
+          label="Save"
+          (onClick)="onSaveClicked()"
+          [disabled]="!(loadedIncidentConfigId && loadedIncidentConfigName)">
+        </p-button>
 
         <!-- Save As -->
-        <p-button label="Save As" (onClick)="onSaveAsClicked()" [disabled]="!parsedIncidentJson"></p-button>
+        <p-button
+          label="Save As"
+          (onClick)="onSaveAsClicked()"
+          [disabled]="!saveAsButtonEnabled">
+        </p-button>
 
         <!-- Delete -->
-        <p-button label="Delete" (onClick)="onDeleteClicked()" [disabled]="savedIncidentConfigurationsLen === 0"></p-button>
+        <p-button
+          label="Delete"
+          (onClick)="onDeleteConfigClicked()"
+          [disabled]="savedIncidentConfigurationsLen === 0">
+        </p-button>
 
         <!-- Bulk Create -->
-        <p-button label="Bulk Create" (onClick)="onBulkCreateClicked()" [disabled]="savedIncidentConfigurationsLen === 0 || demistoEndpointsLen === 0" pTooltip="Create incidents of one or more types, and on one or more XSOAR servers" showDelay="750"></p-button>
+        <p-button
+          label="Bulk Create"
+          (onClick)="onBulkCreateClicked()"
+          [disabled]="savedIncidentConfigurationsLen === 0 || demistoEndpointsLen === 0"
+          pTooltip="Create incidents of one or more types, and on one or more XSOAR servers"
+          showDelay="750">
+        </p-button>
 
         <!-- Bulk Create Results -->
-        <p-button *ngIf="this.bulkCreateResults.length !== 0"  label="Bulk Create Results" (onClick)="showBulkResultsDialog = true"></p-button>
-
+        <p-button
+          *ngIf="this.bulkCreateResults.length !== 0"
+          label="Bulk Create Results"
+          (onClick)="showBulkResultsDialog = true">
+        </p-button>
 
       </div>
 
@@ -81,28 +139,30 @@
 
     <!-- Incident Fields UI -->
     <incident-fields-ui
-      *ngIf="incidentFields && customFields && parsedIncidentJson && fetchedIncidentFieldDefinitions"
-        [parsedIncidentJson]="parsedIncidentJson"
-        [loadedIncidentConfigName]="loadedIncidentConfigName"
-        [currentDemistoEndpointName]="currentDemistoEndpointName"
-        [currentDemistoEndpointInit]="currentDemistoEndpointInit"
-        [(incidentFields)]="incidentFields"
-        [(customFields)]="customFields"
-        [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
-        [(createInvestigation)]="createInvestigation"
-        [(messages)]="messages">
+      *ngIf="fetchedIncidentFieldDefinitions && showIncidentFieldsUI"
+      [loadedIncidentConfigName]="loadedIncidentConfigName"
+      [loadedIncidentConfigId]="loadedIncidentConfigId"
+      [currentDemistoEndpointName]="currentDemistoEndpointName"
+      [currentDemistoEndpointInit]="currentDemistoEndpointInit"
+      [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
+      [savedIncidentConfigurations]="savedIncidentConfigurations"
+      (saveAsButtonEnabledChange)="saveAsButtonEnabled = $event"
+      (savedIncidentConfigurationsChanged)="onSavedIncidentConfigurationsChanged($event)" 
+      (messagesReplace)="messagesReplace($event)"
+      (messageWithAutoClear)="messageWithAutoClear($event)"
+      (reloadFieldDefinitions)="fetchIncidentFieldDefinitions($event)">
     </incident-fields-ui>
 
 
 
-    <json-mapping-ui
+    <freeform-json-ui
       *ngIf="showJsonMappingUI && fetchedIncidentFieldDefinitions && fetchedIncidentTypes"
-        [loadedJsonMappingConfigName]="loadedJsonMappingConfigName"
-        [currentDemistoEndpointName]="currentDemistoEndpointName"
-        [currentDemistoEndpointInit]="currentDemistoEndpointInit"
-        [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
-        [fetchedIncidentTypes]="fetchedIncidentTypes">
-    </json-mapping-ui>
+      [loadedJsonMappingConfigName]="loadedJsonMappingConfigName"
+      [currentDemistoEndpointName]="currentDemistoEndpointName"
+      [currentDemistoEndpointInit]="currentDemistoEndpointInit"
+      [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
+      [fetchedIncidentTypes]="fetchedIncidentTypes">
+    </freeform-json-ui>
     
     <div>&nbsp;</div>
 
@@ -121,31 +181,75 @@
     <div>
 
       <!-- New -->
-      <p-button label="New" (onClick)="onNewDemistoEndpoint()" styleClass="alignButton"></p-button>
+      <p-button
+        label="New"
+        (onClick)="onNewDemistoEndpointClicked()"
+        styleClass="alignButton">
+      </p-button>
 
       <!-- Edit -->
-      <p-button *ngIf="demistoEndpointsLen !== 0" label="Edit" (onClick)="onEditDemistoEndpoint()" styleClass="alignButton" [disabled]="!selectedDemistoEndpointName"></p-button>
+      <p-button
+        *ngIf="demistoEndpointsLen !== 0"
+        label="Edit"
+        (onClick)="onEditDemistoEndpoint()"
+        styleClass="alignButton"
+        [disabled]="!selectedDemistoEndpointName">
+      </p-button>
 
       <!-- Delete -->
-      <p-button *ngIf="demistoEndpointsLen !== 0" label="Delete" (onClick)="onDeleteDemistoEndpoint()" styleClass="alignButton" [disabled]="!selectedDemistoEndpointName"></p-button>
+      <p-button
+        *ngIf="demistoEndpointsLen !== 0"
+        label="Delete"
+        (onClick)="onDeleteDemistoEndpointClicked()"
+        styleClass="alignButton"
+        [disabled]="!selectedDemistoEndpointName">
+      </p-button>
 
       <!-- Test -->
-      <p-button *ngIf="demistoEndpointsLen !== 0" label="Test" (onClick)="onTestDemistoEndpoint()" styleClass="alignButton" [disabled]="!selectedDemistoEndpointName"></p-button>
+      <p-button
+        *ngIf="demistoEndpointsLen !== 0"
+        label="Test"
+        (onClick)="onTestDemistoEndpoint()"
+        styleClass="alignButton"
+        [disabled]="!selectedDemistoEndpointName">
+      </p-button>
 
       <!-- Default -->
-      <p-button *ngIf="demistoEndpointsLen !== 0" label="Set Default" (onClick)="onSetDefaultDemistoEndpoint()" styleClass="alignButton" [disabled]="!selectedDemistoEndpointName"></p-button>
+      <p-button
+        *ngIf="demistoEndpointsLen !== 0"
+        label="Set Default"
+        (onClick)="onSetDefaultDemistoEndpoint()"
+        styleClass="alignButton"
+        [disabled]="!selectedDemistoEndpointName">
+      </p-button>
 
       <!-- Refresh -->
-      <p-button label="Refresh" (onClick)="onRefreshDemistoEndpoints()" styleClass="alignButton"></p-button>
+      <p-button
+        label="Refresh"
+        (onClick)="onRefreshDemistoEndpoints()"
+        styleClass="alignButton">
+      </p-button>
 
-      <p-message *ngIf="currentDemistoEndpointInit" severity="success" text="Endpoint Initialised"></p-message>
-      <p-message *ngIf="!currentDemistoEndpointInit" severity="error" text="Endpoint Not Initialised"></p-message>
+      <p-message
+        *ngIf="currentDemistoEndpointInit"
+        severity="success"
+        text="Endpoint Initialised">
+      </p-message>
+      
+      <p-message
+        *ngIf="!currentDemistoEndpointInit"
+        severity="error"
+        text="Endpoint Not Initialised">
+      </p-message>
 
     </div>
 
     <div style="margin-top: 1em;">
+
       <span class="formLabel">Current XSOAR Server: </span>
+
           <span class="formLabel" style="text-decoration: underline;">{{currentDemistoEndpointName ? currentDemistoEndpointName : 'No server is selected'}}</span>
+
     </div>
 
     <div style="margin-top: 1em;">
@@ -158,15 +262,29 @@
 
       <div class="formLabel">Select a server</div>
 
-      <p-listbox [options]="demistoEndpointsItems" [(ngModel)]="selectedDemistoEndpointName" [style]="{'width':'100%'}" (onDblClick)="onDemistoEndpointSelected()" [filter]="true"></p-listbox>
+      <p-listbox
+        [options]="demistoEndpointsItems"
+        [(ngModel)]="selectedDemistoEndpointName"
+        [style]="{'width':'100%'}"
+        (onDblClick)="onDemistoEndpointSelected()"
+        [filter]="true">
+      </p-listbox>
 
     </ng-template>
 
       <div style="margin-top: .5em; float: right;">
 
-        <p-button *ngIf="demistoEndpointsLen !== 0" label="Select" (onClick)="onDemistoEndpointSelected()" [disabled]="!selectedDemistoEndpointName"></p-button>
+        <p-button
+          *ngIf="demistoEndpointsLen !== 0"
+          label="Select"
+          (onClick)="onDemistoEndpointSelected()"
+          [disabled]="!selectedDemistoEndpointName">
+        </p-button>
 
-        <p-button label="Close" (onClick)="showDemistoEndpointOpenDialog = false"></p-button>
+        <p-button
+          label="Close"
+          (onClick)="showDemistoEndpointOpenDialog = false">
+        </p-button>
 
     </div>
 
@@ -181,9 +299,15 @@
 
     <div style="margin-top: .5em; float: right;">
 
-      <p-button label="Confirm" (onClick)="onDeleteDemistoEndpointConfirmed()"></p-button>
+      <p-button
+        label="Confirm"
+        (onClick)="onDeleteDemistoEndpointConfirmed()">
+      </p-button>
 
-      <p-button label="Cancel" (onClick)="showDeleteDemistoEndpointDialog = false"></p-button>
+      <p-button
+        label="Cancel"
+        (onClick)="showDeleteDemistoEndpointDialog = false">
+      </p-button>
 
     </div>
 
@@ -220,15 +344,31 @@
     <div style="margin-top: .5em; float: right;">
 
       <!-- Test Button -->
-      <p-button label="Test" (onClick)="testDemistoEndpointAdHoc(newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny)" [disabled]="newEditTestButtonDisabled"></p-button>
+      <p-button
+        label="Test"
+        (onClick)="testDemistoEndpointAdHoc(newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny)"
+        [disabled]="newEditTestButtonDisabled">
+      </p-button>
 
       <!-- Save Button -->
-      <p-button label="Save" *ngIf="newDemistoServerDialogMode === 'new'" (onClick)="onNewDemistoEndpointSaved()" [disabled]="!newDemistoServerUrl || !newDemistoServerApiKey || newDemistoServerSaveDisabled"></p-button>
+      <p-button label="Save"
+        *ngIf="newDemistoServerDialogMode === 'new'"
+        (onClick)="onNewDemistoEndpointSaved()"
+        [disabled]="!newDemistoServerUrl || !newDemistoServerApiKey || newDemistoServerSaveDisabled">
+      </p-button>
 
       <!-- Update Button -->
-      <p-button label="Update" *ngIf="newDemistoServerDialogMode === 'edit'" (onClick)="onDemistoEndpointUpdated(newDemistoServerUrl)" [disabled]="!newDemistoServerUrl || newDemistoServerSaveDisabled"></p-button>
+      <p-button
+        label="Update"
+        *ngIf="newDemistoServerDialogMode === 'edit'"
+        (onClick)="onDemistoEndpointUpdated(newDemistoServerUrl)"
+        [disabled]="!newDemistoServerUrl || newDemistoServerSaveDisabled">
+      </p-button>
 
-      <p-button label="Cancel" (onClick)="onNewDemistoEndpointCanceled()"></p-button>
+      <p-button
+        label="Cancel"
+        (onClick)="onNewDemistoEndpointCanceled()">
+      </p-button>
 
     </div>
 
@@ -246,77 +386,30 @@
 
     <div class="formLabel">Configuration to open</div>
 
-    <p-listbox [options]="fieldsConfigItems" [(ngModel)]="selectedOpenConfig" [style]="{'width':'100%'}" (onDblClick)="onConfigOpened()" [filter]="true"></p-listbox>
+    <p-listbox
+      [options]="fieldsConfigItems"
+      [(ngModel)]="selectedOpenConfig"
+      [style]="{'width':'100%'}"
+      (onDblClick)="onConfigOpened()"
+      [filter]="true">
+    </p-listbox>
 
     <div style="margin-top: .5em;">
 
-      <p-button label="Open" (onClick)="onConfigOpened()"></p-button>
+      <p-button
+        label="Open"
+        (onClick)="onConfigOpened()">
+      </p-button>
 
-      <p-button label="Cancel" (onClick)="onOpenCanceled()"></p-button>
+      <p-button
+        label="Cancel"
+        (onClick)="onOpenCanceled()">
+      </p-button>
 
     </div>
-
-  </p-dialog>
-
-
-
-  <!-- XSOAR Import Dialog -->
-  <p-dialog header="Import Incident from XSOAR" [(visible)]="showLoadFromDemistoDialog" [modal]="true" [style]="{width: '50%'}" styleClass="loadFromDemistoDialog">
-
-    <form #xsoarImportForm="ngForm">
-
-      <div class="bulkCreateContainer">
-
-        <div class="bulkCreateContainerColumn">
-
-          <div class="formLabel" style="margin-bottom: .5em;">Incident number to import</div>
-
-          <input pInputText name="demistoIncidentToLoad" type="url" id="url" required [(ngModel)]="demistoIncidentToLoad" name="url" class="inputDisplay">
-
-        </div>
-
-        <div class="bulkCreateContainerColumn">
-
-          <div class="formLabel" style="margin-bottom: .5em;">Select an XSOAR server</div>
-
-          <p-listbox name="demistoEndpointToLoadFrom" [options]="demistoEndpointsItems" [(ngModel)]="demistoEndpointToLoadFrom" [style]="{'width':'100%'}" [multiple]="false" [checkbox]="true" [filter]="false"></p-listbox>
-
-        </div>
-
-      </div>
-
-      <div style="margin-top: .5em; float: right;">
-
-        <p-button type="submit" label="Load Incident" (onClick)="onLoadFromDemistoAccepted()" [disabled]="importFromDemistoAcceptDisabled"></p-button>
-
-        <p-button label="Cancel" (onClick)="onLoadFromDemistoCanceled()"></p-button>
-
-      </div>
-    </form>
 
   </p-dialog>
   
-
-
-  <!-- Incident Save As Dialog -->
-  <p-dialog header="Save Incident As" [(visible)]="showSaveAsDialog" [modal]="true" [style]="{width: '300px'}" styleClass="saveAsDialog">
-
-    <div style="margin-bottom: .5em;" class="formLabel">Incident Name</div>
-
-    <input pInputText #saveAsInput type="text" [(ngModel)]="saveAsConfigName" class="inputDisplay"/>
-
-    <div style="margin-top: .5em;">{{saveAsButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
-
-    <div style="margin-top: .5em; float: right;">
-
-      <p-button label="Save" (onClick)="onSaveAsAccepted()" [disabled]="saveAsButtonDisabled"></p-button>
-
-      <p-button label="Cancel" (onClick)="onSaveAsCanceled()"></p-button>
-
-    </div>
-
-  </p-dialog>
-
 
 
   <!-- Delete Saved Incident Dialog -->
@@ -324,13 +417,26 @@
 
     <div class="formLabel">Configurations to delete</div>
 
-    <p-listbox [options]="fieldsConfigItems" [(ngModel)]="selectedDeleteConfigs" [multiple]="true" [filter]="true" [checkbox]="true" [style]="{'width':'100%'}"></p-listbox>
+    <p-listbox
+      [options]="fieldsConfigItems"
+      [(ngModel)]="selectedDeleteConfigs"
+      [multiple]="true"
+      [filter]="true"
+      [checkbox]="true"
+      [style]="{'width':'100%'}">
+    </p-listbox>
 
     <div style="margin-top: .5em;">
 
-      <p-button label="Delete" (onClick)="onDeleteAccepted()"></p-button>
+      <p-button
+        label="Delete"
+        (onClick)="onDeleteConfigAccepted()">
+      </p-button>
 
-      <p-button label="Cancel" (onClick)="onDeleteCanceled()"></p-button>
+      <p-button
+        label="Cancel"
+        (onClick)="onDeleteConfigCanceled()">
+      </p-button>
 
     </div>
 
@@ -348,7 +454,14 @@
 
         <div class="formLabel">Select configurations to push to XSOAR</div>
 
-        <p-listbox [options]="fieldsConfigItems" [(ngModel)]="selectedBulkCreateConfigs" [style]="{'width':'100%'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
+        <p-listbox
+          [options]="fieldsConfigItems"
+          [(ngModel)]="selectedBulkCreateConfigs"
+          [style]="{'width':'100%'}"
+          [multiple]="true"
+          [checkbox]="true"
+          [filter]="true">
+        </p-listbox>
 
       </div>
 
@@ -356,7 +469,14 @@
 
         <div class="formLabel">Select XSOAR servers to push to</div>
 
-        <p-listbox [options]="demistoEndpointsItems" [(ngModel)]="selectedBulkCreateEndpoints" [style]="{'width':'100%'}" [multiple]="true" [checkbox]="true" [filter]="true"></p-listbox>
+        <p-listbox
+          [options]="demistoEndpointsItems"
+          [(ngModel)]="selectedBulkCreateEndpoints"
+          [style]="{'width':'100%'}"
+          [multiple]="true"
+          [checkbox]="true"
+          [filter]="true">
+        </p-listbox>
 
       </div>
 
@@ -364,9 +484,16 @@
 
     <div style="margin-top: .5em; float: right;">
 
-      <p-button label="Create Incidents" (onClick)="onCreateBulkIncidents()" [disabled]="selectedBulkCreateConfigs.length === 0 || selectedBulkCreateEndpoints.length === 0"></p-button>
+      <p-button
+        label="Create Incidents"
+        (onClick)="onCreateBulkIncidents()"
+        [disabled]="selectedBulkCreateConfigs.length === 0 || selectedBulkCreateEndpoints.length === 0">
+      </p-button>
 
-      <p-button label="Cancel" (onClick)="onBulkCreateCanceled()"></p-button>
+      <p-button
+        label="Cancel"
+        (onClick)="onBulkCreateCanceled()">
+      </p-button>
 
     </div>
 
@@ -391,37 +518,109 @@
 
         <div>{{result.success ? 'Success' : 'Failure'}}</div>
 
-        <div *ngIf="result.hasOwnProperty('incidentId')"><a href="javascript:void(0)" (click)="onClickDemistoInvestigateUrl(result.incidentId, result.serverId)">{{result.incidentId}}</a></div>
+        <div *ngIf="result.hasOwnProperty('incidentId')">
+        
+          <a href="javascript:void(0)" (click)="onClickDemistoInvestigateUrl(result.incidentId, result.serverId)">{{result.incidentId}}</a>
+
+        </div>
 
         <div *ngIf="!result.hasOwnProperty('incidentId')"></div>
 
         <div>
+
           <span *ngIf="result.hasOwnProperty('skippedFields') && result.skippedFields.length !== 0" class="pi pi-info-circle bulkCreateResultsInfoIcon" [pTooltip]="'Fields were skipped: ' + result.skippedFields.join(', ')">
           </span>
+
         </div>
+
       </ng-container>
+
     </div>
 
     <div style="margin-top: 1em; float: right;">
+
       <p-button label="OK" (onClick)="showBulkResultsDialog = false"></p-button>
+
     </div>
 
   </p-dialog>
 
 
 
-    
+  <!-- XSOAR Import Dialog -->
+  <p-dialog header="Import Incident from XSOAR" [(visible)]="showLoadFromDemistoDialog" [modal]="true" [style]="{width: '50%'}" styleClass="loadFromDemistoDialog">
+
+    <form #xsoarImportForm="ngForm">
+
+      <div class="bulkCreateContainer">
+
+        <div class="bulkCreateContainerColumn">
+
+          <div class="formLabel" style="margin-bottom: .5em;">Incident number to import</div>
+
+          <input pInputText
+            name="demistoIncidentToLoad"
+            type="url"
+            id="url"
+            required
+            [(ngModel)]="demistoIncidentToLoad"
+            name="url"
+            class="inputDisplay">
+
+        </div>
+
+        <div class="bulkCreateContainerColumn">
+
+          <div class="formLabel" style="margin-bottom: .5em;">Select an XSOAR server</div>
+
+          <p-listbox
+            name="demistoEndpointToLoadFrom"
+            [options]="demistoEndpointsItems"
+            [(ngModel)]="demistoEndpointToLoadFrom"
+            [style]="{'width':'100%'}"
+            [multiple]="false"
+            [checkbox]="true"
+            [filter]="false">
+          </p-listbox>
+
+        </div>
+
+      </div>
+
+      <div style="margin-top: .5em; float: right;">
+
+        <p-button
+          type="submit"
+          label="Load Incident"
+          (onClick)="onLoadFromDemistoAccepted()"
+          [disabled]="importFromDemistoAcceptDisabled">
+        </p-button>
+
+        <p-button label="Cancel" (onClick)="onLoadFromDemistoCanceled()"></p-button>
+
+      </div>
+    </form>
+
+  </p-dialog>
 
 
 
   <!-- Confirmation Dialog -->
-  <p-confirmDialog [header]="confirmDialogHeader" [style]="{width: '50vw'}" [closeOnEscape]="true" [closable]="true"></p-confirmDialog>
+  <p-confirmDialog
+    [style]="{width: '50vw'}"
+    [closeOnEscape]="true"
+    [closable]="true">
+  </p-confirmDialog>
 
 
 
   <!-- Container for UI Messages -->
   <div class="messagesContainer">
-    <p-messages [(value)]="messages"></p-messages>
+
+    <p-messages
+      [(value)]="messages">
+    </p-messages>
+
   </div>
 
 
@@ -432,7 +631,9 @@
 
 
 <ng-container *ngIf="!loggedInUser">
+
   <div>
     Logged in user not yet obtained from API
   </div>
+
 </ng-container>

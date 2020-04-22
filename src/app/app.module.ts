@@ -6,13 +6,12 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 // Components
 import { AppComponent } from './app.component';
-import { FieldDisplayComponent } from './field-display.component';
+import { IncidentFieldRowComponent } from './incident-field-row.component';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { JsonViewerComponent } from './json-viewer/json-viewer.component';
 import { IncidentFieldsUIComponent } from './incident-fields-ui.component';
-// import { FreeformJsonUIComponent } from './freeform-json-ui.component';
-import { JsonMappingUIComponent } from './json-mapping-ui.component';
-import { FieldDisplayFreeformComponent } from './field-display-freeform.component';
+import { FreeformJsonUIComponent } from './freeform-json-ui.component';
+import { FreeformJsonRowComponent } from './freeform-json-row.component';
 import { NgxJsonViewerComponent } from './ngx-json-viewer/ngx-json-viewer.component';
 
 // PrimeNG Imports
@@ -43,12 +42,12 @@ import { AceEditorModule } from 'ng2-ace-editor';
 @NgModule({
   declarations: [
     AppComponent,
-    FieldDisplayComponent,
-    FieldDisplayFreeformComponent,
+    IncidentFieldRowComponent,
+    FreeformJsonRowComponent,
     JsonEditorComponent,
     JsonViewerComponent,
     IncidentFieldsUIComponent,
-    JsonMappingUIComponent,
+    FreeformJsonUIComponent,
     NgxJsonViewerComponent
   ],
   imports: [

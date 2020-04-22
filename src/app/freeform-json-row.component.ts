@@ -1,41 +1,53 @@
 import { Component, OnInit, OnChanges, OnDestroy, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
 import { IncidentField } from './types/incident-fields';
-import { SelectItem } from 'primeng/api';
+import { SelectItem, ConfirmationService } from 'primeng/api';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { Subscription } from 'rxjs';
 
 @Component({
   // tslint:disable-next-line:component-selector
-  selector: 'field-display',
-  templateUrl: './field-display.component.html',
+  selector: 'freeform-json-row',
+  templateUrl: './freeform-json-row.component.html',
   providers: [ DialogService ]
 })
 
-export class FieldDisplayComponent implements OnInit, OnChanges, OnDestroy {
+export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
 
-  constructor(public dialogService: DialogService) {}
+  constructor(
+    public dialogService: DialogService,
+    private confirmationService: ConfirmationService) {}
 
   @Input() field: IncidentField;
   @Input() displayShortNames: boolean;
   @Output() fieldChange = new EventEmitter();
+  @Output() fieldDeleted = new EventEmitter();
 
-  detectedFieldType: string;
-  boolOptions: SelectItem[] = [
+  private subscriptions = new Subscription();
+
+  // PrimeNG
+  boolItems: SelectItem[] = [
     { value: true, label: 'True' },
     { value: false, label: 'False' }
   ];
+  mappingMethodItems: SelectItem[] = [
+    { value: 'static', 'label': 'Static' },
+    { value: 'path', 'label': 'Path' },
+    // { value: 'randomised', 'label': 'Randomised' }
+  ];
+  detectedFieldType: string;
   dateFieldValue: Date;
+  mappingMethodValue = 'static';
   resetValueTooltip = 'Resets the value';
-  private subscriptions = new Subscription();
+  JMESPathValue = '';
 
 
   ngOnInit() {
-    // console.log('FieldDisplayComponent: ngOnInit(): field:', this.field);
+    // console.log('FreeformJsonRowComponent: ngOnInit(): field:', this.field);
   }
 
   ngOnChanges(values: SimpleChanges) {
-    // console.log('ngOnChanges(): values:', values);
+    // console.log('FreeformJsonRowComponent: ngOnChanges(): values:', values);
     const updateFieldType = 'field' in values && (values.field.isFirstChange() || values.field.currentValue !== values.field.previousValue);
     if (updateFieldType && this.field.fieldType === 'undefined') {
       this.detectedFieldType = this.identifyType(this.field.value);
@@ -48,7 +60,7 @@ export class FieldDisplayComponent implements OnInit, OnChanges, OnDestroy {
 
 
   ngOnDestroy() {
-    // console.log('I got destroyed!');
+    // console.log('FreeformJsonRowComponent: I got destroyed!');
     this.subscriptions.unsubscribe();
   }
 
@@ -82,16 +94,15 @@ export class FieldDisplayComponent implements OnInit, OnChanges, OnDestroy {
 
 
   onSelectionChanged(value) {
-    // console.log('FieldDisplayComponent: onSelectionChanged(): value:', value);
+    // console.log('FreeformJsonRowComponent: onSelectionChanged(): value:', value);
     this.field.enabled = value;
     this.fieldChange.emit(this.field);
   }
 
 
 
-
   onValueChanged(value) {
-    // console.log('FieldDisplayComponent: onValueChanged(): value:', value);
+    // console.log('FreeformJsonRowComponent: onValueChanged(): value:', value);
     this.fieldChange.emit(this.field);
   }
 
@@ -104,7 +115,7 @@ export class FieldDisplayComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  onResetValue(custom: boolean = null) {
+  onResetValueClicked(custom: boolean = null) {
     if (custom !== null && custom !== this.field.custom) {
       return;
     }
@@ -130,8 +141,8 @@ export class FieldDisplayComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  onEditJSON() {
-    console.log('onEditJSON()');
+  onEditJSONClicked() {
+    console.log('FreeformJsonRowComponent: onEditJSONClicked()');
     let config: DynamicDialogConfig = {
       header: `JSON ${this.field.locked ? 'viewer' : 'editor'} for field '${this.field.shortName}'`,
       closable: true,
@@ -144,6 +155,30 @@ export class FieldDisplayComponent implements OnInit, OnChanges, OnDestroy {
     };
     let dialogRef = this.dialogService.open(JsonEditorComponent, config);
     dialogRef.onClose.subscribe( value => this.onDialogClosed(value) );
+  }
+
+
+
+  onDeleteFieldClicked() {
+    console.log(`FreeformJsonRowComponent: onDeleteFieldClicked(): field: ${this.field.shortName}`);
+    this.confirmationService.confirm({
+      message: `Are you sure you want to delete field ${this.field.shortName}?`,
+      accept: () => this.onDeleteFieldConfirmed(),
+      icon: 'pi pi-exclamation-triangle'
+    })
+  }
+
+
+
+  onDeleteFieldConfirmed() {
+    console.log(`FreeformJsonRowComponent: onDeleteFieldConfirmed(): field: ${this.field.shortName}`);
+    this.fieldDeleted.emit(this.field.shortName);
+  }
+
+
+
+  onMappingMethodChanged() {
+    console.log(`FreeformJsonRowComponent: onMappingMethodChanged(): field: ${this.field.shortName}, mappingMethodValue: ${this.mappingMethodValue}`);
   }
 
 }

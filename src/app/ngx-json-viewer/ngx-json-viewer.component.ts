@@ -39,18 +39,14 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
   segments: Segment[] = [];
   index = 0;
   typeOfJson: valueType;
+  get jsonLen(): number {
+    return Object.keys(this.json).length;
+  }
 
 
   ngOnInit() {
-    console.log('NgxJsonViewerComponent: ngOnInit(): typeof {}: ', typeof {});    console.log('NgxJsonViewerComponent: ngOnInit(): typeof []: ', typeof []);
-    console.log('NgxJsonViewerComponent: ngOnInit(): typeof null: ', typeof null);
-
-    const myarray = [ 'a', 'b', 'c'];
-    console.log('NgxJsonViewerComponent: ngOnInit(): keys myarray:', Object.keys(myarray));
-    
     // if an array, Object.keys() will return the values
-    console.log('NgxJsonViewerComponent: ngOnInit(): firstLevel:', this.firstLevel);
-    // this.expanded = this.firstLevel ? true : false;
+    // console.log('NgxJsonViewerComponent: ngOnInit(): firstLevel:', this.firstLevel);
     // console.log('NgxJsonViewerComponent: ngOnInit(): expanded:', this.expanded);
   }
 

@@ -1,0 +1,239 @@
+<!-- Loaded Configuration Name Container -->
+<p-card *ngIf="loadedJsonMappingConfigName" header="Loaded Mapping Name">
+  
+  <div style="margin-top: 1em;">
+    <span class="formLabel" style="font-size: 18px;">{{loadedJsonMappingConfigName}}</span>
+  </div>
+
+</p-card>
+
+
+
+
+<!-- Select Incident Type Container -->
+<p-card *ngIf="fetchedIncidentFieldDefinitions" header="Incident Type" subheader="Select an incident type on which to map JSON data.">
+
+  <div style="margin-top: 1em;">
+    
+    <p-dropdown
+      [options]="incidentTypeItems"
+      [(ngModel)]="selectedIncidentType"
+      (onChange)="onIncidentTypeChanged($event.value)"
+      [filter]="true"
+      placeholder="Select an incident type"
+      [style]="{'width': '40em'}">
+    </p-dropdown>
+  
+  </div>
+
+</p-card>
+
+
+
+<!-- Create Investigation Container -->
+<p-card *ngIf="chosenIncidentFields" header="Create Investigation" subheader="If enabled, this option will cause an investigation to be created along with a new incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so.">
+
+  <div style="margin-top: 1em;">
+
+    <p-selectButton
+      name="createInvestigation"
+      [options]="createInvestigationButtonItems"
+      [(ngModel)]="createInvestigation">
+      <!-- (ngModelChange)="createInvestigationChange.emit($event)" -->
+    </p-selectButton>
+
+  </div>
+
+</p-card>
+
+
+
+<div *ngIf="chosenIncidentFields" class="fieldsForm">
+
+  <!-- Incident Fields Container -->
+  <div style="min-width: 0;">
+
+    <p-card header="Incident Fields" subheader="Select the main incident fields to include in the new incident">
+
+      <!-- Menu Bar -->
+      <div>
+
+        <!-- I don't think reset is required for freeform -->
+        <!-- <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()" [disabled]="!currentDemistoEndpointInit"></p-button>--> 
+
+        <!-- Add Field Button -->
+        <p-button type="button" label="Add Field" (onClick)="onAddIncidentFieldClicked()"></p-button>
+
+        <p-toggleButton
+          name="shortFieldNames"
+          [onLabel]="shortNamesLabel"
+          [offLabel]="longNamesLabel"
+          [(ngModel)]="displayIncidentFieldShortNames"
+          [disabled]="!currentDemistoEndpointInit">
+        </p-toggleButton>
+
+      </div>
+
+      <!-- Incident Fields -->
+      <div class="freeformFieldContainer">
+
+        <div>
+          <p-checkbox
+            [(ngModel)]="incidentFieldsSelectAllState"
+            [binary]="true"
+            (onChange)="onToggleAllChosenIncidentFields()">
+          </p-checkbox>
+        </div>
+
+        <header>Name</header>
+
+        <header>Type</header>
+
+        <header pToolTip="The method by which to map the field's value">Method</header>
+
+        <header>Value</header>
+
+        <header><i class="pi pi-times" style="font-size: 2em;" pTooltip="Delete All" showDelay="750" (click)="onDeleteAllIncidentFielsdClicked()"></i></header>
+
+        <ng-container *ngFor="let field of chosenIncidentFields | keyvalue">
+
+          <freeform-json-row
+            *ngIf="![undefined, null].includes(field.value.value)"
+            #incidentField
+            [field]="field.value"
+            [displayShortNames]="displayIncidentFieldShortNames"
+            (fieldDeleted)="onIncidentFieldRemoved($event)">
+            <!-- (fieldChange)="onIncidentFieldChanged(field.key, $event)" -->
+          </freeform-json-row>
+
+        </ng-container>
+      </div>
+
+    </p-card>
+  </div>
+
+
+
+  <!-- JSON Container -->
+  <div style="min-width: 0;">
+
+    <p-card header="Freeform JSON Data">
+
+      <div *ngIf="!parsedJson else ngxJsonViewer">
+
+        <h2 style="color: white;">
+          Please upload some JSON data.  It can be any data, as long as it is valid JSON.
+        </h2>
+
+        <ng-container *ngTemplateOutlet="jsonUploader"></ng-container>
+
+      </div>
+      
+      <ng-template #ngxJsonViewer>
+
+        <!-- Menu Bar -->
+        <div>
+          <!-- Add Field Button -->
+          <ng-container *ngTemplateOutlet="jsonUploader"></ng-container>
+
+        </div>
+
+        <ngx-json-viewer
+          [json]="parsedJson"
+          [firstLevel]="true">
+        </ngx-json-viewer>
+
+      </ng-template>
+
+    </p-card>
+
+  </div>
+
+
+  <ng-template #jsonUploader>
+
+    <p-fileUpload #fileUpload
+      name="myfile[]"
+      mode="basic"
+      chooseLabel="Upload"
+      [customUpload]="true"
+      (uploadHandler)="onFreeformJsonUploaded($event, fileUpload)"
+      accept=".json,.txt"
+      [multiple]="false"
+      [auto]="true"
+      pTooltip="Import an incident from a JSON file"
+      showDelay="750">
+    </p-fileUpload>
+    
+  </ng-template>
+
+
+
+
+  <!-- Submit Button -->
+  <!--<div style="margin-top: 1em;">
+    &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onCreateIncident()" [disabled]="!parsedIncidentJson || countEnabledFields() === 0"></button>
+  </div>-->
+
+
+
+</div>
+
+
+
+
+
+
+<!-------------- FIELDS MODAL DIALOGS SECTION -------------->
+
+
+
+<!-- Add Incident Field Dialog -->
+<p-dialog *ngIf="incidentFieldsToAddItems" header="Choose Incident Fields to Add" [(visible)]="displayAddIncidentFieldDialog" [modal]="true" [draggable]="false" [style]="{width: '25em', 'max-height': '75vh'}" styleClass="openDialog">
+
+  <!--<div class="formLabel">Incident Fields to Add</div>-->
+
+  <p-listbox
+    #incidentFieldListBox
+    [options]="incidentFieldsToAddItems"
+    [(ngModel)]="selectedFieldsToAdd"
+    [style]="{ 'width': '100%'}"
+    [listStyle]="{'height': '50vh'}"
+    [multiple]="true"
+    [checkbox]="true"
+    [filter]="true">
+  </p-listbox>
+
+  <div style="margin-top: .5em; float: right;">
+
+    <p-button label="Add" (onClick)="onAddIncidentFieldsAccept()" [disabled]="!selectedFieldsToAdd || selectedFieldsToAddLen === 0"></p-button>
+
+    <p-button label="Cancel" (onClick)="displayAddIncidentFieldDialog = false"></p-button>
+
+  </div>
+
+</p-dialog>
+
+
+
+
+
+<!-- Freeform JSON Viewer / Selector -->
+<p-dialog
+  header="Freeform JSON Selector"
+  [(visible)]="freeformJsonSelector"
+  [modal]="true"
+  [style]="{width: '75%', height: '90vh'}"
+  [draggable]="false">
+
+  <div style="position: relative; overflow: auto; height: 100%; width: 100%;">
+
+    <ngx-json-viewer
+      *ngIf="parsedJson"
+      [json]="parsedJson"
+      [firstLevel]="true">
+    </ngx-json-viewer>
+
+  </div>
+
+</p-dialog>
