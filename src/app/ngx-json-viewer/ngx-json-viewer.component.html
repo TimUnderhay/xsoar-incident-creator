@@ -33,31 +33,42 @@
     <div
       *ngFor="let segment of segments"
       [ngClass]="['segment', 'segment-type-' + segment.type]"
-      [attr.jmespath]="segment.path">
+      [attr.jmespath]="segment.path"
+      (mouseover)="hovering = segment"
+      (mouseout)="hovering = undefined">
+
+        <div
+          style="display: inline-block; cursor: pointer; line-height: 0; font-size: 2em; vertical-align: middle;"
+          [style.visibility]="hovering && enableSelectionIcon(segment) ? 'initial' : 'hidden'"
+          class="pi pi-arrow-circle-left enabledIcon"
+          (click)="onSelectionClicked(segment)">
+        </div>
     
         <!-- make entire row clickable -->
         <div
-          (click)="toggle(segment)"
+          (click)="rowClickHandler(segment)"
           class="segment-main"
-          [class.expandable]="segment.expandable"
+          [class.expandable]="segment.expandable || selectionMode"
           [class.expanded]="segment.expanded">
     
-            <!-- expand/collapse arrow -->
-            <i
-              *ngIf="segment.expandable"
-              class="toggler pi pi-chevron-right"
+          <!-- expand/collapse arrow -->
+          <ng-container *ngIf="segment.expandable">
+            <div
+              class="toggler pi pi-chevron-left"
               [class.pi-chevron-right]="!segment.expanded"
-              [class.pi-chevron-down]="segment.expanded">
-            </i>
-    
-            <!-- key name -->
-            <span class="segment-key">{{segment.key}}</span>
-    
-            <!-- separator -->
-            <span class="segment-separator">: </span>
-    
-            <!-- value -->
-            <span class="segment-value">{{segment.description}}</span>
+              [class.pi-chevron-down]="segment.expanded"
+              style="color: white;">
+            </div>
+          </ng-container>
+  
+          <!-- key name -->
+          <span class="segment-key" [style.color]="segment.type === 'object' ? 'white' : undefined">{{segment.key}}</span>
+  
+          <!-- separator -->
+          <span class="segment-separator">: </span>
+  
+          <!-- value | description  -->
+          <span class="segment-value">{{segment.description}}</span>
     
         </div>
     
@@ -69,7 +80,10 @@
           [json]="segment.value"
           [expanded]="expanded"
           [firstLevel]="false"
-          [path]="segment.path">
+          [path]="segment.path"
+          [selectionMode]="selectionMode"
+          [selectionModeFieldType]="selectionModeFieldType"
+          [jsonSelectionReceivedSubject]="jsonSelectionReceivedSubject">
         </ngx-json-viewer>
     
     </div>

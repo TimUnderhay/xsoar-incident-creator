@@ -102,7 +102,9 @@
             #incidentField
             [field]="field.value"
             [displayShortNames]="displayIncidentFieldShortNames"
-            (fieldDeleted)="onIncidentFieldRemoved($event)">
+            (fieldDeleted)="onIncidentFieldRemoved($event)"
+            (selectValueFromJson)="onStaticSelectValueFromJsonClicked($event)"
+            [jsonLoaded]="json !== undefined">
             <!-- (fieldChange)="onIncidentFieldChanged(field.key, $event)" -->
           </freeform-json-row>
 
@@ -119,7 +121,7 @@
 
     <p-card header="Freeform JSON Data">
 
-      <div *ngIf="!parsedJson else ngxJsonViewer">
+      <div *ngIf="!json else ngxJsonViewer">
 
         <h2 style="color: white;">
           Please upload some JSON data.  It can be any data, as long as it is valid JSON.
@@ -139,8 +141,11 @@
         </div>
 
         <ngx-json-viewer
-          [json]="parsedJson"
-          [firstLevel]="true">
+          [json]="json"
+          [firstLevel]="true"
+          [selectionMode]="selectionMode"
+          [selectionModeFieldType]="selectionModeFieldType"
+          [jsonSelectionReceivedSubject]="jsonSelectionReceivedSubject">
         </ngx-json-viewer>
 
       </ng-template>
@@ -201,7 +206,8 @@
     [listStyle]="{'height': '50vh'}"
     [multiple]="true"
     [checkbox]="true"
-    [filter]="true">
+    [filter]="true"
+    styleClass="addIncidentFieldListbox">
   </p-listbox>
 
   <div style="margin-top: .5em; float: right;">
@@ -209,30 +215,6 @@
     <p-button label="Add" (onClick)="onAddIncidentFieldsAccept()" [disabled]="!selectedFieldsToAdd || selectedFieldsToAddLen === 0"></p-button>
 
     <p-button label="Cancel" (onClick)="displayAddIncidentFieldDialog = false"></p-button>
-
-  </div>
-
-</p-dialog>
-
-
-
-
-
-<!-- Freeform JSON Viewer / Selector -->
-<p-dialog
-  header="Freeform JSON Selector"
-  [(visible)]="freeformJsonSelector"
-  [modal]="true"
-  [style]="{width: '75%', height: '90vh'}"
-  [draggable]="false">
-
-  <div style="position: relative; overflow: auto; height: 100%; width: 100%;">
-
-    <ngx-json-viewer
-      *ngIf="parsedJson"
-      [json]="parsedJson"
-      [firstLevel]="true">
-    </ngx-json-viewer>
 
   </div>
 

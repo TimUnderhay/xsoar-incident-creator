@@ -5,6 +5,8 @@ import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { Subscription } from 'rxjs';
 
+type MappingMethod = 'static' | 'path';
+
 @Component({
   // tslint:disable-next-line:component-selector
   selector: 'freeform-json-row',
@@ -20,8 +22,10 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
 
   @Input() field: IncidentField;
   @Input() displayShortNames: boolean;
-  @Output() fieldChange = new EventEmitter();
-  @Output() fieldDeleted = new EventEmitter();
+  @Input() jsonLoaded: boolean;
+  @Output() fieldChange = new EventEmitter<IncidentField>();
+  @Output() fieldDeleted = new EventEmitter<string>();
+  @Output() selectValueFromJson = new EventEmitter();
 
   private subscriptions = new Subscription();
 
@@ -37,9 +41,10 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
   ];
   detectedFieldType: string;
   dateFieldValue: Date;
-  mappingMethodValue = 'static';
-  resetValueTooltip = 'Resets the value';
+  mappingMethodValue: MappingMethod = 'static';
   JMESPathValue = '';
+  selectValueHovering = false;
+  resetValueHovering = false;
 
 
   ngOnInit() {
@@ -180,5 +185,19 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
   onMappingMethodChanged() {
     console.log(`FreeformJsonRowComponent: onMappingMethodChanged(): field: ${this.field.shortName}, mappingMethodValue: ${this.mappingMethodValue}`);
   }
+
+
+
+  onStaticSelectValueFromJsonClicked() {
+    if (!this.jsonLoaded) {
+      return;
+    }
+    console.log(`FreeformJsonRowComponent: onStaticSelectValueFromJsonClicked(): field: ${this.field.shortName}`);
+    this.selectValueFromJson.emit(this.field)
+  }
+
+
+
+
 
 }

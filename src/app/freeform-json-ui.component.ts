@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, ChangeDetectorRef, ViewChildren, ViewChild } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectorRef, ViewChildren, ViewChild, OnDestroy } from '@angular/core';
 import { FetcherService } from './fetcher-service';
 import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
 import { SelectItem, ConfirmationService } from 'primeng/api';
@@ -7,6 +7,9 @@ import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/f
 import { FieldType, IncidentField, IncidentFields } from './types/incident-fields';
 import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FreeformJsonRowComponent } from './freeform-json-row.component';
+import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
+import { SampleIncident } from './sample-json';
+import { Subject } from 'rxjs';
 
 @Component({
   // tslint:disable-next-line: component-selector
@@ -14,7 +17,7 @@ import { FreeformJsonRowComponent } from './freeform-json-row.component';
   templateUrl: './freeform-json-ui.component.html'
 })
 
-export class FreeformJsonUIComponent implements OnInit {
+export class FreeformJsonUIComponent implements OnInit, OnDestroy {
 
   constructor(
     private fetcherService: FetcherService, // import our URL fetcher
@@ -32,7 +35,6 @@ export class FreeformJsonUIComponent implements OnInit {
   @Input() fetchedIncidentTypes: FetchedIncidentType[]; // the incident types taken from Demisto
 
   availableIncidentFields: IncidentFields; // our incident fields
-  availableFields: IncidentFields; // our custom fields
   chosenIncidentFields: IncidentFields; // incident fields that have been added to the config
   defaultIncidentFieldsToAdd = [
     'details',
@@ -42,7 +44,7 @@ export class FreeformJsonUIComponent implements OnInit {
     'type',
   ]
   internalFieldShortNamesToInclude = ['attachment', 'feedbased', 'labels'];
-  parsedJson: Object;
+  json: Object;
   get selectedFieldsToAddLen(): number {
     return this.selectedFieldsToAdd.length;
   }
@@ -65,11 +67,15 @@ export class FreeformJsonUIComponent implements OnInit {
   // UI State
   displayIncidentFieldShortNames = true; // controls display options
   incidentFieldsSelectAllState = false;
-  freeformJsonSelector = false;
+  selectionMode = false;
+  selectionModeFieldType: string;
+  selectionModeFieldToMapTo: IncidentField;
 
   // UI Labels
   longNamesLabel = 'Short Names';
   shortNamesLabel = 'Long Names';
+
+  jsonSelectionReceivedSubject = new Subject().subscribe( (segment: Segment) => this.onJsonSelectionReceived(segment) );
 
 
   ngOnInit() {
@@ -78,6 +84,14 @@ export class FreeformJsonUIComponent implements OnInit {
     if (this.fetchedIncidentTypes && this.fetchedIncidentFieldDefinitions) {
       this.buildIncidentTypeItems();
     }
+
+    this.json = SampleIncident; // comment out before committing
+  }
+
+
+
+  ngOnDestroy() {
+    this.jsonSelectionReceivedSubject.unsubscribe();
   }
 
 
@@ -221,6 +235,10 @@ export class FreeformJsonUIComponent implements OnInit {
     console.log('FreeformJsonUIComponent: onAddIncidentFieldClicked()');
     this.incidentFieldsToAddItems = this.buildFieldsToAddItems(this.availableIncidentFields, this.chosenIncidentFields);
     this.displayAddIncidentFieldDialog = true;
+    // focus input element
+    setTimeout( () => {
+      (document.getElementsByClassName('addIncidentFieldListbox')[0].getElementsByClassName('ui-inputtext')[0] as HTMLInputElement).focus();
+    }, 200 );
   }
 
 
@@ -310,8 +328,8 @@ export class FreeformJsonUIComponent implements OnInit {
 
     reader.onloadend = (progressEvent: ProgressEvent) => {
       try {
-        this.parsedJson = JSON.parse(reader.result as string);
-        console.log('FreeformJsonUIComponent: onFreeformJsonUploaded(): parsedIncidentJson:', this.parsedJson);
+        this.json = JSON.parse(reader.result as string);
+        console.log('FreeformJsonUIComponent: onFreeformJsonUploaded(): json:', this.json);
       }
       catch (error) {
         console.error('FreeformJsonUIComponent: onFreeformJsonUploaded(): onloadend((): Error parsing uploaded JSON:', error);
@@ -324,9 +342,22 @@ export class FreeformJsonUIComponent implements OnInit {
 
 
 
-  onShowBasicJsonViewerClicked() {
-    console.log(`FreeformJsonUIComponent: onShowBasicJsonViewerClicked()`);
-    this.freeformJsonSelector = true;
+  onStaticSelectValueFromJsonClicked(field: IncidentField) {
+    console.log(`FreeformJsonUIComponent: onStaticSelectValueFromJsonClicked(): field:`, field);
+    this.selectionMode = true;
+    this.selectionModeFieldType = field.fieldType;
+    this.selectionModeFieldToMapTo = field;
+  }
+
+
+
+  onJsonSelectionReceived(segment: Segment) {
+    console.log(`FreeformJsonUIComponent: onJsonSelectionReceived(): segment:`, segment);
+    const fieldName = this.selectionModeFieldToMapTo.shortName;
+    this.chosenIncidentFields[fieldName].value = segment.value;
+    this.selectionMode = false;
+    this.selectionModeFieldType = undefined;
+    this.selectionModeFieldToMapTo = undefined;
   }
 
 

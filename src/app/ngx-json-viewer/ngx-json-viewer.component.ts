@@ -1,6 +1,9 @@
 // based on https://github.com/hivivo/ngx-json-viewer
 
-import { Component, OnInit, OnChanges, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnChanges, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
+import { FieldType } from '../types/incident-fields';
+import { Subject } from 'rxjs';
+import * as utils from '../utils';
 
 type valueType = 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
 
@@ -16,6 +19,27 @@ export interface Segment {
   path: string; // the JMESPath
 }
 
+export const acceptableDataTypesPerFieldType = {
+  // key is field type
+  'number': ['number', 'string'], // string will only work if it contains a number
+  'shortText': ['number', 'string', 'boolean', 'null'],
+  'longText': ['number', 'string', 'boolean', 'null'],
+  'boolean': ['boolean'],
+  'grid': ['array', 'object'], // grid accepts an array of objects
+  'url': ['string', 'null'],
+  'html': ['string', 'null'],
+  'role': ['string', 'null'],
+  'markdown': ['string', 'null'],
+  'user': ['string', 'null'],
+  'singleSelect': [],
+  'multiSelect': [],
+  'internal': [],
+  'date': [],
+  'timer': [],
+  'attachments': [],
+  'tags': []
+};
+
 
 
 @Component({
@@ -29,11 +53,11 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
   @Input() json: Object;
   @Input() expanded = false;
-  @Input() cleanOnChange = true;
-  @Input() selectableMode = false;
   @Input() path = '';
   @Input() firstLevel = false;
-  @Output() selectedPath = new EventEmitter<string>();
+  @Input() selectionMode = false;
+  @Input() selectionModeFieldType: FieldType;
+  @Input() jsonSelectionReceivedSubject: Subject<Segment>;
 
 
   segments: Segment[] = [];
@@ -42,6 +66,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
   get jsonLen(): number {
     return Object.keys(this.json).length;
   }
+  hovering: Segment;
 
 
   ngOnInit() {
@@ -88,18 +113,20 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
 
 
-  ngOnChanges() {
-    if (this.cleanOnChange) {
-      this.segments = [];
+  ngOnChanges(values: SimpleChanges) {
+    if (!utils.firstOrChangedSimpleChange('json', values)) {
+      return;
     }
-    
+
     this.typeOfJson = this.getType(this.json);
+
+    let segments: Segment[] = [];
 
     if (typeof this.json === 'object') {
       // object = object, array, null,
       Object.keys(this.json).forEach( key => {
         const segment = this.buildSegment(key, this.json[key])
-        this.segments.push(segment);
+        segments.push(segment);
       });
     }
 
@@ -107,13 +134,16 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
       // we really shouldn't enter this block, as this.json should only ever be an array or an object
       console.error('NgxJsonViewerComponent: JSON object is not an object!  json:', this.json);
       const segment = this.buildSegment(`(${typeof this.json})`, this.json)
-      this.segments.push(segment);
+      segments.push(segment);
     }
+
+    this.segments = segments;
   }
 
 
 
   toggle(segment: Segment) {
+    console.log('NgxJsonViewerComponent: toggle()');
     segment.expanded = segment.expandable ? !segment.expanded : false;
   }
 
@@ -192,6 +222,58 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
   getJMESPath(segment: Segment): string {
     return segment.path;
+  }
+
+
+
+  rowClickHandler(segment: Segment) {
+    console.log('NgxJsonViewerComponent: rowClickHandler(): segment:', segment);
+    if (this.selectionMode && this.segmentTypeIsValidForFieldType(segment)) {
+      this.onSelectionClicked(segment);
+    }
+    else if (segment.expandable) {
+      this.toggle(segment);
+    }
+    // else do nothing
+  }
+
+
+
+  segmentTypeIsValidForFieldType(segment: Segment) {
+    if (acceptableDataTypesPerFieldType[this.selectionModeFieldType].includes(segment.type)) {
+      return true;
+    }
+    return false;
+  }
+
+
+
+  onSelectionClicked(segment: Segment) {
+    // Massage the data to match field type
+    console.log('NgxJsonViewerComponent: onSelectionClicked(): segment:', segment);
+    if (this.selectionModeFieldType === 'grid' && segment.type === 'object') {
+      // grid fields accept only arrays of objects
+      segment.value = [segment.value];
+    }
+    if (['shortText', 'longText', 'url', 'html', 'markdown', 'user', 'role'].includes(this.selectionModeFieldType) && segment.type === 'null') {
+      segment.value = 'null';
+    }
+    if (segment.type === 'string' && this.selectionModeFieldType === 'number' && (segment.value as string).match(/^\d+(?:\.\d+)?$/) ) {
+      segment.value = parseFloat(segment.value);
+    }
+    if (segment.type === 'string' && this.selectionModeFieldType === 'number' && !(segment.value as string).match(/^\d+(?:\.\d+)?$/) ) {
+      return;
+    }
+    this.jsonSelectionReceivedSubject.next(segment);
+  }
+
+
+
+  enableSelectionIcon(segment: Segment): boolean {
+    if ( this.hovering && this.hovering === segment && this.selectionMode && this.segmentTypeIsValidForFieldType(segment) ) {
+      return true;
+    }
+    return false;
   }
 
 }

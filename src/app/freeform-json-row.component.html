@@ -64,10 +64,39 @@
 
       </div>
 
+      <!-- Select Value -->
+      <div class="verticalCenter" *ngIf="mappingMethodValue === 'static'">
+        <div></div>
+        <div
+          style="margin-left: .1em; font-size: 2em;"
+          class="pi pi-arrow-circle-right"
+          [class.enabledIcon]="jsonLoaded"
+          [class.disabledIcon]="!jsonLoaded"
+          (mouseover)="selectValueHovering = true"
+          (mouseout)="selectValueHovering = false"
+          [style.cursor]="jsonLoaded && selectValueHovering ? 'pointer' : 'default'"
+          (click)="onStaticSelectValueFromJsonClicked()"
+          pTooltip="Select value from JSON"
+          showDelay="750">
+        </div>
+        <div></div>
+      </div>
+
       <!-- Reset Value Icon -->
       <div class="verticalCenter">
         <div></div>
-        <div [class.enabledIcon]="field.value !== field.originalValue" [class.disabledIcon]="field.value === field.originalValue" style="margin-left: .1em; font-size: 2em;" class="pi pi-refresh" (click)="onResetValueClicked()" [pTooltip]="resetValueTooltip" showDelay="750"></div>
+        <div
+          style="margin-left: .1em; font-size: 2em;"
+          class="pi pi-refresh"
+          [class.enabledIcon]="field.value !== field.originalValue"
+          [class.disabledIcon]="field.value === field.originalValue"
+          (mouseover)="resetValueHovering = true"
+          (mouseout)="resetValueHovering = false"
+          [style.cursor]="field.value !== field.originalValue && resetValueHovering ? 'pointer' : 'default'"
+          (click)="onResetValueClicked()"
+          pTooltip="Resets the value"
+          showDelay="750">
+        </div>
         <div></div>
       </div>
       
