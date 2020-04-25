@@ -9,7 +9,7 @@ import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FreeformJsonRowComponent } from './freeform-json-row.component';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
 import { SampleIncident } from './sample-json';
-import { Subject } from 'rxjs';
+import { Subject, Subscription } from 'rxjs';
 
 @Component({
   // tslint:disable-next-line: component-selector
@@ -75,7 +75,7 @@ export class FreeformJsonUIComponent implements OnInit, OnDestroy {
   longNamesLabel = 'Short Names';
   shortNamesLabel = 'Long Names';
 
-  jsonSelectionReceivedSubject = new Subject().subscribe( (segment: Segment) => this.onJsonSelectionReceived(segment) );
+  private subscriptions = new Subscription();
 
 
   ngOnInit() {
@@ -86,12 +86,16 @@ export class FreeformJsonUIComponent implements OnInit, OnDestroy {
     }
 
     this.json = SampleIncident; // comment out before committing
+
+    // Subscriptions
+    this.subscriptions.add( this.fetcherService.jsonSelectionReceivedSubject.subscribe( (segment: Segment) => this.onJsonSelectionReceived(segment) ));
+    this.subscriptions.add( this.fetcherService.fieldMappingSelectionCanceled.subscribe( () => this.onFieldMappingSelectionCanceled() ));
   }
 
 
 
   ngOnDestroy() {
-    this.jsonSelectionReceivedSubject.unsubscribe();
+    this.subscriptions.unsubscribe();
   }
 
 
@@ -351,13 +355,19 @@ export class FreeformJsonUIComponent implements OnInit, OnDestroy {
 
 
 
+  onFieldMappingSelectionCanceled() {
+    this.selectionMode = false;
+    this.selectionModeFieldType = undefined;
+    this.selectionModeFieldToMapTo = undefined;
+  }
+
+
+
   onJsonSelectionReceived(segment: Segment) {
     console.log(`FreeformJsonUIComponent: onJsonSelectionReceived(): segment:`, segment);
     const fieldName = this.selectionModeFieldToMapTo.shortName;
     this.chosenIncidentFields[fieldName].value = segment.value;
-    this.selectionMode = false;
-    this.selectionModeFieldType = undefined;
-    this.selectionModeFieldToMapTo = undefined;
+    this.fetcherService.fieldMappingSelectionCanceled.next();
   }
 
 

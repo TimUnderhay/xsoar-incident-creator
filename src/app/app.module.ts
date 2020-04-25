@@ -38,6 +38,7 @@ import { ConfirmationService } from 'primeng/api';
 
 // Other 3rd-party Modules
 import { AceEditorModule } from 'ng2-ace-editor';
+import { ClickOutsideModule } from 'ng-click-outside';
 
 @NgModule({
   declarations: [
@@ -74,7 +75,8 @@ import { AceEditorModule } from 'ng2-ace-editor';
     DynamicDialogModule,
     DialogModule,
     ConfirmDialogModule,
-    AceEditorModule
+    AceEditorModule,
+    ClickOutsideModule
   ],
   entryComponents: [
     JsonEditorComponent

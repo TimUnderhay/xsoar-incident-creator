@@ -4,6 +4,7 @@ import { SelectItem, ConfirmationService } from 'primeng/api';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { Subscription } from 'rxjs';
+import { FetcherService } from './fetcher-service';
 
 type MappingMethod = 'static' | 'path';
 
@@ -18,6 +19,7 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
 
   constructor(
     public dialogService: DialogService,
+    private fetcherService: FetcherService, // import our URL fetcher)
     private confirmationService: ConfirmationService) {}
 
   @Input() field: IncidentField;
@@ -193,10 +195,9 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
     console.log(`FreeformJsonRowComponent: onStaticSelectValueFromJsonClicked(): field: ${this.field.shortName}`);
-    this.selectValueFromJson.emit(this.field)
+    this.selectValueFromJson.emit(this.field);
+    this.fetcherService.fieldMappingSelectionActive.next(this.field);
   }
-
-
 
 
 

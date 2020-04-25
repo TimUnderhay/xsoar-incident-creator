@@ -198,6 +198,22 @@ textarea[read-only].jsonTextAreaDisplay {
   opacity: initial;
 }
 
+.fieldMappingSelection {
+  display: block;
+  position: fixed;
+  width: 22em;
+  top: 5em;
+  right: 0;
+  left: 0;
+  margin-right: auto;
+  margin-left: auto;
+  background-color: rgb(123, 104, 238, 0.6);
+  font-weight: bold;
+  text-align: center;
+  padding: 1em;
+  border-radius: 1em;
+}
+
 
 
 /* Input Text Fields */

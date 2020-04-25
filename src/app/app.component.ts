@@ -13,6 +13,7 @@ import { PMessageOption } from './types/message-options';
 import { BulkCreateResult } from './types/bulk-create-result';
 import { IncidentFieldsUIComponent } from './incident-fields-ui.component';
 import { FreeformJsonUIComponent } from './freeform-json-ui.component';
+import { Subscription } from 'rxjs';
 
 type DemistoServerEditMode = 'edit' | 'new';
 
@@ -124,6 +125,12 @@ export class AppComponent implements OnInit {
   get importFromDemistoAcceptDisabled(): boolean {
     return this.demistoEndpointToLoadFrom === '' || this.demistoIncidentToLoad.match(/^\d+$/) === null;
   }
+
+  // fieldMappingSelection Box
+  showFieldMappingSelectionBox = false;
+
+  
+  private subscriptions = new Subscription();
   
   
 
@@ -131,6 +138,9 @@ export class AppComponent implements OnInit {
 
   async ngOnInit() {
     // Get Logged In User
+    this.subscriptions.add(this.fetcherService.fieldMappingSelectionActive.subscribe( () => this.onFieldMappingSelectionActive() ));
+    this.subscriptions.add(this.fetcherService.fieldMappingSelectionCanceled.subscribe( () => this.onFieldMappingSelectionCanceled() ));
+
     try {
       this.loggedInUser = await this.fetcherService.getLoggedInUser();
       console.log('AppComponent: ngOnInit(): LoggedInUser:', this.loggedInUser);
@@ -1200,6 +1210,18 @@ export class AppComponent implements OnInit {
       await this.finishLoadFromDemisto();
     }
 
+  }
+
+
+
+  onFieldMappingSelectionActive() {
+    this.showFieldMappingSelectionBox = true;
+  }
+
+
+
+  onFieldMappingSelectionCanceled() {
+    this.showFieldMappingSelectionBox = false;
   }
 
 

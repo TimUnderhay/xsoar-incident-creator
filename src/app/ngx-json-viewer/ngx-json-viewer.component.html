@@ -1,4 +1,7 @@
-<div class="ngx-json-viewer">
+<div
+  class="ngx-json-viewer"
+  (clickOutside)="onClickOutside()"
+  [clickOutsideEnabled]="enableClickOutside">
   
   <!-- Root Segment -->
   <div *ngIf="firstLevel else jsonViewer" class="segment" [ngClass]="['segment-type-' + typeOfJson]">
@@ -82,8 +85,7 @@
           [firstLevel]="false"
           [path]="segment.path"
           [selectionMode]="selectionMode"
-          [selectionModeFieldType]="selectionModeFieldType"
-          [jsonSelectionReceivedSubject]="jsonSelectionReceivedSubject">
+          [selectionModeFieldType]="selectionModeFieldType">
         </ngx-json-viewer>
     
     </div>

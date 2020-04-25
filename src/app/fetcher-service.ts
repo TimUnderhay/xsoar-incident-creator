@@ -9,6 +9,7 @@ import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
 import { DefaultDemistoEndpoint } from './types/default-demisto-endpoint';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
 import * as JSEncrypt from 'jsencrypt';
+import { Subject } from 'rxjs';
 
 @Injectable({providedIn: 'root'})
 
@@ -21,6 +22,13 @@ export class FetcherService {
   currentUser: User;
   private publicKey: string;
   encryptor: JSEncrypt.JSEncrypt;
+
+  // RXJS Observables
+  // These technically don't belong in a fetcher service, but there's no need to write another service just to house them, either.
+  // We use the fetcherService to easily bounce messages between components
+  fieldMappingSelectionActive = new Subject();
+  fieldMappingSelectionCanceled = new Subject();
+  jsonSelectionReceivedSubject = new Subject();
 
 
 
