@@ -36,7 +36,8 @@
               "src/styles.scss"
             ],
             "scripts": [
-              "node_modules/ace-builds/src-min/ace.js"
+              "node_modules/ace-builds/src-min/ace.js",
+              "node_modules/@gorillastack/jmespath/jmespath.js"
             ]
           },
           "configurations": {

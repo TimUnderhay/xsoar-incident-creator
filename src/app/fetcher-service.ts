@@ -10,6 +10,15 @@ import { DefaultDemistoEndpoint } from './types/default-demisto-endpoint';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
 import * as JSEncrypt from 'jsencrypt';
 import { Subject } from 'rxjs';
+import { IncidentField } from './types/incident-fields';
+import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
+import { IncidentFieldRowComponent } from './incident-field-row.component';
+
+export interface FieldMappingSelection {
+  field: IncidentField;
+  method: 'static' | 'jmespath';
+}
+
 
 @Injectable({providedIn: 'root'})
 
@@ -26,9 +35,9 @@ export class FetcherService {
   // RXJS Observables
   // These technically don't belong in a fetcher service, but there's no need to write another service just to house them, either.
   // We use the fetcherService to easily bounce messages between components
-  fieldMappingSelectionActive = new Subject();
-  fieldMappingSelectionCanceled = new Subject();
-  jsonSelectionReceivedSubject = new Subject();
+  fieldMappingSelectionActive = new Subject<FieldMappingSelection>();
+  fieldMappingSelectionEnded = new Subject<void>();
+  fieldMappingSelectionReceived = new Subject<Segment>();
 
 
 

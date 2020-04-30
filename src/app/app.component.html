@@ -161,7 +161,9 @@
       [currentDemistoEndpointName]="currentDemistoEndpointName"
       [currentDemistoEndpointInit]="currentDemistoEndpointInit"
       [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
-      [fetchedIncidentTypes]="fetchedIncidentTypes">
+      [fetchedIncidentTypes]="fetchedIncidentTypes"
+      (messagesReplace)="messagesReplace($event)"
+      (messageWithAutoClear)="messageWithAutoClear($event)">
     </freeform-json-ui>
     
     <div>&nbsp;</div>

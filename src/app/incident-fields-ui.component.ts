@@ -62,6 +62,9 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
   showSaveAsDialog = false;
   saveAsConfigName = ''; // for text label
 
+  // Blacklisted field types
+  blacklistedFieldTypes = ['timer'];
+
   // UI Labels
   createInvestigationButtonItems: SelectItem[] = [
     { value: true, label: 'Enabled' },
@@ -372,9 +375,19 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
         custom: true
       };
       if (this.fetchedIncidentFieldDefinitions && shortName in this.fetchedIncidentFieldDefinitions) {
-        tmpField.longName = this.fetchedIncidentFieldDefinitions[shortName].name;
+
+        const fetchedField = this.fetchedIncidentFieldDefinitions[shortName];
+        for (const fieldType of this.blacklistedFieldTypes) {
+          // skip blacklisted field types
+          if (fieldType === fetchedField.type) {
+            console.log(`Skipping field '${shortName}' of blacklisted type '${fieldType}'`)
+            return;
+          }
+        }
+
+        tmpField.longName = fetchedField.name;
         tmpField.locked = false;
-        tmpField.fieldType = this.fetchedIncidentFieldDefinitions[shortName].type;
+        tmpField.fieldType = fetchedField.type;
         if (['attachments'].includes(tmpField.fieldType) ) {
           tmpField.locked = true;
           tmpField.lockedReason = 'This field type is not supported for import';
@@ -423,11 +436,6 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
         return;
       }
 
-      if (this.fetchedIncidentFieldDefinitions && !(shortName in this.fetchedIncidentFieldDefinitions)) {
-        console.warn(`Incident field not found: ${shortName}.  It's probably an investigation field and this can safely be ignored.`);
-        return;
-      }
-
       if (!this.fetchedIncidentFieldDefinitions) {
         incidentFields[shortName] = {
           shortName,
@@ -442,15 +450,38 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
         return;
       }
 
+      if (!(shortName in this.fetchedIncidentFieldDefinitions)) {
+        console.warn(`Incident field '${shortName}' not found.  It's probably an investigation field and this can safely be ignored.`);
+        return;
+      }
+
+      const fetchedField = this.fetchedIncidentFieldDefinitions[shortName];
+
+      for (const fieldType of this.blacklistedFieldTypes) {
+        // skip blacklisted field types
+        if (fieldType === fetchedField.type) {
+          console.log(`Skipping field '${shortName}' of blacklisted type '${fieldType}'`)
+        }
+        return;
+      }
+
+      if (fetchedField.isReadOnly) {
+        console.warn(`Skipping read-only incident field '${shortName}'`);
+        return;
+      }
+
       incidentFields[shortName] = {
         shortName,
-        longName: this.fetchedIncidentFieldDefinitions[shortName].name,
+        longName: fetchedField.name,
         enabled: false,
         locked: false,
         value,
         originalValue: value,
-        fieldType: this.fetchedIncidentFieldDefinitions[shortName].type,
-        custom: false
+        fieldType: fetchedField.type,
+        custom: false,
+        mappingMethod: 'static',
+        jmesPath: '',
+        permitNullValue: false
       };
 
     });

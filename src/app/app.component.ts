@@ -137,10 +137,14 @@ export class AppComponent implements OnInit {
 
 
   async ngOnInit() {
-    // Get Logged In User
+    // Take Subscriptions
     this.subscriptions.add(this.fetcherService.fieldMappingSelectionActive.subscribe( () => this.onFieldMappingSelectionActive() ));
-    this.subscriptions.add(this.fetcherService.fieldMappingSelectionCanceled.subscribe( () => this.onFieldMappingSelectionCanceled() ));
 
+    this.subscriptions.add(this.fetcherService.fieldMappingSelectionEnded.subscribe( () => this.onFieldMappingSelectionEnded() ));
+
+    this.subscriptions.add( this.fetcherService.fieldMappingSelectionReceived.subscribe( () => this.onFieldMappingSelectionEnded() ));
+
+    // Get Logged In User
     try {
       this.loggedInUser = await this.fetcherService.getLoggedInUser();
       console.log('AppComponent: ngOnInit(): LoggedInUser:', this.loggedInUser);
@@ -1220,7 +1224,7 @@ export class AppComponent implements OnInit {
 
 
 
-  onFieldMappingSelectionCanceled() {
+  onFieldMappingSelectionEnded() {
     this.showFieldMappingSelectionBox = false;
   }
 

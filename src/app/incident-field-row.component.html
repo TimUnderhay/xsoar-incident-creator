@@ -16,12 +16,12 @@
   </div>
 
   <!-- Field Value -->
-  <div *ngIf="['shortText', 'longText', 'number', 'url', 'boolean', 'html', 'role', 'singleSelect', 'date', 'user', 'multiSelect', 'markdown', 'grid', 'internal', 'timer', 'attachments'].includes(field.fieldType); else notYetSupported" class="valueContainer">
+  <div *ngIf="['shortText', 'longText', 'number', 'url', 'boolean', 'html', 'role', 'singleSelect', 'date', 'user', 'multiSelect', 'markdown', 'grid', 'internal', 'attachments', 'tagsSelect'].includes(field.fieldType); else notYetSupported" class="valueContainer">
 
     <div style="flex-basis: auto; flex-grow: 1;">
 
-      <!-- shortText, user, role, singleSelect, multiSelect -->
-      <input *ngIf="['shortText', 'user', 'role', 'singleSelect', 'multiSelect'].includes(field.fieldType)" class="inputDisplay" pInputText [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)" type="text"/>
+      <!-- shortText, user, singleSelect -->
+      <input *ngIf="['shortText', 'user', 'singleSelect'].includes(field.fieldType)" class="inputDisplay" pInputText [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)" type="text"/>
       
       <!-- url -->
       <input *ngIf="field.fieldType === 'url'" pInputText class="inputDisplay" [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)" type="url"/>
@@ -38,8 +38,8 @@
       <!-- date -->
       <p-calendar *ngIf="field.fieldType === 'date'" [(ngModel)]="dateFieldValue" [showTime]="true" hourFormat="24" (ngModelChange)="onDateChanged()" [monthNavigator]="true" [yearNavigator]="true" yearRange="2018:2100" [showButtonBar]="true"></p-calendar>
 
-      <!-- objects - grid, internal, 'timer' -->
-      <span *ngIf="['grid', 'internal', 'timer'].includes(field.fieldType)" (click)="onEditJSON()" class="editJsonLink">Edit JSON</span>
+      <!-- objects - grid, internal, 'multiSelect', 'role', 'tagsSelect' -->
+      <span *ngIf="['grid', 'internal', 'multiSelect', 'role', 'tagsSelect'].includes(field.fieldType)" (click)="onEditJSON()" class="editJsonLink">Edit JSON</span>
 
       <!-- attachments -->
       <span *ngIf="['attachments'].includes(field.fieldType)" (click)="onEditJSON()" class="editJsonLink">View JSON</span>

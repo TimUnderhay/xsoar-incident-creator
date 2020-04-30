@@ -149,6 +149,7 @@ header {
 .valueContainer {
   display: flex;
   flex-direction: row;
+  justify-content: space-between;
 }
 
 .verticalCenter {
@@ -157,9 +158,16 @@ header {
   justify-content: center;
 }
 
-.enabledIcon {
+.enabledIcon,
+.jmesPathResolved {
   color: white;
 }
+
+.jmesPathError {
+  color: red;
+}
+
+
 
 .disabledIcon {
   color: rgb(51, 51, 51);

@@ -93,19 +93,25 @@
 
         <header>Value</header>
 
-        <header><i class="pi pi-times" style="font-size: 2em;" pTooltip="Delete All" showDelay="750" (click)="onDeleteAllIncidentFielsdClicked()"></i></header>
+        <div class="valueContainer">
 
-        <ng-container *ngFor="let field of chosenIncidentFields | keyvalue">
+          <header>Actions</header>
+
+          <div class="pi pi-times" style="font-size: 2em;" pTooltip="Delete All" showDelay="750" (click)="onDeleteAllIncidentFielsdClicked()"></div>
+          
+        </div>
+
+        <ng-container *ngFor="let field of chosenIncidentFields; trackBy: trackByIdentity">
 
           <freeform-json-row
-            *ngIf="![undefined, null].includes(field.value.value)"
-            #incidentField
-            [field]="field.value"
+            *ngIf="![undefined, null].includes(field.value)"
+            #incidentFieldRow
+            [field]="field"
+            (fieldChange)="onFieldChange($event)"
             [displayShortNames]="displayIncidentFieldShortNames"
             (fieldDeleted)="onIncidentFieldRemoved($event)"
-            (selectValueFromJson)="onStaticSelectValueFromJsonClicked($event)"
-            [jsonLoaded]="json !== undefined">
-            <!-- (fieldChange)="onIncidentFieldChanged(field.key, $event)" -->
+            [jsonLoaded]="json !== undefined"
+            [json]="json">
           </freeform-json-row>
 
         </ng-container>
@@ -175,9 +181,9 @@
 
 
   <!-- Submit Button -->
-  <!--<div style="margin-top: 1em;">
-    &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onCreateIncident()" [disabled]="!parsedIncidentJson || countEnabledFields() === 0"></button>
-  </div>-->
+  <div style="margin-top: 1em;">
+    &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onCreateIncident()" [disabled]="!json || enabledFieldsCount === 0"></button>
+  </div>
 
 
 

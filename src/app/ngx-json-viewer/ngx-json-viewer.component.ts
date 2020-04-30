@@ -25,20 +25,19 @@ export const acceptableDataTypesPerFieldType = {
   'number': ['number', 'string'], // string will only work if it contains a number
   'shortText': ['number', 'string', 'boolean', 'null'],
   'longText': ['number', 'string', 'boolean', 'null'],
-  'boolean': ['boolean'],
+  'boolean': ['boolean', 'string', 'number'], // string will only work if it's 'true'|'false'.  For number, <=0 is false, and >0 is true.
   'grid': ['array', 'object'], // grid accepts an array of objects
   'url': ['string', 'null'],
-  'html': ['string', 'null'],
-  'role': ['string', 'null'],
+  'html': ['string', 'number', 'boolean', 'null'],
   'markdown': ['string', 'null'],
+  'role': ['array', 'string', 'null'],
   'user': ['string', 'null'],
   'singleSelect': ['number', 'string', 'boolean', 'null'],
-  'multiSelect': [],
+  'multiSelect': ['array', 'number', 'string', 'boolean', 'null'],
   'internal': [],
   'date': [],
-  'timer': [],
   'attachments': [],
-  'tags': []
+  'tagsSelect': ['string', 'null']
 };
 
 
@@ -163,7 +162,6 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
     if (this.typeOfJson === 'array') {
       return `${this.path}[${this.index++}]`;
     }
-    
     let leadingDot = this.firstLevel ? '' : '.';
     return `${this.path}${leadingDot}${key}`;
   }
@@ -203,7 +201,6 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
         // yes, null is an object
         segment.type = 'null';
         segment.description = 'null';
-        segment.path = `${this.path}.${segment.key}`;
         break;
       }
 
@@ -261,20 +258,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
   onSelectionClicked(segment: Segment) {
     // Massage the data to match field type
     console.log('NgxJsonViewerComponent: onSelectionClicked(): segment:', segment);
-    if (this.selectionModeFieldType === 'grid' && segment.type === 'object') {
-      // grid fields accept only arrays of objects
-      segment.value = [segment.value];
-    }
-    if (['shortText', 'longText', 'url', 'html', 'markdown', 'user', 'role', 'singleSelect'].includes(this.selectionModeFieldType) && segment.type === 'null') {
-      segment.value = 'null';
-    }
-    if (segment.type === 'string' && this.selectionModeFieldType === 'number' && (segment.value as string).match(/^\d+(?:\.\d+)?$/) ) {
-      segment.value = parseFloat(segment.value);
-    }
-    if (segment.type === 'string' && this.selectionModeFieldType === 'number' && !(segment.value as string).match(/^\d+(?:\.\d+)?$/) ) {
-      return;
-    }
-    this.fetcherService.jsonSelectionReceivedSubject.next(segment);
+    this.fetcherService.fieldMappingSelectionReceived.next(segment);
   }
 
 
@@ -289,7 +273,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
   onClickOutside() {
     console.log('NgxJsonViewerComponent: onClickOutside()');
-    this.fetcherService.fieldMappingSelectionCanceled.next();
+    this.fetcherService.fieldMappingSelectionEnded.next();
   }
 
 }

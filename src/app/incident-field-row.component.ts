@@ -34,17 +34,26 @@ export class IncidentFieldRowComponent implements OnInit, OnChanges, OnDestroy {
     // console.log('IncidentFieldRowComponent: ngOnInit(): field:', this.field);
   }
 
+
+
   ngOnChanges(values: SimpleChanges) {
-    // console.log('ngOnChanges(): values:', values);
+    // console.log('IncidentFieldRowComponent: ngOnChanges(): values:', values);
+
     const updateFieldType = 'field' in values && (values.field.isFirstChange() || values.field.currentValue !== values.field.previousValue);
+
     if (updateFieldType && this.field.fieldType === 'undefined') {
       this.detectedFieldType = this.identifyType(this.field.value);
     }
+
     else if (updateFieldType && this.field.fieldType === 'date') {
-    // if ('fieldType' in this.field && this.field.fieldType === 'date') {
       this.dateFieldValue = new Date(this.field.value);
     }
+
+    if (this.field && this.field.fieldType === 'multiSelect') {
+      console.log(`IncidentFieldRowComponent: ngOnChanges(): ${this.field.shortName}:`, this.field.value);
+    }
   }
+
 
 
   ngOnDestroy() {

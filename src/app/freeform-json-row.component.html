@@ -2,7 +2,7 @@
   
   <!-- Enabled -->
   <div style="vertical-align: top;">
-    <p-checkbox [(ngModel)]="field.enabled" (onChange)="onSelectionChanged($event)" [binary]="true" [disabled]="field.locked" standalone></p-checkbox>
+    <p-checkbox [(ngModel)]="enabled" (onChange)="onEnabledSelectionChanged($event)" [binary]="true" [disabled]="field.locked" standalone></p-checkbox>
   </div>
 
   <!-- Field Name -->
@@ -17,124 +17,221 @@
 
   <!-- Mapping Method -->
   <div class="fieldLabel">
-    <p-dropdown [options]="mappingMethodItems" [(ngModel)]="mappingMethodValue" (onChange)="onMappingMethodChanged()"></p-dropdown>
+
+    <p-dropdown
+      [options]="mappingMethodItems"
+      [(ngModel)]="mappingMethod">
+    </p-dropdown>
+
   </div>
+
+  <!-- Static Field -->
+  <ng-container *ngIf="mappingMethod === 'static'">
+
+    <ng-container *ngTemplateOutlet="staticField"></ng-container>
+
+  </ng-container> 
+
+  <!-- JMESPath Mapped Field -->
+  <ng-container *ngIf="mappingMethod === 'jmespath'">
+
+    <ng-container *ngTemplateOutlet="mappedField"></ng-container>
+
+  </ng-container> 
+
   
-  <!-- JMES Path -->
-  <div *ngIf="mappingMethodValue === 'path'">
+</ng-container>
+
+
+
+
+<!----------------- Templates -------------------->
+
+
+<!-- Static Field, Supported Type -->
+<ng-template #staticField>
+  
+  <div *ngIf="['shortText', 'longText', 'number', 'url', 'boolean', 'html', 'role', 'singleSelect', 'date', 'user', 'multiSelect', 'markdown', 'grid', 'internal', 'attachments', 'tagsSelect'].includes(field.fieldType); else staticFieldNotYetSupported" class="valueContainer">
+
+    <div style="flex-basis: auto; flex-grow: 1;">
+
+      <!-- shortText, user, role, singleSelect, multiSelect -->
+      <input *ngIf="['shortText', 'user', 'singleSelect', 'multiSelect'].includes(field.fieldType)" class="inputDisplay" pInputText [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)" type="text"/>
+      
+      <!-- url -->
+      <input *ngIf="field.fieldType === 'url'" pInputText class="inputDisplay" [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)" type="url"/>
+
+      <!-- longText, html, markdown -->
+      <textarea *ngIf="['longText', 'html', 'markdown'].includes(field.fieldType)" pInputTextarea class="inputDisplay" [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)"></textarea>
+      
+      <!-- number -->
+      <input *ngIf="field.fieldType === 'number'" pInputText class="inputDisplay" [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)" type="number"/>
+
+      <!-- boolean -->
+      <p-selectButton *ngIf="field.fieldType === 'boolean'" [options]="boolItems" [(ngModel)]="field.value" (onChange)="onValueChanged($event)" standalone></p-selectButton>
+
+      <!-- date -->
+      <p-calendar *ngIf="field.fieldType === 'date'" [(ngModel)]="dateFieldValue" [showTime]="true" hourFormat="24" (ngModelChange)="onDateChanged()" [monthNavigator]="true" [yearNavigator]="true" yearRange="2018:2100" [showButtonBar]="true"></p-calendar>
+
+      <!-- objects - grid, internal, 'multiSelect', 'role', 'tagsSelect' -->
+      <span *ngIf="['grid', 'internal', 'multiSelect', 'role', 'tagsSelect'].includes(field.fieldType)" (click)="onEditJSONClicked()" class="editJsonLink">Edit JSON</span>
+
+      <!-- attachments -->
+      <span *ngIf="['attachments'].includes(field.fieldType)" (click)="onEditJSONClicked()" class="editJsonLink">View JSON</span>
+
+    </div>
     
+  </div>
+
+  <div class="valueContainer">
+
+    <!-- Select Value Icon -->
+    <div class="verticalCenter">
+      <div></div>
+      <div
+        style="margin-left: .1em; font-size: 2em;"
+        class="pi pi-arrow-circle-right"
+        [class.enabledIcon]="jsonLoaded"
+        [class.disabledIcon]="!jsonLoaded"
+        (mouseover)="selectValueHovering = true"
+        (mouseout)="selectValueHovering = false"
+        [style.cursor]="jsonLoaded && selectValueHovering ? 'pointer' : 'default'"
+        (click)="onStaticSelectValueFromJsonClicked()"
+        pTooltip="Select value from JSON"
+        showDelay="750">
+      </div>
+      <div></div>
+    </div>
+  
+    <!-- Reset Value Icon -->
+    <div class="verticalCenter">
+      <div></div>
+      <div
+        style="margin-left: .1em; font-size: 2em;"
+        class="pi pi-refresh"
+        [class.enabledIcon]="field.value !== field.originalValue"
+        [class.disabledIcon]="field.value === field.originalValue"
+        (mouseover)="resetValueHovering = true"
+        (mouseout)="resetValueHovering = false"
+        [style.cursor]="field.value !== field.originalValue && resetValueHovering ? 'pointer' : 'default'"
+        (click)="onResetValueClicked()"
+        pTooltip="Resets the value"
+        showDelay="750">
+      </div>
+      <div></div>
+    </div>
+  
+    <!-- Delete Field -->
+    <div class="verticalCenter">
+      <div></div>
+      <div class="pi pi-times enabledIcon" style="margin-left: .1em; font-size: 2em;" (click)="onDeleteFieldClicked()" pTooltip="Delete field" showDelay="750"></div>
+      <div></div>
+    </div>
+
+  </div>
+
+
+</ng-template>
+
+
+
+<!-- Static Field, Unsupported Type -->
+<ng-template #staticFieldNotYetSupported>
+
+  <div class="valueContainer">
+
+    <div style="flex-basis: auto; flex-grow: 1;">
+
+      <!-- objects -->
+      <span *ngIf="detectedFieldType === 'object'; else text" (click)="onEditJSONClicked()" class="editJsonLink">View JSON</span>
+
+      <ng-template #text>
+        <span>{{field.value}}</span>
+      </ng-template>
+
+    </div>
+
+  </div>
+
+</ng-template>
+
+
+
+<!-- JMESPath Mapping -->
+<ng-template #mappedField>
+
+  <div class="valueContainer">
+
     <div style="flex-basis: auto; flex-grow: 1;">
       
-      <input class="inputDisplay" pInputText [(ngModel)]="JMESPathValue" type="text"/>
+      <!-- Input Box -->
+      <input
+        pInputText
+        type="text"
+        [(ngModel)]="field.jmesPath"
+        (ngModelChange)="jmesPathResolve(field.jmesPath)"
+        class="inputDisplay"/>
+
+      <!-- Resolved Non-Object Value -->
+      <div
+        *ngIf="json && detectedFieldType !== 'object' && jmesPath !== ''"
+        class="jmesPathResolved"
+        [class.jmesPathError]="jmesPathResolveError">
+          {{resolvedValue}}
+      </div>
+
+      <div
+        *ngIf="json && detectedFieldType === 'object' && jmesPath !== ''"
+        class="editJsonLink" (click)="onViewJSONClicked(resolvedValue)">
+          View JSON
+      </div>
     
     </div>
-  
+   
   </div>
-
-  <!-- Static Field, Supported Type -->
-  <ng-container *ngIf="mappingMethodValue === 'static'">
   
-    <div *ngIf="['shortText', 'longText', 'number', 'url', 'boolean', 'html', 'role', 'singleSelect', 'date', 'user', 'multiSelect', 'markdown', 'grid', 'internal', 'timer', 'attachments', 'markdown'].includes(field.fieldType); else notYetSupported" class="valueContainer">
+  <!-- Action Icons -->
+  <div class="valueContainer">
 
-      <div style="flex-basis: auto; flex-grow: 1;">
-
-        <!-- shortText, user, role, singleSelect, multiSelect -->
-        <input *ngIf="['shortText', 'user', 'role', 'singleSelect', 'multiSelect'].includes(field.fieldType)" class="inputDisplay" pInputText [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)" type="text"/>
-        
-        <!-- url -->
-        <input *ngIf="field.fieldType === 'url'" pInputText class="inputDisplay" [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)" type="url"/>
-
-        <!-- longText, html, markdown -->
-        <textarea *ngIf="['longText', 'html', 'markdown'].includes(field.fieldType)" pInputTextarea class="inputDisplay" [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)"></textarea>
-        
-        <!-- number -->
-        <input *ngIf="field.fieldType === 'number'" pInputText class="inputDisplay" [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)" type="number"/>
-
-        <!-- boolean -->
-        <p-selectButton *ngIf="field.fieldType === 'boolean'" [options]="boolItems" [(ngModel)]="field.value" (onChange)="onValueChanged($event)" standalone></p-selectButton>
-
-        <!-- date -->
-        <p-calendar *ngIf="field.fieldType === 'date'" [(ngModel)]="dateFieldValue" [showTime]="true" hourFormat="24" (ngModelChange)="onDateChanged()" [monthNavigator]="true" [yearNavigator]="true" yearRange="2018:2100" [showButtonBar]="true"></p-calendar>
-
-        <!-- objects - grid, internal, 'timer' -->
-        <span *ngIf="['grid', 'internal', 'timer'].includes(field.fieldType)" (click)="onEditJSONClicked()" class="editJsonLink">Edit JSON</span>
-
-        <!-- attachments -->
-        <span *ngIf="['attachments'].includes(field.fieldType)" (click)="onEditJSONClicked()" class="editJsonLink">View JSON</span>
-
+    <!-- Select Value Icon -->
+    <div class="verticalCenter">
+      <div></div>
+      <div
+        style="margin-left: .1em; font-size: 2em;"
+        class="pi pi-arrow-circle-right"
+        [class.enabledIcon]="jsonLoaded"
+        [class.disabledIcon]="!jsonLoaded"
+        (mouseover)="selectValueHovering = true"
+        (mouseout)="selectValueHovering = false"
+        [style.cursor]="jsonLoaded && selectValueHovering ? 'pointer' : 'default'"
+        (click)="onJMESPathSelectValueFromJsonClicked()"
+        pTooltip="Select a JMESPath from JSON"
+        showDelay="750">
       </div>
+      <div></div>
+    </div>
 
-      <!-- Select Value -->
-      <div class="verticalCenter" *ngIf="mappingMethodValue === 'static'">
-        <div></div>
-        <div
-          style="margin-left: .1em; font-size: 2em;"
-          class="pi pi-arrow-circle-right"
-          [class.enabledIcon]="jsonLoaded"
-          [class.disabledIcon]="!jsonLoaded"
-          (mouseover)="selectValueHovering = true"
-          (mouseout)="selectValueHovering = false"
-          [style.cursor]="jsonLoaded && selectValueHovering ? 'pointer' : 'default'"
-          (click)="onStaticSelectValueFromJsonClicked()"
-          pTooltip="Select value from JSON"
-          showDelay="750">
-        </div>
-        <div></div>
-      </div>
+    <!-- Permit Null Value Checkbox -->
+    <div class="verticalCenter">
+      <div></div>
+      <p-checkbox
+        [binary]="true"
+        [(ngModel)]="field.permitNullValue"
+        pTooltip="Permit null value in incident field"
+        showDelay="750">
+      </p-checkbox>
+      <div></div>
+    </div>
 
-      <!-- Reset Value Icon -->
-      <div class="verticalCenter">
-        <div></div>
-        <div
-          style="margin-left: .1em; font-size: 2em;"
-          class="pi pi-refresh"
-          [class.enabledIcon]="field.value !== field.originalValue"
-          [class.disabledIcon]="field.value === field.originalValue"
-          (mouseover)="resetValueHovering = true"
-          (mouseout)="resetValueHovering = false"
-          [style.cursor]="field.value !== field.originalValue && resetValueHovering ? 'pointer' : 'default'"
-          (click)="onResetValueClicked()"
-          pTooltip="Resets the value"
-          showDelay="750">
-        </div>
-        <div></div>
-      </div>
+    <!-- Delete Field -->
+    <div class="verticalCenter">
+      <div></div>
+      <div class="pi pi-times enabledIcon" style="margin-left: .1em; font-size: 2em;" (click)="onDeleteFieldClicked()" pTooltip="Delete field" showDelay="750"></div>
+      <div></div>
+    </div>
+
+  </div>
       
-    </div>
-
-  </ng-container>
-
-
-  <!-- Delete Field -->
-  <div class="verticalCenter">
-    <div></div>
-    <div class="pi pi-times enabledIcon" style="margin-left: .1em; font-size: 2em;" (click)="onDeleteFieldClicked()" pTooltip="Delete field" showDelay="750"></div>
-    <div></div>
-  </div>
-
   
-  <!-- Static Field, Unsupported Type -->
-  <ng-template #notYetSupported>
 
-    <div class="valueContainer">
-
-      <div style="flex-basis: auto; flex-grow: 1;">
-
-        <!-- objects -->
-        <span *ngIf="detectedFieldType === 'object'; else text" (click)="onEditJSONClicked()" class="editJsonLink">View JSON</span>
-
-        <ng-template #text>
-          <span>{{field.value}}</span>
-        </ng-template>
-
-        
-
-      </div>
-
-    </div>
-
-  </ng-template>
-
-
-
-</ng-container>
+</ng-template>
