@@ -19,6 +19,8 @@ export interface Segment {
   expandable: boolean;
   path: string; // the JMESPath,
   spacerValue?: number; // value of spacer
+  hasChildren: boolean;
+  // hasAnExpandableChild?: boolean;
 }
 
 export const acceptableDataTypesPerFieldType = {
@@ -57,7 +59,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
     private changeDetector: ChangeDetectorRef
   ) {}
 
-  @Input() json: Object;
+  @Input() json: Object | Array<any>;
   @Input() expanded = false;
   @Input() path = '';
   @Input() selectionMode = false;
@@ -71,14 +73,14 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
     return Object.keys(this.json).length;
   }
   hovering: Segment;
+  childHovering: Segment;
   enableClickOutside = false;
   spacerWidthBaseDepthOne = 2.2; // extra space is needed to allow the selector arrow to fit on root segments
   spacerWidthBase = 1.5; // unit: rem
+  hasExpandableChildren = false;
 
 
   ngOnInit() {
-    // if an array, Object.keys() will return the values
-    // console.log('NgxJsonViewerComponent: ngOnInit(): firstLevel:', this.firstLevel);
     // console.log('NgxJsonViewerComponent: ngOnInit(): expanded:', this.expanded);
   }
 
@@ -87,6 +89,9 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
   getSpacerWidth(segment: Segment): number {
     if (this.depth === 1) {
       return this.spacerWidthBaseDepthOne * this.depth;
+    }
+    if (!this.hasExpandableChildren) {
+      return this.spacerWidthBase * this.depth - this.spacerWidthBase * .7;
     }
     return this.spacerWidthBase * this.depth;
   }
@@ -144,6 +149,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
     if (typeof this.json === 'object') {
       // object = object, array, null,
+      this.hasExpandableChildren = this.valueHasAnExpandableChild(this.json);
       Object.keys(this.json).forEach( key => {
         const segment = this.buildSegment(key, this.json[key])
         segments.push(segment);
@@ -153,6 +159,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
     else {
       // we really shouldn't enter this block, as this.json should only ever be an array or an object
       console.error('NgxJsonViewerComponent: JSON object is not an object!  json:', this.json);
+      this.hasExpandableChildren = this.valueHasAnExpandableChild(this.json);
       const segment = this.buildSegment(`(${typeof this.json})`, this.json)
       segments.push(segment);
     }
@@ -180,7 +187,8 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
       description: '' + value,
       expanded: this.expanded,
       expandable: false,
-      path: this.buildJMESPath(key)
+      path: this.buildJMESPath(key),
+      hasChildren: false
     };
 
     switch (this.getType(segment.value)) {
@@ -227,6 +235,8 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
     }
 
     segment.spacerValue = this.getSpacerWidth(segment);
+    segment.hasChildren = this.segmentHasChildren(segment);
+    // segment.hasAnExpandableChild = this.segmentHasAnExpandableChild(segment);
 
     return segment;
   }
@@ -248,6 +258,14 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
       this.toggle(segment);
     }
     // else do nothing
+  }
+
+
+
+  keyClickHandler(segment: Segment) {
+    if (segment.expandable) {
+      this.toggle(segment);
+    }
   }
 
 
@@ -286,7 +304,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
   enableSelectionIcon(segment: Segment): boolean {
     if ( this.hovering && this.hovering === segment && this.selectionMode && this.segmentTypeIsValidForFieldType(segment) ) {
-      if (segment.expandable && segment.expanded) {
+      if (segment.expandable && segment.expanded && this.childHovering === segment) {
         return false;
       }
       return true;
@@ -298,6 +316,70 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
   onClickOutside() {
     console.log('NgxJsonViewerComponent: onClickOutside()');
     this.fetcherService.fieldMappingSelectionEnded.next();
+  }
+
+
+
+  segmentHasChildren(segment: Segment): boolean {
+    if (segment.expandable && segment.type === 'object' && Object.keys(segment.value).length !== 0)  {
+      return true;
+    }
+    else if (segment.expandable && segment.type === 'array' && segment.value.length !== 0)  {
+      return true;
+    }
+    return false;
+  }
+
+
+
+  objectOrArrayHasChildren(value: Object | Array<any>) {
+    // if value is an object or an array, return whether it has children (i.e. a non-zero length or non-zero key length)
+    const valueType = this.getType(value);
+    if (valueType === 'array' && (value as Array<any>).length !== 0) {
+      return true;
+    }
+    else if (valueType === 'object' && Object.keys(value).length !== 0) {
+      return true;
+    }
+    return false;
+  }
+  
+
+
+  /*segmentHasAnExpandableChild(segment: Segment): boolean {
+    if (! ['object', 'array'].includes(segment.type)) {
+      // only arrays and objects can have children
+      return false;
+    }
+
+    const outerList = segment.type === 'array' ? segment.value : Object.values(segment.value); // build iterable list of children
+    for (let value of outerList) { // iterate over children
+      if (this.objectOrArrayHasChildren(value)) { // check to see if the child has children
+        return true;
+      }
+    }
+    
+    return false;
+  }*/
+
+
+
+
+  valueHasAnExpandableChild(value: Object | Array<any>): boolean {
+    const valueType = this.getType(value);
+    if (! ['object', 'array'].includes(valueType)) {
+      // only arrays and objects can have children
+      return false;
+    }
+
+    const outerList = valueType === 'array' ? value : Object.values(value); // build iterable list of children
+    for (let innerValue of outerList as Array<any>) { // iterate over children
+      if (this.objectOrArrayHasChildren(innerValue)) { // check to see if the child has children
+        return true;
+      }
+    }
+    
+    return false;
   }
 
 }

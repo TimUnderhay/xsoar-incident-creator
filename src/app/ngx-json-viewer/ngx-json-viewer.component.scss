@@ -15,6 +15,7 @@ ngx-json-viewer {
   display: block;
   // font-family: monospace;
   overflow-x: auto;
+  overflow-y: hidden;
 
   .segment {
     padding-top: 2px;
@@ -22,6 +23,9 @@ ngx-json-viewer {
     margin: 1px 0 1px 0;
     position: relative;
     font-size: 1em;
+
+    // overflow-x: auto;
+    // overflow-y: none;
 
     .segment-key {
       color: #7e7e7e;
