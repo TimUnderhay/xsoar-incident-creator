@@ -22,10 +22,10 @@ const defsDir = `./definitions`;
 const incidentsDir = `${configDir}/incidents`;
 const staticDir = '../../dist/xsoar-incident-creator';
 const foundDist = fs.existsSync(staticDir); // check for presence of pre-built angular client directory
-const apiCfgFile = `${configDir}/api.json`;
+const apiCfgFile = `${configDir}/servers.json`;
 const foundDemistoApiConfig = fs.existsSync(apiCfgFile); // check for presence of API configuration file
-const fieldsConfigFile = `${configDir}/fields-config.json`;
-const foundFieldsConfigFile = fs.existsSync(fieldsConfigFile);
+const incidentsFile = `${configDir}/incidents.json`;
+const foundIncidentsFile = fs.existsSync(incidentsFile);
 
 // Certificates
 const sslDir = `${configDir}/certs`;
@@ -43,8 +43,8 @@ var encryptor;
 // UUID
 const uuidv4 = require('uuid/v4');
 
-// Field Configs
-var fieldsConfig;
+// Incidents Config
+var incidentsConfig;
 
 var incident_fields = {};
 
@@ -666,14 +666,14 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
 
 
 
-function saveFieldsConfig() {
-  return fs.promises.writeFile(fieldsConfigFile, JSON.stringify(fieldsConfig, null, 2), { encoding: 'utf8', mode: 0o660});
+function saveIncidentsConfig() {
+  return fs.promises.writeFile(incidentsFile, JSON.stringify(incidentsConfig, null, 2), { encoding: 'utf8', mode: 0o660});
 }
 
 
 
 app.post(apiPath + '/incidentConfig', async (req, res) => {
-  // save a new field config
+  // save a new incident config
   let body = req.body;
   const requiredFields = ['name', 'incident', 'customFieldsConfig', 'incidentFieldsConfig', 'createInvestigation'];
   for (let i = 0; i < requiredFields.length; i++) {
@@ -687,7 +687,7 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
   }
 
   // check for existing config name
-  if ('name' in fieldsConfig) {
+  if ('name' in incidentsConfig) {
     const error = `Invalid request: Name '${body.name}' is already defined`;
     res.status(400).json({error});
     return;
@@ -705,8 +705,8 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
     createInvestigation: body.createInvestigation
   };
 
-  fieldsConfig[newBody.name] = newBody;
-  await saveFieldsConfig();
+  incidentsConfig[newBody.name] = newBody;
+  await saveIncidentsConfig();
 
   res.status(201).json({success: true}); // send 'created'
 } );
@@ -744,8 +744,8 @@ app.post(apiPath + '/incidentConfig/update', async (req, res) => {
     createInvestigation: body.createInvestigation
   };
 
-  fieldsConfig[body.name] = updatedField;
-  await saveFieldsConfig();
+  incidentsConfig[body.name] = updatedField;
+  await saveIncidentsConfig();
 
   res.status(200).json({success: true});; // send 'OK'
 } );
@@ -754,7 +754,7 @@ app.post(apiPath + '/incidentConfig/update', async (req, res) => {
 
 app.get(apiPath + '/incidentConfig/all', async (req, res) => {
   // retrieve all field configs -- must come before /incidentConfig/:name
-  res.status(200).json(fieldsConfig);
+  res.status(200).json(incidentsConfig);
 } );
 
 
@@ -762,8 +762,8 @@ app.get(apiPath + '/incidentConfig/all', async (req, res) => {
 app.get(apiPath + '/incidentConfig/:name', async (req, res) => {
   // get a particular field config
   const name = req.params.name;
-  if (name in fieldsConfig) {
-    res.status(200).json(fieldsConfig[name]);
+  if (name in incidentsConfig) {
+    res.status(200).json(incidentsConfig[name]);
     return;
   }
   else {
@@ -778,9 +778,9 @@ app.get(apiPath + '/incidentConfig/:name', async (req, res) => {
 app.delete(apiPath + '/incidentConfig/:name', async (req, res) => {
   // delete a field config
   const name = req.params.name;
-  if (name in fieldsConfig) {
-      delete fieldsConfig[name];
-      await saveFieldsConfig();
+  if (name in incidentsConfig) {
+      delete incidentsConfig[name];
+      await saveIncidentsConfig();
       res.status(200).json({name, success: true});
       return;
     }
@@ -991,19 +991,19 @@ async function loadDemistoApiConfigs() {
 
 
 
-function loadFieldConfigs() {
+function loadIncidentsConfig() {
   // Read Field Configs
-  if (!foundFieldsConfigFile) {
+  if (!foundIncidentsFile) {
     console.log('Fields configuration file was not found');
-    fieldsConfig = {};
+    incidentsConfig = {};
   }
   else {
     try {
-      fieldsConfig = JSON.parse(fs.readFileSync(fieldsConfigFile, 'utf8'));
+      incidentsConfig = JSON.parse(fs.readFileSync(incidentsFile, 'utf8'));
     }
     catch (error) {
-      console.error(`Error parsing ${fieldsConfigFile}:`, error);
-      fieldsConfig = {};
+      console.error(`Error parsing ${incidentsFile}:`, error);
+      incidentsConfig = {};
     }
   }
 }
@@ -1219,7 +1219,7 @@ function initSSL() {
 
   await loadDemistoApiConfigs();
 
-  loadFieldConfigs();
+  loadIncidentsConfig();
 
   if (foundDist && !devMode) {
     // Serve compiled Angular files statically

@@ -51,19 +51,6 @@
           [style.left.rem]="segment.expandable && segment.hasChildren ? segment.spacerValue - 2.4 : segment.spacerValue - 1.7">
         </div>
 
-    
-        <!-- make entire row clickable -->
-        <!--
-        <div
-          (click)="rowClickHandler(segment)"
-          class="segment-main"
-          [class.expandable]="segment.expandable || selectionMode"
-          [class.expanded]="segment.expanded"
-          [style.padding-left]="segment.expandable ? '0' : '1.25em'">
-        </div>
-        -->
-
-
         <!-- toggle expand/collapse -->
         <div
           *ngIf="segment.expandable && segment.hasChildren"

@@ -169,23 +169,25 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
 
 
   onToggleAllIncidentFields() {
-    // console.log('IncidentFieldsUIComponent: onToggleAllIncidentFields()')
-    Object.keys(this.incidentFields).forEach( shortName => {
+    // console.log('IncidentFieldsUIComponent: onToggleAllIncidentFields()');
+    // Object.keys(this.incidentFields).forEach( shortName => {
+    for (const shortName in Object.keys(this.incidentFields)) {
       if (!this.incidentFields[shortName].locked) {
         this.incidentFields[shortName].enabled = this.incidentFieldsSelectAllState;
       }
-    });
+    }
   }
 
 
 
   onToggleAllCustomFields() {
-    // console.log('IncidentFieldsUIComponent: onToggleAllCustomFields()')
-    Object.keys(this.customFields).forEach( shortName => {
+    // console.log('IncidentFieldsUIComponent: onToggleAllCustomFields()');
+    // Object.keys(this.customFields).forEach( shortName => {
+    for (const shortName in Object.keys(this.customFields)) {
       if (!this.customFields[shortName].locked) {
         this.customFields[shortName].enabled = this.customFieldsSelectAllState;
       }
-    });
+    }
   }
 
 
@@ -422,6 +424,7 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
     console.log('IncidentFieldsUIComponent: buildIncidentFields(): incidentJson:', json);
     let incidentFields: IncidentFields = {};
     let skippedInvestigationFields = [];
+
     Object.keys(json).forEach( shortName => {
       // console.log('IncidentFieldsUIComponent: buildIncidentFields(): shortName:', shortName);
       let value = json[shortName];
@@ -451,7 +454,7 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
       }
 
       if (!(shortName in this.fetchedIncidentFieldDefinitions)) {
-        console.warn(`Incident field '${shortName}' not found.  It's probably an investigation field and this can safely be ignored.`);
+        console.warn(`Incident field '${shortName}' was not found.  It's probably an investigation field and this can safely be ignored.`);
         return;
       }
 
@@ -461,8 +464,8 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
         // skip blacklisted field types
         if (fieldType === fetchedField.type) {
           console.log(`Skipping field '${shortName}' of blacklisted type '${fieldType}'`)
+          return;
         }
-        return;
       }
 
       if (fetchedField.isReadOnly) {
@@ -483,11 +486,11 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
         jmesPath: '',
         permitNullValue: false
       };
+    } );
 
-    });
     this.incidentFields = incidentFields;
     console.log(`Skipped investigation fields:`, skippedInvestigationFields);
-    // console.log('IncidentFieldsUIComponent: buildIncidentFields(): incidentFields:', this.incidentFields);
+    console.log('IncidentFieldsUIComponent: buildIncidentFields(): incidentFields:', this.incidentFields);
   }
 
 
@@ -556,23 +559,33 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
     doesn't contain info on which fields to enable
     */
 
-    Object.values(savedIncidentConfig.incidentFieldsConfig).forEach( field => {
+    console.log('IncidentFieldsUIComponent: mergeLoadedFieldConfig(): savedIncidentConfig:', savedIncidentConfig);
+
+    for (const field of Object.values(savedIncidentConfig.incidentFieldsConfig)) {
       const shortName = field.shortName;
+      if (!(shortName in this.incidentFields)) {
+        console.warn(`Loaded incident contained incident field '${shortName}', which was not available for inclusion.  It may have previously been skipped due to it being read-only or a blacklisted field type, such as a timer field`)
+        continue;
+      }
       if (!this.incidentFields[shortName].locked) {
         this.incidentFields[shortName].enabled = field.enabled;
       }
       this.incidentFields[shortName].value = field.value;
       this.incidentFields[shortName].originalValue = field.value;
-    } );
+    }
 
-    Object.values(savedIncidentConfig.customFieldsConfig).forEach( field => {
+    for (const field of Object.values(savedIncidentConfig.customFieldsConfig)) {
       const shortName = field.shortName;
+      if (!(shortName in this.customFields)) {
+        console.warn(`Loaded incident contained incident custom field '${shortName}', which was not available for inclusion.  It may have previously been skipped due to it being read-only or a blacklisted field type, such as a timer field`)
+        continue;
+      }
       if (!this.customFields[shortName].locked) {
         this.customFields[shortName].enabled = field.enabled;
       }
       this.customFields[shortName].value = field.value;
       this.customFields[shortName].originalValue = field.value;
-    } );
+    }
 
     console.log('IncidentFieldsUIComponent: mergeLoadedFieldConfig(): incidentFields:', this.incidentFields);
     // this.incidentFields = JSON.parse(JSON.stringify(this.incidentFields)); // hack deep copy to trigger change detection

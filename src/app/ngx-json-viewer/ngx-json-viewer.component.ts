@@ -2,7 +2,6 @@
 
 import { Component, OnInit, OnChanges, Input, Output, EventEmitter, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 import { FieldType } from '../types/incident-fields';
-import { Subject } from 'rxjs';
 import * as utils from '../utils';
 import { FetcherService } from '../fetcher-service';
 
@@ -20,7 +19,6 @@ export interface Segment {
   path: string; // the JMESPath,
   spacerValue?: number; // value of spacer
   hasChildren: boolean;
-  // hasAnExpandableChild?: boolean;
 }
 
 export const acceptableDataTypesPerFieldType = {
@@ -236,7 +234,6 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
     segment.spacerValue = this.getSpacerWidth(segment);
     segment.hasChildren = this.segmentHasChildren(segment);
-    // segment.hasAnExpandableChild = this.segmentHasAnExpandableChild(segment);
 
     return segment;
   }
@@ -343,25 +340,6 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
     }
     return false;
   }
-  
-
-
-  /*segmentHasAnExpandableChild(segment: Segment): boolean {
-    if (! ['object', 'array'].includes(segment.type)) {
-      // only arrays and objects can have children
-      return false;
-    }
-
-    const outerList = segment.type === 'array' ? segment.value : Object.values(segment.value); // build iterable list of children
-    for (let value of outerList) { // iterate over children
-      if (this.objectOrArrayHasChildren(value)) { // check to see if the child has children
-        return true;
-      }
-    }
-    
-    return false;
-  }*/
-
 
 
 
