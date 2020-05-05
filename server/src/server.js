@@ -26,6 +26,8 @@ const apiCfgFile = `${configDir}/servers.json`;
 const foundDemistoApiConfig = fs.existsSync(apiCfgFile); // check for presence of API configuration file
 const incidentsFile = `${configDir}/incidents.json`;
 const foundIncidentsFile = fs.existsSync(incidentsFile);
+const freeJsonFile = `${configDir}/json.json`;
+const foundFreeJsonFile = fs.existsSync(freeJsonFile);
 
 // Certificates
 const sslDir = `${configDir}/certs`;
@@ -45,8 +47,10 @@ const uuidv4 = require('uuid/v4');
 
 // Incidents Config
 var incidentsConfig;
-
 var incident_fields = {};
+
+// Freeform JSON Config
+var freeJsonConfig;
 
 
 
@@ -592,6 +596,7 @@ app.get(apiPath + '/sampleIncident', async (req, res) => {
 
 
 app.get(apiPath + '/incidentFields/:serverId', async (req, res) => {
+  // Retrieves incident fields from XSOAR
   const serverId = decodeURIComponent(req.params.serverId);
   const fields = await getIncidentFields(serverId);
   incident_fields[serverId] = fields;
@@ -601,6 +606,7 @@ app.get(apiPath + '/incidentFields/:serverId', async (req, res) => {
 
 
 app.get(apiPath + '/incidentType/:serverId', async (req, res) => {
+  // Retrieves the list of incident types from XSOAR
   const serverId = decodeURIComponent(req.params.serverId);
   const incident_types = await getIncidentTypes(serverId);
   res.json( {id: serverId, incident_types} );
@@ -609,7 +615,7 @@ app.get(apiPath + '/incidentType/:serverId', async (req, res) => {
 
 
 app.post(apiPath + '/createDemistoIncident', async (req, res) => {
-  // This method will create a XSOAR incident, per the body supplied by the client
+  // This method will create an XSOAR incident, per the body supplied by the client
 
   let currentUser = req.headers.authorization;
 
@@ -666,6 +672,102 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
 
 
 
+function saveFreeJsonConfig() {
+  return fs.promises.writeFile(freeJsonFile, JSON.stringify(freeJsonConfig, null, 2), { encoding: 'utf8', mode: 0o660});
+}
+
+
+
+function checkForRequiredFields(fields, body) {
+  for (const fieldName of fields) {
+    if (!(fieldName in body)) {
+      throw `${fieldName}`;
+    }
+  }
+}
+
+
+
+app.post(apiPath + '/json', async (req, res) => {
+  // save new freeform JSON
+  let body = req.body;
+  const requiredFields = ['name', 'json'];
+
+  try {
+    checkForRequiredFields(requiredFields, body);
+  }
+  catch(fieldName) {
+    res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+    return;
+  }
+
+  const name = body.name;
+  const json = body.json;
+  const id = uuidv4();
+
+  // check for existing json name
+  if (name in freeJsonConfig) {
+    const error = `Invalid request: Name '${name}' is already defined`;
+    res.status(400).json({error});
+    return;
+  }
+
+  const entry = {
+    name,
+    id,
+    json
+  };
+
+  freeJsonConfig[name] = entry;
+  await saveFreeJsonConfig();
+
+  res.status(201).json({success: true}); // send 'created'
+} );
+
+
+
+app.delete(apiPath + '/json/:name', async (req, res) => {
+  // delete a freeform JSON config
+  const name = req.params.name;
+  if (name in freeJsonConfig) {
+      delete freeJsonConfig[name];
+      await saveFreeJsonConfig();
+      res.status(200).json({name, success: true});
+      return;
+    }
+    else {
+      const error = 'Resource not found';
+      res.status(400).json({error, name, success: false});
+      return;
+    }
+} );
+
+
+
+app.get(apiPath + '/json', async (req, res) => {
+  // retrieve all freeform JSON config names
+  const freeJsonNames = Object.values(freeJsonConfig).map( config => config.name );
+  res.status(200).json(freeJsonNames);
+} );
+
+
+
+app.get(apiPath + '/json/:name', async (req, res) => {
+  // get a particular freeform JSON config (just the json)
+  const name = req.params.name;
+  if (name in freeJsonConfig) {
+    res.status(200).json(freeJsonConfig[name].json);
+    return;
+  }
+  else {
+    const error = `Freeform JSON config ${'name'} was not found`;
+    res.status(400).json({error});
+    return;
+  }
+} );
+
+
+
 function saveIncidentsConfig() {
   return fs.promises.writeFile(incidentsFile, JSON.stringify(incidentsConfig, null, 2), { encoding: 'utf8', mode: 0o660});
 }
@@ -676,36 +778,40 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
   // save a new incident config
   let body = req.body;
   const requiredFields = ['name', 'incident', 'customFieldsConfig', 'incidentFieldsConfig', 'createInvestigation'];
-  for (let i = 0; i < requiredFields.length; i++) {
-    // check for valid request
-    let fieldName = requiredFields[i];
-    if (!(fieldName in body)) {
-      const error = `Invalid request: Key '${fieldName}' missing`;
-      res.status(400).json({error});
-      return;
-    }
+
+  try {
+    checkForRequiredFields(requiredFields, body);
+  }
+  catch(fieldName) {
+    res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+    return;
   }
 
+  const name = body.name;
+  const id = uuidv4();
+  const incident = body.incident;
+  const customFieldsConfig = body.customFieldsConfig;
+  const incidentFieldsConfig = body.incidentFieldsConfig;
+  const createInvestigation = body.createInvestigation;
+
   // check for existing config name
-  if ('name' in incidentsConfig) {
-    const error = `Invalid request: Name '${body.name}' is already defined`;
+  if (name in incidentsConfig) {
+    const error = `Invalid request: Name '${name}' is already defined`;
     res.status(400).json({error});
     return;
   }
 
-  const id = uuidv4();
-
   // remove any invalid fields
-  const newBody = {
-    name: body.name,
+  const entry = {
+    name,
     id,
-    incident: body.incident,
-    customFieldsConfig: body.customFieldsConfig,
-    incidentFieldsConfig: body.incidentFieldsConfig,
-    createInvestigation: body.createInvestigation
+    incident,
+    customFieldsConfig,
+    incidentFieldsConfig,
+    createInvestigation
   };
 
-  incidentsConfig[newBody.name] = newBody;
+  incidentsConfig[name] = entry;
   await saveIncidentsConfig();
 
   res.status(201).json({success: true}); // send 'created'
@@ -776,7 +882,7 @@ app.get(apiPath + '/incidentConfig/:name', async (req, res) => {
 
 
 app.delete(apiPath + '/incidentConfig/:name', async (req, res) => {
-  // delete a field config
+  // delete an incident config
   const name = req.params.name;
   if (name in incidentsConfig) {
       delete incidentsConfig[name];
@@ -1010,6 +1116,25 @@ function loadIncidentsConfig() {
 
 
 
+function loadFreeJsonConfig() {
+  // Read Freeform JSON Configs
+  if (!foundFreeJsonFile) {
+    console.log('Freeform JSON configuration file was not found');
+    freeJsonConfig = {};
+  }
+  else {
+    try {
+      freeJsonConfig = JSON.parse(fs.readFileSync(freeJsonFile, 'utf8'));
+    }
+    catch (error) {
+      console.error(`Error parsing ${freeJsonFile}:`, error);
+      freeJsonConfig = {};
+    }
+  }
+}
+
+
+
 function getDemistoApiConfig(serverId) {
   return demistoApiConfigs[serverId];
 }
@@ -1220,6 +1345,7 @@ function initSSL() {
   await loadDemistoApiConfigs();
 
   loadIncidentsConfig();
+  loadFreeJsonConfig();
 
   if (foundDist && !devMode) {
     // Serve compiled Angular files statically

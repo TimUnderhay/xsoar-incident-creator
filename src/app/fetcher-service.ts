@@ -13,6 +13,7 @@ import { Subject } from 'rxjs';
 import { IncidentField } from './types/incident-fields';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
 import { IncidentFieldRowComponent } from './incident-field-row.component';
+import { FreeformJSONConfig } from './types/freeform-json-config';
 
 export interface FieldMappingSelection {
   field: IncidentField;
@@ -219,6 +220,39 @@ export class FetcherService {
     return this.http.get(this.apiPath + '/incidentConfig/all', { headers } )
                     .toPromise()
                     .then(value => value as FieldsConfig);
+  }
+
+
+
+  getSavedJSONConfigurationNames(): Promise<string> {
+    let headers = this.buildHeaders();
+    return this.http.get(this.apiPath + '/json', { headers } )
+                    .toPromise()
+                    .then(value => value as string);
+  }
+
+
+
+  getSavedJSONConfiguration(name): Promise<Object | Array<any>> {
+    let headers = this.buildHeaders();
+    return this.http.get(`${this.apiPath}/json/${name}`, { headers } )
+                    .toPromise<Object | Array<any>>();
+  }
+
+
+
+  saveNewFreeformJSONConfiguration(config: FreeformJSONConfig): Promise<any> {
+    let headers = this.buildHeaders();
+    return this.http.post(this.apiPath + '/json', config, { headers } )
+                    .toPromise();
+  }
+
+
+
+  deleteFreeformJSONConfiguration(name: string): Promise<any> {
+    let headers = this.buildHeaders();
+    return this.http.delete(this.apiPath + `/json/${name}`, { headers } )
+                    .toPromise();
   }
 
 
