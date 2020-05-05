@@ -620,7 +620,7 @@ export class FreeformJsonUIComponent implements OnInit, OnDestroy {
 
 
   onFieldChange(field: IncidentField) {
-    console.log('FreeformJsonUIComponent: onFieldChange():', field.shortName);
+    // console.log('FreeformJsonUIComponent: onFieldChange():', field.shortName);
     this.setFieldOfChosenFields(field, false);
   }
 

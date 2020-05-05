@@ -4,22 +4,17 @@
   [clickOutsideEnabled]="enableClickOutside">
   
   <!-- Root Segment -->
-  <div *ngIf="firstLevel else jsonViewer" class="segment" [ngClass]="['segment-type-' + typeOfJson]">
-
-    <div class="segment-main expandable expanded">
+  <div *ngIf="depth === 1 else jsonViewer" class="segment expanded" [ngClass]="['segment-type-' + typeOfJson]">
   
-      <i class="toggler pi pi-chevron-down"></i>
+    <!-- key name -->
+    <span class="segment-key">root</span>
   
-      <!-- key name -->
-      <span class="segment-key">root</span>
-    
-      <!-- separator -->
-      <span class="segment-separator">: </span>
-    
-      <!-- value -->
-      <span class="segment-value"> {{typeOfJson === 'object' ? '{}' : '[]'}} {{jsonLen}} items</span>
+    <!-- separator -->
+    <span class="segment-separator">: </span>
   
-    </div>
+    <!-- value -->
+    <span class="segment-value"> {{typeOfJson === 'object' ? '{}' : '[]'}} {{jsonLen}} items</span>
+  
 
     <!-- Project Segments Template Under Root -->
     <ng-container *ngTemplateOutlet="jsonViewer"></ng-container>
@@ -30,7 +25,7 @@
 <!-- Template for Segments -->
 <ng-template #jsonViewer>
 
-  <div class="ngx-json-viewer" [class.children]="!firstLevel">
+  <div class="ngx-json-viewer" [class.children]="depth !== 1">
 
     <!-- segments -->
     <div
@@ -38,51 +33,64 @@
       [ngClass]="['segment', 'segment-type-' + segment.type]"
       [attr.jmespath]="segment.path"
       (mouseover)="hovering = segment"
-      (mouseout)="hovering = undefined">
+      (mouseout)="hovering = undefined"
+      [class.expanded]="segment.expandable && segment.expanded">
 
+        <!-- Spacer div -->
         <div
-          style="display: inline-block; cursor: pointer; line-height: 0; font-size: 2em; vertical-align: middle;"
-          [style.visibility]="hovering && enableSelectionIcon(segment) ? 'initial' : 'hidden'"
-          class="pi pi-arrow-circle-left enabledIcon"
-          (click)="onSelectionClicked(segment)">
+          [style.width.rem]="segment.spacerValue"
+          style="display: inline-block;"
+          class="spacer">
         </div>
+
+        <!-- Selector Arrow -->
+        <div
+          [style.visibility]="hovering && enableSelectionIcon(segment) ? 'visible' : 'hidden'"
+          class="arrowSelector pi pi-arrow-circle-left enabledIcon"
+          (click)="onSelectionClicked(segment)"
+          [style.left.rem]="segment.expandable ? segment.spacerValue - 2.4 : segment.spacerValue - 1.7">
+        </div>
+
     
         <!-- make entire row clickable -->
+        <!--
         <div
           (click)="rowClickHandler(segment)"
           class="segment-main"
           [class.expandable]="segment.expandable || selectionMode"
-          [class.expanded]="segment.expanded">
-    
-          <!-- expand/collapse arrow -->
-          <ng-container *ngIf="segment.expandable">
-            <div
-              class="toggler pi pi-chevron-left"
-              [class.pi-chevron-right]="!segment.expanded"
-              [class.pi-chevron-down]="segment.expanded"
-              style="color: white;">
-            </div>
-          </ng-container>
-  
-          <!-- key name -->
-          <span class="segment-key" [style.color]="segment.type === 'object' ? 'white' : undefined">{{segment.key}}</span>
-  
-          <!-- separator -->
-          <span class="segment-separator">: </span>
-  
-          <!-- value | description  -->
-          <span class="segment-value">{{segment.description}}</span>
-    
+          [class.expanded]="segment.expanded"
+          [style.padding-left]="segment.expandable ? '0' : '1.25em'">
         </div>
+        -->
+
+
+        <!-- toggle expand/collapse -->
+        <div
+          *ngIf="segment.expandable"
+          (click)="expansionArrowClickHandler($event, segment)"
+          class="toggler pi"
+          [class.pi-chevron-right]="!segment.expanded"
+          [class.pi-chevron-down]="segment.expanded"
+          [style.left.rem]="segment.spacerValue - .8">
+        </div>
+
+        <!-- key name -->
+        <span class="segment-key" [style.color]="segment.type === 'object' || segment.type === 'array' ? 'white' : undefined">{{segment.key}}</span>
+
+        <!-- separator -->
+        <span class="segment-separator">: </span>
+
+        <!-- value | description  -->
+        <span class="segment-value">{{segment.description}}</span>
     
     
         <!-- If expanded, pop in another ngx-json-viewer -->
         <ngx-json-viewer
-          *ngIf="segment.expanded && segment.expandable"
+          *ngIf="segment.expandable && segment.expanded"
           class="children"
           [json]="segment.value"
           [expanded]="expanded"
-          [firstLevel]="false"
+          [depth]="depth + 1"
           [path]="segment.path"
           [selectionMode]="selectionMode"
           [selectionModeFieldType]="selectionModeFieldType">

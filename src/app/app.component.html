@@ -6,12 +6,12 @@
     <div style="margin-top: 1em; margin-right: 1em; float: right;">Logged in as: <span style="font-weight: bold;"> {{loggedInUser.username}}</span></div>
 
     <h1 class="bodyHeader">
-      Incident Importer
+      Incident Creator
     </h1>
 
 
 
-    <div style="margin-top: 0; margin-bottom: 1em;">This app creates Cortex XSOAR incidents from incident field JSON.  The fields to be imported are selectable and editable.  These can be saved in configurations for easy retrieval.</div>
+    <div style="margin-top: 0; margin-bottom: 1em;">This app creates Cortex XSOAR incidents from JSON data, either incident JSON imported from XSOAR or mapped from 3rd-party JSON sources.  The fields to be imported are selectable and editable.  These can be saved in configurations for easy retrieval.</div>
 
 
 
@@ -47,17 +47,16 @@
     </p-card>
 
 
-    <!-- Incident Data -->
-    <p-card header="Incident Data" subheader="Load an incident from Cortex XSOAR, upload an incident JSON file, or perform other file and bulk create operations.  To create an incident JSON file, use the XSOAR command '!ExportIncident make_importable=false create_investigation=false', and download the result.">
+    <!-- File -->
+    <p-card header="File" subheader="Load an incident from Cortex XSOAR, upload an incident JSON file, or perform other file and bulk create operations.">
 
       <div style="margin-top: 1em;">
-
         
         <!-- <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span> -->
         
         <!-- Open -->
         <p-button
-          label="Open"
+          label="Open Incident"
           (onClick)="onOpenClicked()"
           styleClass="alignButton"
           [disabled]="savedIncidentConfigurationsLen === 0"
@@ -109,9 +108,9 @@
           [disabled]="!saveAsButtonEnabled">
         </p-button>
 
-        <!-- Delete -->
+        <!-- Delete Incident -->
         <p-button
-          label="Delete"
+          label="Delete Incidents"
           (onClick)="onDeleteConfigClicked()"
           [disabled]="savedIncidentConfigurationsLen === 0">
         </p-button>

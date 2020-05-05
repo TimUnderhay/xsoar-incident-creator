@@ -2,9 +2,9 @@ import { MappingMethod } from '../freeform-json-row.component';
 
 export type FieldType = 'shortText' | 'longText' | 'singleSelect' | 'multiSelect' | 'grid' | 'internal' | 'number' | 'date' | 'timer' | 'boolean' | 'url' | 'html' | 'role' | 'attachments' | 'markdown' | 'tagsSelect' | 'user' | 'undefined';
 
-// supportetdTypes: 'shortText', 'longText', 'number', 'url', 'boolean', 'html', 'role', 'singleSelect', 'date', 'user', 'multiSelect', 'markdown', 'grid', 'internal', 'timer', 'attachments'
+// supportetdTypes: 'shortText', 'longText', 'number', 'url', 'boolean', 'html', 'role', 'singleSelect', 'date', 'user', 'multiSelect', 'markdown', 'grid', 'internal', 'attachments'
 
-// unsupportedTypes: 'undefined', 'user', 'tagsSelect'
+// unsupportedTypes: 'undefined', 'timer'
 
 export interface IncidentField extends Object {
   shortName: string;

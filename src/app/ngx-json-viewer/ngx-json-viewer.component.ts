@@ -17,7 +17,8 @@ export interface Segment {
   expanded: boolean;
   length?: number;
   expandable: boolean;
-  path: string; // the JMESPath
+  path: string; // the JMESPath,
+  spacerValue?: number; // value of spacer
 }
 
 export const acceptableDataTypesPerFieldType = {
@@ -59,10 +60,9 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
   @Input() json: Object;
   @Input() expanded = false;
   @Input() path = '';
-  @Input() firstLevel = false;
   @Input() selectionMode = false;
   @Input() selectionModeFieldType: FieldType;
-
+  @Input() depth = 1;
 
   segments: Segment[] = [];
   index = 0;
@@ -72,12 +72,23 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
   }
   hovering: Segment;
   enableClickOutside = false;
+  spacerWidthBaseDepthOne = 2.2; // extra space is needed to allow the selector arrow to fit on root segments
+  spacerWidthBase = 1.5; // unit: rem
 
 
   ngOnInit() {
     // if an array, Object.keys() will return the values
     // console.log('NgxJsonViewerComponent: ngOnInit(): firstLevel:', this.firstLevel);
     // console.log('NgxJsonViewerComponent: ngOnInit(): expanded:', this.expanded);
+  }
+
+
+
+  getSpacerWidth(segment: Segment): number {
+    if (this.depth === 1) {
+      return this.spacerWidthBaseDepthOne * this.depth;
+    }
+    return this.spacerWidthBase * this.depth;
   }
 
 
@@ -151,18 +162,11 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
 
 
-  toggle(segment: Segment) {
-    console.log('NgxJsonViewerComponent: toggle()');
-    segment.expanded = segment.expandable ? !segment.expanded : false;
-  }
-
-
-
   buildJMESPath(key) {
     if (this.typeOfJson === 'array') {
       return `${this.path}[${this.index++}]`;
     }
-    let leadingDot = this.firstLevel ? '' : '.';
+    let leadingDot = this.depth === 1 ? '' : '.';
     return `${this.path}${leadingDot}${key}`;
   }
 
@@ -222,6 +226,8 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
     }
 
+    segment.spacerValue = this.getSpacerWidth(segment);
+
     return segment;
   }
 
@@ -246,6 +252,29 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
 
 
+  onSelectionClicked(segment: Segment) {
+    // Massage the data to match field type
+    console.log('NgxJsonViewerComponent: onSelectionClicked(): segment:', segment);
+    this.fetcherService.fieldMappingSelectionReceived.next(segment);
+  }
+
+
+
+  toggle(segment: Segment) {
+    console.log('NgxJsonViewerComponent: toggle()');
+    segment.expanded = segment.expandable ? !segment.expanded : false;
+  }
+
+
+
+  expansionArrowClickHandler(event: MouseEvent, segment: Segment) {
+    console.log('NgxJsonViewerComponent: expansionArrowClickHandler(): segment:', segment);
+    event.stopPropagation();
+    this.toggle(segment);
+  }
+
+
+
   segmentTypeIsValidForFieldType(segment: Segment) {
     if (acceptableDataTypesPerFieldType[this.selectionModeFieldType].includes(segment.type)) {
       return true;
@@ -255,16 +284,11 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
 
 
-  onSelectionClicked(segment: Segment) {
-    // Massage the data to match field type
-    console.log('NgxJsonViewerComponent: onSelectionClicked(): segment:', segment);
-    this.fetcherService.fieldMappingSelectionReceived.next(segment);
-  }
-
-
-
   enableSelectionIcon(segment: Segment): boolean {
     if ( this.hovering && this.hovering === segment && this.selectionMode && this.segmentTypeIsValidForFieldType(segment) ) {
+      if (segment.expandable && segment.expanded) {
+        return false;
+      }
       return true;
     }
     return false;

@@ -9,73 +9,77 @@
 
 
 
+<div class="fieldsForm">
 
-<!-- Select Incident Type Container -->
-<p-card *ngIf="fetchedIncidentFieldDefinitions" header="Incident Type" subheader="Select an incident type on which to map JSON data.">
-
-  <div style="margin-top: 1em;">
-    
-    <p-dropdown
-      [options]="incidentTypeItems"
-      [(ngModel)]="selectedIncidentType"
-      (onChange)="onIncidentTypeChanged($event.value)"
-      [filter]="true"
-      placeholder="Select an incident type"
-      [style]="{'width': '40em'}">
-    </p-dropdown>
-  
-  </div>
-
-</p-card>
-
-
-
-<!-- Create Investigation Container -->
-<p-card *ngIf="chosenIncidentFields" header="Create Investigation" subheader="If enabled, this option will cause an investigation to be created along with a new incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so.">
-
-  <div style="margin-top: 1em;">
-
-    <p-selectButton
-      name="createInvestigation"
-      [options]="createInvestigationButtonItems"
-      [(ngModel)]="createInvestigation">
-      <!-- (ngModelChange)="createInvestigationChange.emit($event)" -->
-    </p-selectButton>
-
-  </div>
-
-</p-card>
-
-
-
-<div *ngIf="chosenIncidentFields" class="fieldsForm">
-
-  <!-- Incident Fields Container -->
+  <!-- Incident Container -->
   <div style="min-width: 0;">
 
-    <p-card header="Incident Fields" subheader="Select the main incident fields to include in the new incident">
+    <p-card header="Incident">
+
+      <!-- Select Incident Type -->
+      <div style="margin-top: 0; margin-bottom: 1em;">
+
+        <span
+          class="fieldLabel"
+          pTooltip="Select an incident type.  This will control which fields are available to you, based on field definitions loaded from Cortex XSOAR.  Changing this will wipe out all selections.">
+          Source Incident Type:&nbsp;&nbsp;
+        </span>
+    
+        <p-dropdown
+          [options]="incidentTypeItems"
+          [(ngModel)]="selectedIncidentType"
+          (onChange)="onIncidentTypeChanged($event.value)"
+          [filter]="true"
+          placeholder="Select an incident type"
+          [style]="{'width': '40em'}">
+        </p-dropdown>
+      
+      </div>
 
       <!-- Menu Bar -->
-      <div>
+      <div *ngIf="selectedIncidentType" class="menuContainer">
 
         <!-- I don't think reset is required for freeform -->
         <!-- <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()" [disabled]="!currentDemistoEndpointInit"></p-button>--> 
 
         <!-- Add Field Button -->
-        <p-button type="button" label="Add Field" (onClick)="onAddIncidentFieldClicked()"></p-button>
+        <span>
 
-        <p-toggleButton
-          name="shortFieldNames"
-          [onLabel]="shortNamesLabel"
-          [offLabel]="longNamesLabel"
-          [(ngModel)]="displayIncidentFieldShortNames"
-          [disabled]="!currentDemistoEndpointInit">
-        </p-toggleButton>
+          <p-button type="button" label="Add Field" (onClick)="onAddIncidentFieldClicked()"></p-button>
+
+          <p-toggleButton
+            name="shortFieldNames"
+            [onLabel]="shortNamesLabel"
+            [offLabel]="longNamesLabel"
+            [(ngModel)]="displayIncidentFieldShortNames"
+            [disabled]="!currentDemistoEndpointInit">
+          </p-toggleButton>
+
+          <p-toggleButton
+            onLabel="Create Investigation On"
+            offLabel="Create Investigation: Off"
+            [(ngModel)]="createInvestigation"
+            pTooltip="If enabled, this option will cause an investigation to be created along with a new incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so."
+            showDelay="750">
+
+          </p-toggleButton>
+
+        </span>
+
+        <!-- Create Incident Button -->
+        <button pButton
+          type="button"
+          label="Create Incident"
+          (click)="onCreateIncident()"
+          [disabled]="!json || enabledFieldsCount === 0"
+          class="ui-button-warning">
+        </button>
+
 
       </div>
 
       <!-- Incident Fields -->
-      <div class="freeformFieldContainer">
+      <div *ngIf="selectedIncidentType" class="freeformFieldContainer">
 
         <div>
           <p-checkbox
@@ -145,13 +149,18 @@
           <ng-container *ngTemplateOutlet="jsonUploader"></ng-container>
 
         </div>
+        
+        <div style="overflow-x: auto;">
 
-        <ngx-json-viewer
-          [json]="json"
-          [firstLevel]="true"
-          [selectionMode]="selectionMode"
-          [selectionModeFieldType]="selectionModeFieldType">
-        </ngx-json-viewer>
+          <ngx-json-viewer
+            [json]="json"
+            [selectionMode]="selectionMode"
+            [selectionModeFieldType]="selectionModeFieldType">
+          </ngx-json-viewer>
+
+        </div>
+
+        
 
       </ng-template>
 
@@ -176,14 +185,6 @@
     </p-fileUpload>
     
   </ng-template>
-
-
-
-
-  <!-- Submit Button -->
-  <div style="margin-top: 1em;">
-    &nbsp;&nbsp;<button pButton type="button" label="Create Incident" (click)="onCreateIncident()" [disabled]="!json || enabledFieldsCount === 0"></button>
-  </div>
 
 
 

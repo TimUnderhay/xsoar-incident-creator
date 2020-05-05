@@ -1,12 +1,12 @@
-# Create a container: docker create -p 4002:4002 --name demisto-incident-importer tundisto/demisto-incident-importer:latest
-# Start the conatiner: docker start demisto-incident-importer
-# Stop the container: docker stop demisto-incident-importer
-# Run a temporary container: docker run -p 4002:4002 -ti --rm tundisto/demisto-incident-importer:latest
+# Create a container: docker create -p 4002:4002 --name xsoar-incident-creator tundisto/xsoar-incident-creator:latest
+# Start the conatiner: docker start xsoar-incident-creator
+# Stop the container: docker stop xsoar-incident-creator
+# Run a temporary container: docker run -p 4002:4002 -ti --rm tundisto/xsoar-incident-creator:latest
 
 FROM node:lts-alpine
-ENV DSTDIR /opt/demisto/demisto-incident-importer
+ENV DSTDIR /opt/xsoar/xsoar-incident-creator
 WORKDIR $DSTDIR
-ARG IMPORTER_DEBUG
+ARG CREATOR_DEBUG
 EXPOSE 4002/tcp
 
 COPY dist/ ${DSTDIR}/dist/

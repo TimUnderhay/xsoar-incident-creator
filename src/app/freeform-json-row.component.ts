@@ -99,27 +99,27 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     this.subscriptions.add( this.fetcherService.fieldMappingSelectionReceived.subscribe( (segment: Segment) => this.onFieldMappingSelectionReceived(segment) ));
 
     this.subscriptions.add( this.fetcherService.fieldMappingSelectionEnded.subscribe( () => this.onFieldMappingSelectionEnded() ));
-
-    
   }
 
 
 
   ngOnChanges(values: SimpleChanges) {
     // console.log('FreeformJsonRowComponent: ngOnChanges(): values:', values);
-    const updateFieldType = utils.firstOrChangedSimpleChange('field', values);
+    const fieldFirstOrChanged = utils.firstOrChangedSimpleChange('field', values);
 
-    if (updateFieldType && this.field.fieldType === 'undefined') {
+    if (fieldFirstOrChanged && this.field.fieldType === 'undefined') {
       this.detectedFieldType = this.identifyType(this.field.value);
     }
 
-    else if (updateFieldType && this.field.fieldType === 'date') {
+    else if (fieldFirstOrChanged && this.field.fieldType === 'date') {
       this.dateFieldValue = new Date(this.field.value);
     }
 
-    /*if (this.json && utils.firstOrChangedSimpleChange('field', values) && this.field.mappingMethod === 'jmespath' && this.field.jmesPath !== '') {
+    const jsonFirstOrChanged = utils.firstOrChangedSimpleChange('json', values);
+    const useJMESPath = this.field && this.field.mappingMethod === 'jmespath' && this.field.jmesPath !== '';
+    if (this.json && useJMESPath && (jsonFirstOrChanged || fieldFirstOrChanged)) {
       this.jmesPathResolve(this.field.jmesPath);
-    }*/
+    }
     
   }
 

@@ -2,76 +2,79 @@ $type-colors: (
   string: #798953,
   number: #d28445,
   boolean: #75b5aa,
-
   array: #999,
   object: #999,
-
   'null': #b0b0b0
 );
 
 ngx-json-viewer {
-  display: contents;
+  display: contents; // pass through the host element and use .ngx-json-viewer class instead
 }
 
 .ngx-json-viewer {
   display: block;
-  font-family: monospace;
-  font-size: 1em;
-  width: 100%;
-  height: 100%;
-  overflow: none;
-  position: relative;
+  // font-family: monospace;
+  overflow-x: auto;
 
   .segment {
-    padding: 2px;
-    margin: 1px 1px 1px 12px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    margin: 1px 0 1px 0;
+    position: relative;
+    font-size: 1em;
 
-    .segment-main {
-      word-wrap: break-word;
-      display: inline-block;
-      // line-height: 1.2em;
-      // vertical-align: middle;
-      font-size: 1.25em;
-
-      .toggler {
-        position: absolute;
-        margin-left: -1.25em;
-        margin-top: 3px;
-        font-size: .8em;
-        line-height: 1.2em;
-        vertical-align: middle;
-        color: #787878;
-      }
-
-      .segment-key {
-        // color: #4E187C;
-        font-weight: 700;
-        color: #7e7e7e;
-      }
-
-      .segment-separator {
-        color: #999;
-      }
-
-      .segment-value {
-        color: #000;
-        font-weight: 700;
-      }
+    .segment-key {
+      color: #7e7e7e;
+      font-weight: 700;
     }
 
-    .children {
-      // margin-left: 12px;
-      margin-left: 6px;
-      // margin-left: 0;
+    .segment-separator {
+      color: #999;
+    }
+
+    .segment-value {
+      display: inline-block;
+      word-wrap: break-word;
+      // word-wrap: none;
+      color: #000;
+      font-weight: 700;
+    }
+    
+    .root-toggler {
+      font-weight: bolder;
+      margin-top: 3px;
+      font-size: .8em;
+      line-height: 1.2em;
+      color: white;
+    }
+
+    .toggler {
+      position: absolute;
+      font-weight: bolder;
+      margin-top: 3px;
+      font-size: .8em;
+      line-height: 1.2em;
+      vertical-align: top;
+      color: white;
+    }
+
+    .arrowSelector {
+      position: absolute;
+      line-height: .8em;
+      font-size: 2em;
+      cursor: pointer;
     }
   }
 
+
   @each $type, $color in $type-colors {
-    .segment-type-#{$type} > .segment-main > .segment-value {
+    // .segment-type-#{$type} > .segment-main > .segment-value {
+    .segment-type-#{$type} > .segment-value {
       color: $color;
     }
   }
   
+  // .segment-type-undefined > .segment-main {
   .segment-type-undefined > .segment-main {
     & > .segment-key {
       color: #999;

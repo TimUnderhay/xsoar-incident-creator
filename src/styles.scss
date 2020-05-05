@@ -167,6 +167,12 @@ header {
   color: red;
 }
 
+.menuContainer {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
 
 
 .disabledIcon {

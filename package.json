@@ -1,5 +1,5 @@
 {
-  "name": "demisto-incident-importer",
+  "name": "xsoar-incident-creator",
   "version": "0.0.2",
   "scripts": {
     "ng": "ng",
@@ -10,7 +10,7 @@
     "e2e": "ng e2e",
     "server": "cd server/src && node server.js",
     "server-dev": "cd server/src && node server.js --dev",
-    "build-docker-dev": "docker build --no-cache=true -t demisto-incident-importer:dev .",
+    "build-docker-dev": "docker build --no-cache=true -t xsoar-incident-creator:dev .",
     "fixdeps": "cp -r node_modules/ace-builds/src-min/*-json.js src/assets"
   },
   "private": true,
