@@ -224,11 +224,11 @@ export class FetcherService {
 
 
 
-  getSavedJSONConfigurationNames(): Promise<string> {
+  getSavedJSONConfigurationNames(): Promise<string[]> {
     let headers = this.buildHeaders();
     return this.http.get(this.apiPath + '/json', { headers } )
                     .toPromise()
-                    .then(value => value as string);
+                    .then(value => value as string[]);
   }
 
 

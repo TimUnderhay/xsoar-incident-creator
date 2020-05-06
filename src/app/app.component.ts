@@ -14,6 +14,7 @@ import { BulkCreateResult } from './types/bulk-create-result';
 import { IncidentFieldsUIComponent } from './incident-fields-ui.component';
 import { FreeformJsonUIComponent } from './freeform-json-ui.component';
 import { Subscription } from 'rxjs';
+import * as utils from './utils';
 
 type DemistoServerEditMode = 'edit' | 'new';
 
@@ -129,6 +130,9 @@ export class AppComponent implements OnInit {
   // fieldMappingSelection Box
   showFieldMappingSelectionBox = false;
 
+  // Freeform JSON Configs
+  savedJsonConfigurations: string[] = [];
+
   
   private subscriptions = new Subscription();
   
@@ -184,6 +188,20 @@ export class AppComponent implements OnInit {
 
     await this.getSavedIncidentConfigurations();
 
+    await this.getSavedJsonConfigurations();
+
+  }
+
+
+
+  async getSavedJsonConfigurations() {
+    try {
+      this.savedJsonConfigurations = await this.fetcherService.getSavedJSONConfigurationNames();
+      console.log('AppComponent: getSavedJsonConfigurations(): savedJsonConfigurations:', this.savedJsonConfigurations);
+    }
+    catch (error) {
+      console.error('AppComponent: getSavedJsonConfigurations(): Caught error fetching Freeform JSON configurations:', error);
+    }
   }
 
 
@@ -583,9 +601,9 @@ export class AppComponent implements OnInit {
   onDeleteConfigAccepted() {
     console.log('AppComponent: onDeleteConfigAccepted()');
     this.showDeleteDialog = false;
-    let message = `Are you sure that you would like to delete the ${this.selectedDeleteConfigs.length === 1 ? 'configuration' : 'configurations'}: ${this.selectedDeleteConfigs.join(', ')} ?`;
+    let message = `Are you sure that you would like to delete the configuration${utils.sPlural(this.selectedDeleteConfigs)}: ${this.selectedDeleteConfigs.join(', ')} ?`;
     if (this.selectedDeleteConfigs.includes(this.loadedIncidentConfigName) ) {
-      message = `Are you sure you want to delete the active configuration '${this.loadedIncidentConfigName}' ?`;
+      message = `Are you sure you want to delete the ACTIVE configuration '${this.loadedIncidentConfigName}' ?`;
     }
     this.confirmationService.confirm( {
       header: `Confirm Deletion`,
@@ -617,8 +635,7 @@ export class AppComponent implements OnInit {
 
     // fetch fields config
     await this.getSavedIncidentConfigurations();
-    this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration ${this.selectedOpenConfig} was successfully deleted`});
-    // handle when we've deleted the loaded config
+    this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration${utils.sPlural(this.selectedDeleteConfigs)} ${this.selectedDeleteConfigs.join(', ')} was successfully deleted`});
     
     this.selectedDeleteConfigs = []; // reset selection
   }

@@ -162,7 +162,9 @@
       [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
       [fetchedIncidentTypes]="fetchedIncidentTypes"
       (messagesReplace)="messagesReplace($event)"
-      (messageWithAutoClear)="messageWithAutoClear($event)">
+      (messageWithAutoClear)="messageWithAutoClear($event)"
+      [savedJsonConfigurations]="savedJsonConfigurations"
+      (freeformJsonConfigurationsChanged)="getSavedJsonConfigurations()">
     </freeform-json-ui>
     
     <div>&nbsp;</div>

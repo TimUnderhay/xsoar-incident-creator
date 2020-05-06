@@ -131,7 +131,7 @@
 
     <p-card header="Freeform JSON Data">
 
-      <div *ngIf="!json else ngxJsonViewer">
+      <div *ngIf="!json && (!savedJsonConfigurations || savedJsonConfigurations.length === 0) else menuBar">
 
         <h2 style="color: white;">
           Please upload some JSON data.  It can be any data, as long as it is valid JSON.
@@ -140,17 +140,62 @@
         <ng-container *ngTemplateOutlet="jsonUploader"></ng-container>
 
       </div>
+
+      <ng-template #jsonUploader>
+
+        <p-fileUpload #fileUpload
+          name="myfile[]"
+          mode="basic"
+          chooseLabel="Upload"
+          [customUpload]="true"
+          (uploadHandler)="onFreeformJsonUploaded($event, fileUpload)"
+          accept=".json,.txt"
+          [multiple]="false"
+          [auto]="true"
+          pTooltip="Import an incident from a JSON file"
+          showDelay="750">
+        </p-fileUpload>
+        
+      </ng-template>
       
-      <ng-template #ngxJsonViewer>
+      <ng-template #menuBar>
 
         <!-- Menu Bar -->
         <div>
+
+          <!-- Open -->
+          <p-button
+            label="Open"
+            (onClick)="onOpenClicked()"
+            styleClass="alignButton"
+            [disabled]="savedJsonConfigurations.length === 0"
+            pTooltip="Open a saved JSON configuration"
+            showDelay="750">
+          </p-button>
+
           <!-- Add Field Button -->
           <ng-container *ngTemplateOutlet="jsonUploader"></ng-container>
 
+          <p-button
+            label="Save As"
+            (onClick)="onSaveAsClicked()">
+          </p-button>
+
+          <p-button
+            label="Delete"
+            (onClick)="onDeleteConfigClicked()"
+            [disabled]="savedJsonConfigurations.length === 0">
+          </p-button>
+
         </div>
+
+        <header
+          *ngIf="loadedJsonConfigName"
+          style="margin: .25em 0 .25em 0;">
+            Loaded: <span style="color: white">{{loadedJsonConfigName}}</span>
+        </header>
         
-        <div style="overflow-x: auto;">
+        <div *ngIf="json" style="overflow-x: auto;">
 
           <ngx-json-viewer
             [json]="json"
@@ -160,31 +205,11 @@
 
         </div>
 
-        
-
       </ng-template>
 
     </p-card>
 
   </div>
-
-
-  <ng-template #jsonUploader>
-
-    <p-fileUpload #fileUpload
-      name="myfile[]"
-      mode="basic"
-      chooseLabel="Upload"
-      [customUpload]="true"
-      (uploadHandler)="onFreeformJsonUploaded($event, fileUpload)"
-      accept=".json,.txt"
-      [multiple]="false"
-      [auto]="true"
-      pTooltip="Import an incident from a JSON file"
-      showDelay="750">
-    </p-fileUpload>
-    
-  </ng-template>
 
 
 
@@ -225,3 +250,87 @@
   </div>
 
 </p-dialog>
+
+
+
+  <!-- Open Freeform JSON Config Dialog -->
+  <p-dialog header="Select a JSON Configuration" [(visible)]="showOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="openJsonDialog">
+
+    <div class="formLabel">Configuration to open</div>
+
+    <p-listbox
+      [options]="freeformJsonConfigurationItems"
+      [(ngModel)]="selectedOpenConfig"
+      [style]="{'width':'100%'}"
+      (onDblClick)="onConfigOpened()"
+      [filter]="true">
+    </p-listbox>
+
+    <div style="margin-top: .5em;">
+
+      <p-button
+        label="Open"
+        (onClick)="onConfigOpened()">
+      </p-button>
+
+      <p-button
+        label="Cancel"
+        (onClick)="onOpenCanceled()">
+      </p-button>
+
+    </div>
+
+  </p-dialog>
+
+
+
+<!-- Freeform JSON Save As Dialog -->
+<p-dialog header="Save JSON As" [(visible)]="showSaveAsDialog" [modal]="true" [style]="{width: '300px'}" styleClass="jsonSaveAsDialog">
+
+  <div style="margin-bottom: .5em;" class="formLabel">JSON Configuration Name</div>
+
+  <input pInputText #saveAsJsonInput type="text" [(ngModel)]="saveAsConfigName" class="inputDisplay"/>
+
+  <div style="margin-top: .5em;">{{saveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+
+  <div style="margin-top: .5em; float: right;">
+
+    <p-button label="Save" (onClick)="onSaveAsAccepted()" [disabled]="saveAsOkayButtonDisabled"></p-button>
+
+    <p-button label="Cancel" (onClick)="onSaveAsCanceled()"></p-button>
+
+  </div>
+
+</p-dialog>
+
+
+
+  <!-- Delete JSON Config Dialog -->
+  <p-dialog header="Delete JSON Configuration" [(visible)]="showDeleteDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="deleteConfigDialog">
+
+    <div class="formLabel">JSON Configurations to delete</div>
+
+    <p-listbox
+      [options]="freeformJsonConfigurationItems"
+      [(ngModel)]="selectedDeleteConfigs"
+      [multiple]="true"
+      [filter]="true"
+      [checkbox]="true"
+      [style]="{'width':'100%'}">
+    </p-listbox>
+
+    <div style="margin-top: .5em;">
+
+      <p-button
+        label="Delete"
+        (onClick)="onDeleteConfigAccepted()">
+      </p-button>
+
+      <p-button
+        label="Cancel"
+        (onClick)="onDeleteConfigCanceled()">
+      </p-button>
+
+    </div>
+
+  </p-dialog>

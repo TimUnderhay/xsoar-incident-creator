@@ -116,3 +116,15 @@ export function toGrid(value) {
   }
 
 }
+
+
+
+export function sPlural(value: any[]): string {
+  return value.length !== 1 ? 's' : '';
+}
+
+
+
+export function werePlural(value: any[]): string {
+  return value.length !== 1 ? 'were' : 'was';
+}

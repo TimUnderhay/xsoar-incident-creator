@@ -61,6 +61,9 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
   customFieldsSelectAllState = false;
   showSaveAsDialog = false;
   saveAsConfigName = ''; // for text label
+  get saveAsOkayButtonDisabled(): boolean {
+    return this.saveAsConfigName in this.savedIncidentConfigurations;
+  }
 
   // Blacklisted field types
   blacklistedFieldTypes = ['timer'];
@@ -78,10 +81,6 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
   set saveAsButtonEnabled(value) {
     this._saveAsButtonEnabled = value;
     this.saveAsButtonEnabledChange.emit(value);
-  }
-
-  get saveAsOkayButtonDisabled(): boolean {
-    return this.saveAsConfigName in this.savedIncidentConfigurations;
   }
 
 
