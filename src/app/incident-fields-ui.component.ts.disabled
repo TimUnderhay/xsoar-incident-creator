@@ -5,7 +5,7 @@ import { ConfirmationService, SelectItem } from 'primeng/api';
 import { IncidentFieldRowComponent } from './incident-field-row.component';
 import { IncidentField, IncidentFields } from './types/incident-fields';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
-import { FieldConfig, FieldsConfig, IncidentFieldsConfig } from './types/fields-config';
+import { IncidentConfig, IncidentConfigs, IncidentFieldsConfig } from './types/incident-config';
 import { AppComponent } from './app.component';
 import { PMessageOption } from './types/message-options';
 import { InvestigationFields as investigationFields } from './investigation-fields';
@@ -32,7 +32,7 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
   @Input() currentDemistoEndpointName: string;
   @Input() currentDemistoEndpointInit: boolean;
   @Input() fetchedIncidentFieldDefinitions: FetchedIncidentFieldDefinitions; // the fields taken from Demisto
-  @Input() savedIncidentConfigurations: FieldsConfig;
+  @Input() savedIncidentConfigurations: IncidentConfigs;
   
   // Incident Inputs / Outputs
   json: Object; // parsed json
@@ -117,7 +117,7 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
 
 
 
-  onConfigOpened(selectedConfig: FieldConfig) {
+  onConfigOpened(selectedConfig: IncidentConfig) {
     // console.log('IncidentFieldsUIComponent: onConfigOpened()');
     this.json = selectedConfig.incident;
     // console.log('IncidentFieldsUIComponent: onConfigOpened(): json:', this.json);
@@ -360,60 +360,6 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
 
 
 
-  buildCustomFields(customFields) {
-    /*
-    Called from buildIncidentFields()
-    */
-    // console.log('IncidentFieldsUIComponent: buildCustomFields(): customFields:', customFields);
-    let tmpCustomFields: IncidentFields = {};
-    Object.keys(customFields).forEach( shortName => {
-      let value = customFields[shortName];
-      let tmpField: IncidentField = {
-        shortName,
-        value,
-        originalValue: value,
-        enabled: false,
-        custom: true
-      };
-      if (this.fetchedIncidentFieldDefinitions && shortName in this.fetchedIncidentFieldDefinitions) {
-
-        const fetchedField = this.fetchedIncidentFieldDefinitions[shortName];
-        for (const fieldType of this.blacklistedFieldTypes) {
-          // skip blacklisted field types
-          if (fieldType === fetchedField.type) {
-            console.log(`Skipping field '${shortName}' of blacklisted type '${fieldType}'`)
-            return;
-          }
-        }
-
-        tmpField.longName = fetchedField.name;
-        tmpField.locked = false;
-        tmpField.fieldType = fetchedField.type;
-        if (['attachments'].includes(tmpField.fieldType) ) {
-          tmpField.locked = true;
-          tmpField.lockedReason = 'This field type is not supported for import';
-        }
-      }
-      else if (!this.fetchedIncidentFieldDefinitions) {
-        // no fields currently defined
-        tmpField.locked = true;
-        tmpField.fieldType = 'undefined';
-        tmpField.lockedReason = 'No fields are currently available from Demisto';
-      }
-      else {
-        // custom field isn't defined in Demisto
-        tmpField.locked = true;
-        tmpField.fieldType = 'undefined';
-        tmpField.lockedReason = 'This field cannot be imported as it is not defined in Demisto';
-      }
-      tmpCustomFields[shortName] = tmpField;
-    });
-    this.customFields = tmpCustomFields;
-    console.log('IncidentFieldsUIComponent: buildCustomFields(): customFields:', this.customFields);
-  }
-
-
-
   buildIncidentFields(json: any) {
     /*
     Called from onIncidentJsonUploaded(), getSampleIncident(), onConfigOpened()
@@ -494,6 +440,60 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
 
 
 
+  buildCustomFields(customFields) {
+    /*
+    Called from buildIncidentFields()
+    */
+    // console.log('IncidentFieldsUIComponent: buildCustomFields(): customFields:', customFields);
+    let tmpCustomFields: IncidentFields = {};
+    Object.keys(customFields).forEach( shortName => {
+      let value = customFields[shortName];
+      let tmpField: IncidentField = {
+        shortName,
+        value,
+        originalValue: value,
+        enabled: false,
+        custom: true
+      };
+      if (this.fetchedIncidentFieldDefinitions && shortName in this.fetchedIncidentFieldDefinitions) {
+
+        const fetchedField = this.fetchedIncidentFieldDefinitions[shortName];
+        for (const fieldType of this.blacklistedFieldTypes) {
+          // skip blacklisted field types
+          if (fieldType === fetchedField.type) {
+            console.log(`Skipping field '${shortName}' of blacklisted type '${fieldType}'`)
+            return;
+          }
+        }
+
+        tmpField.longName = fetchedField.name;
+        tmpField.locked = false;
+        tmpField.fieldType = fetchedField.type;
+        if (['attachments'].includes(tmpField.fieldType) ) {
+          tmpField.locked = true;
+          tmpField.lockedReason = 'This field type is not supported for import';
+        }
+      }
+      else if (!this.fetchedIncidentFieldDefinitions) {
+        // no fields currently defined
+        tmpField.locked = true;
+        tmpField.fieldType = 'undefined';
+        tmpField.lockedReason = 'No fields are currently available from Demisto';
+      }
+      else {
+        // custom field isn't defined in Demisto
+        tmpField.locked = true;
+        tmpField.fieldType = 'undefined';
+        tmpField.lockedReason = 'This field cannot be imported as it is not defined in Demisto';
+      }
+      tmpCustomFields[shortName] = tmpField;
+    });
+    this.customFields = tmpCustomFields;
+    console.log('IncidentFieldsUIComponent: buildCustomFields(): customFields:', this.customFields);
+  }
+
+
+
   mergeAndKeepLoadedFieldConfig() {
     console.log('IncidentFieldsUIComponent: mergeAndKeepLoadedFieldConfig()');
     // Attempts to keep current field selections and values
@@ -550,9 +550,10 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
 
 
 
-  mergeLoadedFieldConfig(savedIncidentConfig: FieldConfig) {
+  mergeLoadedFieldConfig(savedIncidentConfig: IncidentConfig) {
     /*
-    Takes a saved incident field configuration and compares it with the config from the current Demisto endpoint.
+    Takes a saved incident field configuration and compares it with already-loaded incident fields.  This sets value and originalValue to what's in the incident config.
+    If a field isn't locked, it will set its enabled value.
     Called from onConfigOpened(), switchCurrentDemistoEndpoint(), onDemistoEndpointUpdated()
     Does not need to be called from onIncidentJsonUploaded() because uploaded JSON...
     doesn't contain info on which fields to enable
@@ -560,20 +561,22 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
 
     console.log('IncidentFieldsUIComponent: mergeLoadedFieldConfig(): savedIncidentConfig:', savedIncidentConfig);
 
-    for (const field of Object.values(savedIncidentConfig.incidentFieldsConfig)) {
-      const shortName = field.shortName;
+    for (const newIncidentField of Object.values(savedIncidentConfig.incidentFieldsConfig)) {
+      // loop through the incident fields of the saved incident config
+      const shortName = newIncidentField.shortName;
       if (!(shortName in this.incidentFields)) {
         console.warn(`Loaded incident contained incident field '${shortName}', which was not available for inclusion.  It may have previously been skipped due to it being read-only or a blacklisted field type, such as a timer field`)
         continue;
       }
       if (!this.incidentFields[shortName].locked) {
-        this.incidentFields[shortName].enabled = field.enabled;
+        this.incidentFields[shortName].enabled = newIncidentField.enabled;
       }
-      this.incidentFields[shortName].value = field.value;
-      this.incidentFields[shortName].originalValue = field.value;
+      this.incidentFields[shortName].value = newIncidentField.value;
+      this.incidentFields[shortName].originalValue = newIncidentField.value;
     }
 
     for (const field of Object.values(savedIncidentConfig.customFieldsConfig)) {
+      // loop through the custom fields of the saved incident config
       const shortName = field.shortName;
       if (!(shortName in this.customFields)) {
         console.warn(`Loaded incident contained incident custom field '${shortName}', which was not available for inclusion.  It may have previously been skipped due to it being read-only or a blacklisted field type, such as a timer field`)
@@ -620,7 +623,7 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
 
   async onSaveClicked() {
     console.log('IncidentFieldsUIComponent(): onSaveClicked()');
-    let config: FieldConfig = {
+    let config: IncidentConfig = {
       name: this.loadedIncidentConfigName,
       incident: this.json,
       incidentFieldsConfig: this.buildFieldConfig(this.incidentFields),
@@ -657,7 +660,7 @@ export class IncidentFieldsUIComponent implements OnInit, AfterViewInit, OnChang
 
     let newIncidentConfigName: string;
 
-    const incident_config: FieldConfig = {
+    const incident_config: IncidentConfig = {
       name: this.saveAsConfigName,
       incident: this.json,
       incidentFieldsConfig: this.buildFieldConfig(this.incidentFields),

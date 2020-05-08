@@ -4,7 +4,7 @@ import { User } from './types/user';
 import { DemistoEndpointStatus } from './types/demisto-endpoint-status';
 import { FetchedIncidentField } from './types/fetched-incident-field';
 import { FetchedIncidentType } from './types/fetched-incident-types';
-import { FieldConfig, FieldsConfig } from './types/fields-config';
+import { IncidentConfig, IncidentConfigs } from './types/incident-config';
 import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
 import { DefaultDemistoEndpoint } from './types/default-demisto-endpoint';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
@@ -215,11 +215,11 @@ export class FetcherService {
 
 
 
-  getSavedIncidentConfigurations(): Promise<FieldsConfig> {
+  getSavedIncidentConfigurations(): Promise<IncidentConfigs> {
     let headers = this.buildHeaders();
     return this.http.get(this.apiPath + '/incidentConfig/all', { headers } )
                     .toPromise()
-                    .then(value => value as FieldsConfig);
+                    .then(value => value as IncidentConfigs);
   }
 
 
@@ -257,7 +257,7 @@ export class FetcherService {
 
 
 
-  saveNewIncidentConfiguration(config: FieldConfig): Promise<any> {
+  saveNewIncidentConfiguration(config: IncidentConfig): Promise<any> {
     let headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/incidentConfig', config, { headers } )
                     .toPromise();
@@ -265,7 +265,7 @@ export class FetcherService {
 
 
 
-  saveIncidentConfiguration(config: FieldConfig): Promise<any> {
+  saveIncidentConfiguration(config: IncidentConfig): Promise<any> {
     let headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/incidentConfig/update', config, { headers } )
                     .toPromise();

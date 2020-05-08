@@ -176,7 +176,13 @@
       <div
         *ngIf="json && detectedFieldType !== 'object' && jmesPath !== ''"
         class="jmesPathResolved"
-        [class.jmesPathError]="jmesPathResolveError">
+        [class.jmesPathError]="jmesPathResolveError !== undefined">
+          <span
+            *ngIf="jmesPathResolveError"
+            class="pi pi-info-circle"
+            style="color: white;"
+            [pTooltip]="jmesPathResolveError">
+          </span>
           {{resolvedValue}}
       </div>
 

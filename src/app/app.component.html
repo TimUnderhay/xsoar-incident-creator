@@ -31,13 +31,13 @@
 
         <p-message
           *ngIf="currentDemistoEndpointInit"
-          severity="success" text="Endpoint Initialised">
+          severity="success" text="XSOAR Connected">
         </p-message>
 
         <p-message
           *ngIf="!currentDemistoEndpointInit"
           severity="error"
-          text="Endpoint Not Initialised">
+          text="XSOAR Not Connected">
         </p-message>
 
 
@@ -53,6 +53,12 @@
       <div style="margin-top: 1em;">
         
         <!-- <span class="formLabel"> - OR -&nbsp;&nbsp;&nbsp;</span> -->
+
+        <!-- New Mapping -->
+        <p-button
+          label="New Mapping"
+          (onClick)="onNewJsonMappingClicked()">
+        </p-button>
         
         <!-- Open -->
         <p-button
@@ -87,12 +93,6 @@
           pTooltip="Import an incident from a JSON file"
           showDelay="750">
         </p-fileUpload>
-
-        <!-- New JSON Mapping -->
-        <p-button
-          label="New JSON Mapping"
-          (onClick)="onNewJsonMappingClicked()">
-        </p-button>
 
         <!-- Save -->
         <p-button
@@ -137,6 +137,7 @@
 
 
     <!-- Incident Fields UI -->
+    <!--
     <incident-fields-ui
       *ngIf="fetchedIncidentFieldDefinitions && showIncidentFieldsUI"
       [loadedIncidentConfigName]="loadedIncidentConfigName"
@@ -150,21 +151,32 @@
       (messagesReplace)="messagesReplace($event)"
       (messageWithAutoClear)="messageWithAutoClear($event)"
       (reloadFieldDefinitions)="fetchIncidentFieldDefinitions($event)">
-    </incident-fields-ui>
+    </incident-fields-ui>-->
 
 
 
     <freeform-json-ui
       *ngIf="showJsonMappingUI && fetchedIncidentFieldDefinitions && fetchedIncidentTypes"
-      [loadedJsonMappingConfigName]="loadedJsonMappingConfigName"
+
+      [loadedIncidentConfigName]="loadedIncidentConfigName"
+      [loadedIncidentConfigId]="loadedIncidentConfigId"
+      [loadDefaultChosenFields]="loadDefaultChosenFields"
+
       [currentDemistoEndpointName]="currentDemistoEndpointName"
       [currentDemistoEndpointInit]="currentDemistoEndpointInit"
       [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
       [fetchedIncidentTypes]="fetchedIncidentTypes"
+      
+      (saveAsButtonEnabledChange)="saveAsButtonEnabled = $event"
+      [savedIncidentConfigurations]="savedIncidentConfigurations"
+      (savedIncidentConfigurationsChanged)="onSavedIncidentConfigurationsChanged($event)"
+
+      [savedJsonConfigurations]="savedJsonConfigurations"
       (messagesReplace)="messagesReplace($event)"
       (messageWithAutoClear)="messageWithAutoClear($event)"
-      [savedJsonConfigurations]="savedJsonConfigurations"
-      (freeformJsonConfigurationsChanged)="getSavedJsonConfigurations()">
+      (freeformJsonConfigurationsChanged)="getSavedJsonConfigurations()"
+
+      (reloadFieldDefinitions)="fetchIncidentFieldDefinitions($event)">
     </freeform-json-ui>
     
     <div>&nbsp;</div>
@@ -236,13 +248,13 @@
       <p-message
         *ngIf="currentDemistoEndpointInit"
         severity="success"
-        text="Endpoint Initialised">
+        text="XSOAR Connected">
       </p-message>
       
       <p-message
         *ngIf="!currentDemistoEndpointInit"
         severity="error"
-        text="Endpoint Not Initialised">
+        text="XSOAR Not Connected">
       </p-message>
 
     </div>

@@ -1,4 +1,4 @@
-import { MappingMethod } from '../freeform-json-row.component';
+export type MappingMethod = 'static' | 'jmespath'; // 'randomised'
 
 export type FieldType = 'shortText' | 'longText' | 'singleSelect' | 'multiSelect' | 'grid' | 'internal' | 'number' | 'date' | 'timer' | 'boolean' | 'url' | 'html' | 'role' | 'attachments' | 'markdown' | 'tagsSelect' | 'user' | 'undefined';
 
@@ -14,11 +14,11 @@ export interface IncidentField extends Object {
   lockedReason?: string;
   value?: any;
   jmesPath?: any;
-  originalValue: any;
+  originalValue?: any;
   fieldType?: FieldType;
   custom: boolean; // used by FieldDisplayComponent
   selectValues?: any; // possible values that the field can hold.  For singleSelect and multiSelect fields 
-  mappingMethod?: MappingMethod;
+  mappingMethod: MappingMethod;
   permitNullValue?: boolean;
 }
 

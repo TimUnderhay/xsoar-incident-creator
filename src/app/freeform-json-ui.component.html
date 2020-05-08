@@ -1,8 +1,8 @@
 <!-- Loaded Configuration Name Container -->
-<p-card *ngIf="loadedJsonMappingConfigName" header="Loaded Mapping Name">
+<p-card *ngIf="loadedIncidentConfigName" header="Loaded Mapping Name">
   
   <div style="margin-top: 1em;">
-    <span class="formLabel" style="font-size: 18px;">{{loadedJsonMappingConfigName}}</span>
+    <span class="formLabel" style="font-size: 18px;">{{loadedIncidentConfigName}}</span>
   </div>
 
 </p-card>
@@ -17,27 +17,47 @@
     <p-card header="Incident">
 
       <!-- Select Incident Type -->
-      <div style="margin-top: 0; margin-bottom: 1em;">
+      <div style="margin-top: 0; margin-bottom: 1em; display: flex; flex-direction: row;">
 
-        <span
-          class="fieldLabel"
-          pTooltip="Select an incident type.  This will control which fields are available to you, based on field definitions loaded from Cortex XSOAR.  Changing this will wipe out all selections.">
-          Source Incident Type:&nbsp;&nbsp;
-        </span>
-    
-        <p-dropdown
-          [options]="incidentTypeItems"
-          [(ngModel)]="selectedIncidentType"
-          (onChange)="onIncidentTypeChanged($event.value)"
-          [filter]="true"
-          placeholder="Select an incident type"
-          [style]="{'width': '40em'}">
-        </p-dropdown>
+        <div class="verticalCenter">
+
+          <div></div>
+          <div>
+            
+            <span
+              class="fieldLabel"
+              pTooltip="Select an incident type.  This will control which fields are available to you, based on field definitions loaded from Cortex XSOAR.  Changing this will wipe out all selections.">
+                Source Incident Type:
+                <i
+                  class="pi pi-info-circle"
+                  style="line-height: 14px; vertical-align: middle; font-size: 2em;"
+                  pTooltip="This controls which fields are available to be added.  If its value is changed, some fields may become locked if they are not associated with the newly-selected incident type">
+                </i>
+                &nbsp;&nbsp;
+              </span>
+            </div>
+            <div></div>
+
+        </div>
+
+        <div style="flex-grow: 1;">
+
+          <p-dropdown
+            [options]="incidentTypeItems"
+            [(ngModel)]="selectedIncidentType"
+            (onChange)="onIncidentTypeChanged($event.value)"
+            [filter]="true"
+            placeholder="Select an incident type"
+            [style]="{'width': '100%'}">
+          </p-dropdown>
+
+        </div>
       
       </div>
 
       <!-- Menu Bar -->
-      <div *ngIf="selectedIncidentType" class="menuContainer">
+      <!-- *ngIf="selectedIncidentType" -->
+      <div class="menuContainer">
 
         <!-- I don't think reset is required for freeform -->
         <!-- <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()" [disabled]="!currentDemistoEndpointInit"></p-button>--> 
@@ -47,6 +67,7 @@
 
           <p-button type="button" label="Add Field" (onClick)="onAddIncidentFieldClicked()"></p-button>
 
+          <!-- Short / Long Field Names -->
           <p-toggleButton
             name="shortFieldNames"
             [onLabel]="shortNamesLabel"
@@ -55,14 +76,24 @@
             [disabled]="!currentDemistoEndpointInit">
           </p-toggleButton>
 
+          <!-- Create Investigation Toggle -->
           <p-toggleButton
-            onLabel="Create Investigation On"
+            [onLabel]="'Create Investigation On'"
             offLabel="Create Investigation: Off"
             [(ngModel)]="createInvestigation"
             pTooltip="If enabled, this option will cause an investigation to be created along with a new incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so."
             showDelay="750">
-
           </p-toggleButton>
+
+          <!-- Reload Field Definitions -->
+          <p-button
+            type="button"
+            label="Reload Definitions"
+            name="createIncident"
+            (onClick)="onReloadFieldDefinitions()"
+            [disabled]="!currentDemistoEndpointInit"
+            pTooltip="Reload the field definitions from XSOAR">
+          </p-button>
 
         </span>
 
@@ -79,7 +110,8 @@
       </div>
 
       <!-- Incident Fields -->
-      <div *ngIf="selectedIncidentType" class="freeformFieldContainer">
+      <!-- *ngIf="selectedIncidentType" -->
+      <div class="freeformFieldContainer">
 
         <div>
           <p-checkbox
@@ -157,8 +189,17 @@
         </p-fileUpload>
         
       </ng-template>
+
+      
       
       <ng-template #menuBar>
+
+        <!-- Loaded JSON Name -->
+        <header
+          *ngIf="loadedJsonConfigName"
+          style="margin: .25em 0 .25em 0;">
+            Loaded: <span style="color: white">{{loadedJsonConfigName}}</span>
+        </header>
 
         <!-- Menu Bar -->
         <div>
@@ -166,7 +207,7 @@
           <!-- Open -->
           <p-button
             label="Open"
-            (onClick)="onOpenClicked()"
+            (onClick)="onJsonOpenClicked()"
             styleClass="alignButton"
             [disabled]="savedJsonConfigurations.length === 0"
             pTooltip="Open a saved JSON configuration"
@@ -178,22 +219,18 @@
 
           <p-button
             label="Save As"
-            (onClick)="onSaveAsClicked()">
+            (onClick)="onJsonSaveAsClicked()">
           </p-button>
 
           <p-button
             label="Delete"
-            (onClick)="onDeleteConfigClicked()"
+            (onClick)="onJsonDeleteConfigClicked()"
             [disabled]="savedJsonConfigurations.length === 0">
           </p-button>
 
         </div>
 
-        <header
-          *ngIf="loadedJsonConfigName"
-          style="margin: .25em 0 .25em 0;">
-            Loaded: <span style="color: white">{{loadedJsonConfigName}}</span>
-        </header>
+        
         
         <div *ngIf="json" style="overflow-x: auto;">
 
@@ -254,7 +291,7 @@
 
 
   <!-- Open Freeform JSON Config Dialog -->
-  <p-dialog header="Select a JSON Configuration" [(visible)]="showOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="openJsonDialog">
+  <p-dialog header="Select a JSON Configuration" [(visible)]="showJsonOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="openJsonDialog">
 
     <div class="formLabel">Configuration to open</div>
 
@@ -262,7 +299,7 @@
       [options]="freeformJsonConfigurationItems"
       [(ngModel)]="selectedOpenConfig"
       [style]="{'width':'100%'}"
-      (onDblClick)="onConfigOpened()"
+      (onDblClick)="onJsonConfigOpened()"
       [filter]="true">
     </p-listbox>
 
@@ -270,12 +307,12 @@
 
       <p-button
         label="Open"
-        (onClick)="onConfigOpened()">
+        (onClick)="onJsonConfigOpened()">
       </p-button>
 
       <p-button
         label="Cancel"
-        (onClick)="onOpenCanceled()">
+        (onClick)="onJsonOpenCanceled()">
       </p-button>
 
     </div>
@@ -285,7 +322,7 @@
 
 
 <!-- Freeform JSON Save As Dialog -->
-<p-dialog header="Save JSON As" [(visible)]="showSaveAsDialog" [modal]="true" [style]="{width: '300px'}" styleClass="jsonSaveAsDialog">
+<p-dialog header="Save JSON As" [(visible)]="showJsonSaveAsDialog" [modal]="true" [style]="{width: '300px'}" styleClass="jsonSaveAsDialog">
 
   <div style="margin-bottom: .5em;" class="formLabel">JSON Configuration Name</div>
 
@@ -295,9 +332,9 @@
 
   <div style="margin-top: .5em; float: right;">
 
-    <p-button label="Save" (onClick)="onSaveAsAccepted()" [disabled]="saveAsOkayButtonDisabled"></p-button>
+    <p-button label="Save" (onClick)="onJsonSaveAsAccepted()" [disabled]="saveAsOkayButtonDisabled"></p-button>
 
-    <p-button label="Cancel" (onClick)="onSaveAsCanceled()"></p-button>
+    <p-button label="Cancel" (onClick)="onJsonSaveAsCanceled()"></p-button>
 
   </div>
 
@@ -323,14 +360,35 @@
 
       <p-button
         label="Delete"
-        (onClick)="onDeleteConfigAccepted()">
+        (onClick)="onJsonDeleteConfigAccepted()">
       </p-button>
 
       <p-button
         label="Cancel"
-        (onClick)="onDeleteConfigCanceled()">
+        (onClick)="onJsonDeleteConfigCanceled()">
       </p-button>
 
     </div>
 
   </p-dialog>
+
+
+
+<!-- Incident Save As Dialog -->
+<p-dialog header="Save Incident As" [(visible)]="showIncidentSaveAsDialog" [modal]="true" [style]="{width: '300px'}" styleClass="saveAsDialog">
+
+  <div style="margin-bottom: .5em;" class="formLabel">Incident Name</div>
+
+  <input pInputText #saveAsInput type="text" [(ngModel)]="saveAsConfigName" class="inputDisplay"/>
+
+  <div style="margin-top: .5em;">{{saveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+
+  <div style="margin-top: .5em; float: right;">
+
+    <p-button label="Save" (onClick)="onIncidentSaveAsAccepted()" [disabled]="saveAsOkayButtonDisabled"></p-button>
+
+    <p-button label="Cancel" (onClick)="onIncidentSaveAsCanceled()"></p-button>
+
+  </div>
+
+</p-dialog>

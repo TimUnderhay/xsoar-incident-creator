@@ -9,7 +9,6 @@ import { AppComponent } from './app.component';
 import { IncidentFieldRowComponent } from './incident-field-row.component';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { JsonViewerComponent } from './json-viewer/json-viewer.component';
-import { IncidentFieldsUIComponent } from './incident-fields-ui.component';
 import { FreeformJsonUIComponent } from './freeform-json-ui.component';
 import { FreeformJsonRowComponent } from './freeform-json-row.component';
 import { NgxJsonViewerComponent } from './ngx-json-viewer/ngx-json-viewer.component';
@@ -47,7 +46,6 @@ import { ClickOutsideModule } from 'ng-click-outside';
     FreeformJsonRowComponent,
     JsonEditorComponent,
     JsonViewerComponent,
-    IncidentFieldsUIComponent,
     FreeformJsonUIComponent,
     NgxJsonViewerComponent
   ],

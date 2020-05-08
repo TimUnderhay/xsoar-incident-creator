@@ -84,6 +84,48 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
 
 
+  ngOnChanges(values: SimpleChanges) {
+    if ('selectionMode' in values) {
+      setTimeout( () => this.enableClickOutside = this.selectionMode );
+    }
+
+    if (!utils.firstOrChangedSimpleChange('json', values)) {
+      return;
+    }
+
+    this.typeOfJson = this.getType(this.json);
+
+    let segments: Segment[] = [];
+
+    if (typeof this.json === 'object') {
+      // object = object, array, null,
+      this.hasExpandableChildren = this.valueHasAnExpandableChild(this.json);
+      Object.keys(this.json).forEach( key => {
+        // if an array, key will be the array index
+        const segment = this.buildSegment(key, this.json[key])
+        segments.push(segment);
+      });
+    }
+
+    else {
+      // we really shouldn't enter this block, as this.json should only ever be an array or an object
+      console.error('NgxJsonViewerComponent: JSON object is not an object!  json:', this.json);
+      this.hasExpandableChildren = this.valueHasAnExpandableChild(this.json);
+      const segment = this.buildSegment(`(${typeof this.json})`, this.json)
+      segments.push(segment);
+    }
+
+    this.segments = segments.sort(this.segmentsSort);
+  }
+
+
+
+  segmentsSort(a: Segment, b: Segment): number {
+    return utils.sortArrayNaturally(a.key, b.key);
+  }
+
+
+
   getSpacerWidth(segment: Segment): number {
     if (this.depth === 1) {
       return this.spacerWidthBaseDepthOne * this.depth;
@@ -128,41 +170,6 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
       }
     }
-  }
-
-
-
-  ngOnChanges(values: SimpleChanges) {
-    if ('selectionMode' in values) {
-      setTimeout( () => this.enableClickOutside = this.selectionMode );
-    }
-
-    if (!utils.firstOrChangedSimpleChange('json', values)) {
-      return;
-    }
-
-    this.typeOfJson = this.getType(this.json);
-
-    let segments: Segment[] = [];
-
-    if (typeof this.json === 'object') {
-      // object = object, array, null,
-      this.hasExpandableChildren = this.valueHasAnExpandableChild(this.json);
-      Object.keys(this.json).forEach( key => {
-        const segment = this.buildSegment(key, this.json[key])
-        segments.push(segment);
-      });
-    }
-
-    else {
-      // we really shouldn't enter this block, as this.json should only ever be an array or an object
-      console.error('NgxJsonViewerComponent: JSON object is not an object!  json:', this.json);
-      this.hasExpandableChildren = this.valueHasAnExpandableChild(this.json);
-      const segment = this.buildSegment(`(${typeof this.json})`, this.json)
-      segments.push(segment);
-    }
-
-    this.segments = segments;
   }
 
 

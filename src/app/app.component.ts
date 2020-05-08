@@ -8,10 +8,10 @@ import { SelectItem, ConfirmationService } from 'primeng/api';
 import { IncidentField, IncidentFields } from './types/incident-fields';
 import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
-import { FieldConfig, FieldsConfig, IncidentFieldsConfig } from './types/fields-config';
+import { IncidentConfig, IncidentConfigs } from './types/incident-config';
 import { PMessageOption } from './types/message-options';
 import { BulkCreateResult } from './types/bulk-create-result';
-import { IncidentFieldsUIComponent } from './incident-fields-ui.component';
+// import { IncidentFieldsUIComponent } from './incident-fields-ui.component.ts.disabled';
 import { FreeformJsonUIComponent } from './freeform-json-ui.component';
 import { Subscription } from 'rxjs';
 import * as utils from './utils';
@@ -33,7 +33,7 @@ export class AppComponent implements OnInit {
     private changeDetector: ChangeDetectorRef
   ) {}
 
-  @ViewChild(IncidentFieldsUIComponent) incidentFieldsUIComponent: IncidentFieldsUIComponent;
+  // @ViewChild(IncidentFieldsUIComponent) incidentFieldsUIComponent: IncidentFieldsUIComponent;
   @ViewChild(FreeformJsonUIComponent) freeformJsonUIComponent: FreeformJsonUIComponent;
 
   loggedInUser: User;
@@ -54,7 +54,7 @@ export class AppComponent implements OnInit {
   fieldsConfigItems: SelectItem[] = []; // dropdown/listbox options object for all field configs
 
   // Saved Incident Configurations
-  savedIncidentConfigurations: FieldsConfig = {};
+  savedIncidentConfigurations: IncidentConfigs = {};
   get savedIncidentConfigurationsLen(): number {
     // returns the number of saved field configs
     return Object.keys(this.savedIncidentConfigurations).length;
@@ -109,14 +109,14 @@ export class AppComponent implements OnInit {
   demistoEndpointToDelete: string;
 
   saveAsButtonEnabled = false;
+  loadDefaultChosenFields = false;
   
 
   // Incident Fields UI
-  showIncidentFieldsUI = false;
+  // showIncidentFieldsUI = false;
 
   // Json Mapping UI
   showJsonMappingUI = false;
-  loadedJsonMappingConfigName: string; // must clear when a new config is created, when a config is opened, or when the current config is deleted
   loadedJsonMappingConfigId: string; // must clear when a new config is created, when a config is opened, or when the current config is deleted
 
   // Import from Demisto dialog
@@ -517,11 +517,13 @@ export class AppComponent implements OnInit {
       try {
         const parsedIncidentJson = JSON.parse(reader.result as string);
         console.log('AppComponent: onIncidentJsonUploaded(): parsedIncidentJson:', parsedIncidentJson);
-        this.showIncidentFieldsUI = true;
+        // this.showIncidentFieldsUI = true;
+        this.showJsonMappingUI = true;
+        this.loadDefaultChosenFields = false;
         this.loadedIncidentConfigName = undefined;
         this.loadedIncidentConfigId = undefined;
         this.changeDetector.detectChanges();
-        this.incidentFieldsUIComponent.onLoadIncidentJson(parsedIncidentJson);
+        this.freeformJsonUIComponent.onUploadIncidentJson(parsedIncidentJson);
       }
       catch (error) {
         console.error('onIncidentJsonUploaded(): Error parsing uploaded JSON:', error);
@@ -534,10 +536,13 @@ export class AppComponent implements OnInit {
 
 
 
-  onConfigOpened() {
-    console.log('AppComponent: onConfigOpened()');
+  /*onIncidentConfigOpened() {
+  // onConfigOpened() {
+    // legacy - for use with incident-fields-ui.component
+    console.log('AppComponent: onIncidentConfigOpened()');
     this.showOpenDialog = false;
-    this.showIncidentFieldsUI = true;
+    // this.showIncidentFieldsUI = true;
+    this.showJsonMappingUI = false;
     this.changeDetector.detectChanges();
     
     const selectedConfig = this.savedIncidentConfigurations[this.selectedOpenConfig];
@@ -546,27 +551,51 @@ export class AppComponent implements OnInit {
     this.incidentFieldsUIComponent.onConfigOpened(selectedConfig);
 
     this.selectedOpenConfig = ''; // reset selection
+  }*/
+
+
+
+  onConfigOpened() {
+  // onNewConfigOpened() {
+    // new - uses freeform-json-ui.component
+    console.log('AppComponent: onConfigOpened()');
+    this.showOpenDialog = false;
+    // this.showIncidentFieldsUI = true;
+    this.showJsonMappingUI = true;
+    this.loadDefaultChosenFields = false;
+    this.changeDetector.detectChanges();
+    
+    const selectedConfig = this.savedIncidentConfigurations[this.selectedOpenConfig];
+    this.loadedIncidentConfigName = selectedConfig.name;
+    this.loadedIncidentConfigId = selectedConfig.id;
+    this.freeformJsonUIComponent.onIncidentConfigOpened(selectedConfig);
+    this.selectedOpenConfig = ''; // reset selection
   }
 
 
   onSaveAsClicked() {
     console.log('AppComponent: onSaveAsClicked()');
-    if (this.showIncidentFieldsUI) {
+    this.freeformJsonUIComponent.onIncidentSaveAsClicked();
+    /*if (this.showIncidentFieldsUI) {
       this.incidentFieldsUIComponent.onSaveAsClicked();
     }
-    else if (this.showIncidentFieldsUI) {
-      // this.freeformJsonUIComponent.onSaveAsClicked();
-    }
+    else if (this.showJsonMappingUI) {
+      this.freeformJsonUIComponent.onSaveAsClicked();
+    }*/
   }
 
 
 
   async onSaveClicked() {
     console.log('AppComponent: onSaveClicked()');
-    if (this.showIncidentFieldsUI) {
+    /*if (this.showIncidentFieldsUI) {
       await this.incidentFieldsUIComponent.onSaveClicked();
       this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration '${this.selectedOpenConfig}' has been saved`});
-    }
+    }*/
+    
+    await this.freeformJsonUIComponent.onIncidentSaveClicked();
+    this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration '${this.selectedOpenConfig}' has been saved`});
+
     // Get Fields Configurations
     await this.getSavedIncidentConfigurations();
   }
@@ -682,6 +711,7 @@ export class AppComponent implements OnInit {
 
   async onCreateBulkIncidents() {
     console.log('AppComponent: onCreateBulkIncidents()');
+    /*
     this.showBulkCreateDialog = false;
     this.showBulkResultsDialog = true;
     this.changeDetector.detectChanges(); // trigger change detection
@@ -689,6 +719,7 @@ export class AppComponent implements OnInit {
     this.bulkCreateResults = [];
 
     console.log('AppComponent: selectedBulkCreateConfigs:', this.selectedBulkCreateConfigs);
+    */
 
     /*
     Steps to complete:
@@ -702,6 +733,7 @@ export class AppComponent implements OnInit {
     7.  Display results in a column
     */
 
+    /*
     let createIncidentPromises: Promise<any>[] = [];
     let testResults = [];
     let serverFieldDefinitions = {};
@@ -807,6 +839,7 @@ export class AppComponent implements OnInit {
 
     this.selectedBulkCreateConfigs = []; // reset selection
     this.selectedBulkCreateEndpoints = [];
+    */
   }
 
 
@@ -836,7 +869,8 @@ export class AppComponent implements OnInit {
     console.log('AppComponent: switchCurrentDemistoEndpoint(): serverId:', serverId);
 
     const currentDemistoEndpointNameReselected = this.currentDemistoEndpointName === serverId;
-    const noServerPreviouslySelected = !this.currentDemistoEndpointName;
+    const serverPreviouslySelected = this.currentDemistoEndpointName !== undefined;
+    const incidentConfigIsLoaded = this.loadedIncidentConfigName !== undefined;
 
     if (currentDemistoEndpointNameReselected) {
       console.log('AppComponent: switchCurrentDemistoEndpoint(): currentDemistoEndpointName was reselected.  Returning');
@@ -866,21 +900,27 @@ export class AppComponent implements OnInit {
       try {
         await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName);
 
-        if (this.loadedIncidentConfigName && !noServerPreviouslySelected) {
-          const message = `Do you want to attempt to keep your current field values and selections, or reset them to their saved state?`;
+        if (incidentConfigIsLoaded && serverPreviouslySelected) {
+          const message = `Do you want to attempt to keep your current field values and selections, or revert them to their saved state?`;
           this.confirmationService.confirm( {
             message,
-            accept: () => this.incidentFieldsUIComponent.mergeAndKeepLoadedFieldConfig(),
-            reject: () => this.incidentFieldsUIComponent.mergeLoadedFieldConfig(this.savedIncidentConfigurations[this.loadedIncidentConfigName]),
+            icon: '',
+            
             acceptLabel: 'Keep Current Values & Selections',
-            rejectLabel: 'Reset to Saved State',
-            icon: ''
+            accept: () => this.freeformJsonUIComponent.mergeAndKeepLoadedFieldConfig(),
+            
+            rejectLabel: 'Revert to Saved State',
+            // blow away the current config
+            reject: () => this.freeformJsonUIComponent.buildChosenFieldsFromConfig(this.savedIncidentConfigurations[this.loadedIncidentConfigName])
+            
           });
         }
-        else if (this.loadedIncidentConfigName && noServerPreviouslySelected) {
+        else if (incidentConfigIsLoaded && !serverPreviouslySelected) {
+          // an incident config is loaded and no server was previously selected, but now one is selected
+          // destructive
           const selectedConfig = this.savedIncidentConfigurations[this.loadedIncidentConfigName];
-          this.incidentFieldsUIComponent.buildIncidentFields(selectedConfig.incident);
-          this.incidentFieldsUIComponent.mergeLoadedFieldConfig(selectedConfig);
+          this.freeformJsonUIComponent.buildChosenFieldsFromConfig(selectedConfig);
+          // this.freeformJsonUIComponent.mergeLoadedFieldConfig(selectedConfig);
         }
       }
       catch (error) {
@@ -991,7 +1031,7 @@ export class AppComponent implements OnInit {
     if (!this.currentDemistoEndpointInit) {
       // Clear Demisto Incident Field Definitions
       this.fetchedIncidentFieldDefinitions = undefined;
-      this.incidentFieldsUIComponent.mergeAndKeepLoadedFieldConfig();
+      this.freeformJsonUIComponent.mergeAndKeepLoadedFieldConfig();
     }
 
   }
@@ -1078,11 +1118,13 @@ export class AppComponent implements OnInit {
           const message = `Do you want to attempt to keep your current field values and selections, or reset them to their saved state?`;
           this.confirmationService.confirm( {
             message,
-            accept: () => this.incidentFieldsUIComponent.mergeAndKeepLoadedFieldConfig(),
-            reject: () => this.incidentFieldsUIComponent.mergeLoadedFieldConfig(this.savedIncidentConfigurations[this.loadedIncidentConfigName]),
+            icon: '',
+
             acceptLabel: 'Keep Current Values & Selections',
+            accept: () => this.freeformJsonUIComponent.mergeAndKeepLoadedFieldConfig(),
+
             rejectLabel: 'Reset to Saved State',
-            icon: ''
+            reject: () => this.freeformJsonUIComponent.buildChosenFieldsFromConfig(this.savedIncidentConfigurations[this.loadedIncidentConfigName])
           });
         }
       }
@@ -1113,15 +1155,18 @@ export class AppComponent implements OnInit {
 
 
   onNewJsonMappingClicked() {
-    if (this.showIncidentFieldsUI) {
+    if (this.showJsonMappingUI) {
       this.confirmationService.confirm({
         header: `Proceed?`,
         message: `Proceed with creating a new JSON mapping?  Any unsaved changes will be lost.`,
         accept: () => {
-          this.showJsonMappingUI = true;
-          this.showIncidentFieldsUI = false;
+          this.showJsonMappingUI = false;
+          // this.showIncidentFieldsUI = false;
           this.loadedIncidentConfigName = undefined;
           this.loadedIncidentConfigId = undefined;
+          this.changeDetector.detectChanges();
+          this.showJsonMappingUI = true;
+          this.loadDefaultChosenFields = true;
         },
         reject: () => {},
         acceptLabel: `Proceed`,
@@ -1132,7 +1177,8 @@ export class AppComponent implements OnInit {
     }
     else {
       this.showJsonMappingUI = true;
-      this.showIncidentFieldsUI = false;
+      this.loadDefaultChosenFields = true;
+      // this.showIncidentFieldsUI = false;
       this.loadedIncidentConfigName = undefined;
       this.loadedIncidentConfigId = undefined;
       this.loadedIncidentConfigName = undefined;
@@ -1159,8 +1205,8 @@ export class AppComponent implements OnInit {
 
 
 
-  buildFieldsConfigItems(configs: FieldsConfig): SelectItem[] {
-    let items: SelectItem[] = Object.values(configs).map( (config: FieldConfig) =>
+  buildFieldsConfigItems(configs: IncidentConfigs): SelectItem[] {
+    let items: SelectItem[] = Object.values(configs).map( (config: IncidentConfig) =>
       ({ label: config.name, value: config.name })
     );
     return items;
@@ -1195,14 +1241,16 @@ export class AppComponent implements OnInit {
 
 
 
-  async finishLoadFromDemisto() {
-    this.showJsonMappingUI = false;
-    this.showIncidentFieldsUI = true;
+  async loadFromDemisto() {
+    console.log('AppComponent: loadFromDemistoAccepted()');
+    this.showJsonMappingUI = true;
+    this.loadDefaultChosenFields = false;
+    // this.showIncidentFieldsUI = true;
     this.loadedIncidentConfigName = undefined;
     this.loadedIncidentConfigId = undefined;
     this.changeDetector.detectChanges();
     
-    const res = this.incidentFieldsUIComponent.loadFromDemisto(this.demistoIncidentToLoad, this.demistoEndpointToLoadFrom);
+    const res = await this.freeformJsonUIComponent.loadFromDemisto(this.demistoIncidentToLoad, this.demistoEndpointToLoadFrom);
     if (res) {
       this.demistoEndpointToLoadFrom = '';
       this.demistoIncidentToLoad = '';
@@ -1219,7 +1267,7 @@ export class AppComponent implements OnInit {
       this.confirmationService.confirm({
         header: `Proceed?`,
         message: `Proceed with loading an XSOAR incident?  Any unsaved changes will be lost.`,
-        accept: async () => await this.finishLoadFromDemisto(),
+        accept: async () => await this.loadFromDemisto(),
         reject: () => {},
         acceptLabel: `Proceed`,
         rejectLabel: `Cancel`,
@@ -1228,7 +1276,7 @@ export class AppComponent implements OnInit {
       });
     }
     else {
-      await this.finishLoadFromDemisto();
+      await this.loadFromDemisto();
     }
 
   }

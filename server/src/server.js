@@ -777,7 +777,7 @@ function saveIncidentsConfig() {
 app.post(apiPath + '/incidentConfig', async (req, res) => {
   // save a new incident config
   let body = req.body;
-  const requiredFields = ['name', 'incident', 'customFieldsConfig', 'incidentFieldsConfig', 'createInvestigation'];
+  const requiredFields = ['name', 'chosenFields', 'createInvestigation', 'incidentType'];
 
   try {
     checkForRequiredFields(requiredFields, body);
@@ -789,10 +789,9 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
 
   const name = body.name;
   const id = uuidv4();
-  const incident = body.incident;
-  const customFieldsConfig = body.customFieldsConfig;
-  const incidentFieldsConfig = body.incidentFieldsConfig;
+  const chosenFields = body.chosenFields;
   const createInvestigation = body.createInvestigation;
+  const incidentType = body.incidentType;
 
   // check for existing config name
   if (name in incidentsConfig) {
@@ -805,9 +804,8 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
   const entry = {
     name,
     id,
-    incident,
-    customFieldsConfig,
-    incidentFieldsConfig,
+    incidentType,
+    chosenFields,
     createInvestigation
   };
 
@@ -822,7 +820,7 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
 app.post(apiPath + '/incidentConfig/update', async (req, res) => {
   // update an existing field config
   const body = req.body;
-  const requiredFields = ['name', 'id', 'incident', 'customFieldsConfig', 'incidentFieldsConfig', 'createInvestigation'];
+  const requiredFields = ['name', 'chosenFields', 'createInvestigation', 'incidentType'];
 
   for (let i = 0; i < requiredFields.length; i++) {
     // check for valid request
@@ -844,9 +842,8 @@ app.post(apiPath + '/incidentConfig/update', async (req, res) => {
   const updatedField = {
     name: body.name,
     id: body.id,
-    incident: body.incident,
-    customFieldsConfig: body.customFieldsConfig,
-    incidentFieldsConfig: body.incidentFieldsConfig,
+    incidentType: body.incidentType,
+    chosenFields: body.chosenFields,
     createInvestigation: body.createInvestigation
   };
 

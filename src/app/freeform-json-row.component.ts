@@ -9,8 +9,6 @@ import * as utils from './utils';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
 declare var jmespath: any;
 
-export type MappingMethod = 'static' | 'jmespath'; // 'randomised'
-
 @Component({
   // tslint:disable-next-line:component-selector
   selector: 'freeform-json-row',
@@ -298,8 +296,15 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
       this.detectedFieldType = this.identifyType(this.value);
     }
     catch(error) {
-      console.error(error);
-      this.jmesPathResolveError = error;
+      // console.error(error);
+      if (error.name === 'ParserError') {
+        console.log('JMESPath.search error:', 'message' in error ? error.message : error);
+        this.jmesPathResolveError = error.message;
+        this.resolvedValue = 'null';
+     }
+     else {
+       console.error('JMESPath.search error:', error);
+     }
     }
   }
 
@@ -354,6 +359,7 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     let config: DynamicDialogConfig = {
       header: `JSON viewer for field '${this.field.shortName}'`,
       closable: true,
+      closeOnEscape: true,
       data: {
         value,
         readOnly: true
@@ -372,6 +378,7 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     let config: DynamicDialogConfig = {
       header: `JSON ${this.field.locked ? 'viewer' : 'editor'} for field '${this.field.shortName}'`,
       closable: true,
+      closeOnEscape: true,
       data: {
         value: this.field.value,
         readOnly: this.field.locked
