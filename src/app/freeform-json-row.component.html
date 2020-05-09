@@ -2,7 +2,15 @@
   
   <!-- Enabled -->
   <div style="vertical-align: top;">
-    <p-checkbox [(ngModel)]="enabled" (onChange)="onEnabledSelectionChanged($event)" [binary]="true" [disabled]="field.locked" standalone></p-checkbox>
+
+    <p-checkbox
+      [(ngModel)]="enabled"
+      (onChange)="onEnabledSelectionChanged($event)"
+      [binary]="true"
+      [disabled]="field.shortName === 'type' || field.locked"
+      standalone>
+    </p-checkbox>
+
   </div>
 
   <!-- Field Name -->
@@ -109,8 +117,8 @@
       <div
         style="margin-left: .1em; font-size: 2em;"
         class="pi pi-refresh"
-        [class.enabledIcon]="field.value !== field.originalValue"
-        [class.disabledIcon]="field.value === field.originalValue"
+        [class.enabledIcon]="field.shortName !== 'type' && field.value !== field.originalValue"
+        [class.disabledIcon]="field.shortName === 'type' && field.value === field.originalValue"
         (mouseover)="resetValueHovering = true"
         (mouseout)="resetValueHovering = false"
         [style.cursor]="field.value !== field.originalValue && resetValueHovering ? 'pointer' : 'default'"

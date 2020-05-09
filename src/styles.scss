@@ -42,7 +42,11 @@ body {
 }
 
 .bodyHeader {
-  margin-bottom: .25em;
+  // margin-bottom: .25em;
+  margin-top: .5em;
+  font-size: 2.75em;
+  font-family: 'Decimal Medium';
+  font-weight: bold;
 }
 
 .success {
@@ -114,6 +118,7 @@ body .ui-dialog-content {
   right: 0;
   overflow: auto;
   max-height: 100%;
+  padding: .5em;
 }
 
 .fieldContainer {

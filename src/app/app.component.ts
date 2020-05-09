@@ -896,9 +896,8 @@ export class AppComponent implements OnInit {
     }
 
     if (this.currentDemistoEndpointInit) {
-      // Refresh Demisto Incident Fields
       try {
-        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName);
+        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName); // Refresh Demisto Incident Fields
 
         if (incidentConfigIsLoaded && serverPreviouslySelected) {
           const message = `Do you want to attempt to keep your current field values and selections, or revert them to their saved state?`;
@@ -907,7 +906,7 @@ export class AppComponent implements OnInit {
             icon: '',
             
             acceptLabel: 'Keep Current Values & Selections',
-            accept: () => this.freeformJsonUIComponent.mergeAndKeepLoadedFieldConfig(),
+            accept: () => this.freeformJsonUIComponent.updateChosenFieldLocks(),
             
             rejectLabel: 'Revert to Saved State',
             // blow away the current config
@@ -1031,7 +1030,7 @@ export class AppComponent implements OnInit {
     if (!this.currentDemistoEndpointInit) {
       // Clear Demisto Incident Field Definitions
       this.fetchedIncidentFieldDefinitions = undefined;
-      this.freeformJsonUIComponent.mergeAndKeepLoadedFieldConfig();
+      this.freeformJsonUIComponent.updateChosenFieldLocks();
     }
 
   }
@@ -1121,7 +1120,7 @@ export class AppComponent implements OnInit {
             icon: '',
 
             acceptLabel: 'Keep Current Values & Selections',
-            accept: () => this.freeformJsonUIComponent.mergeAndKeepLoadedFieldConfig(),
+            accept: () => this.freeformJsonUIComponent.updateChosenFieldLocks(),
 
             rejectLabel: 'Reset to Saved State',
             reject: () => this.freeformJsonUIComponent.buildChosenFieldsFromConfig(this.savedIncidentConfigurations[this.loadedIncidentConfigName])

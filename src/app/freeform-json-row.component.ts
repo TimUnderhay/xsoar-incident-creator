@@ -177,6 +177,9 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
 
 
   onResetValueClicked(custom: boolean = null) {
+    if (this.field.shortName === 'type') {
+      return;
+    }
     if (custom !== null && custom !== this.field.custom) {
       return;
     }
@@ -187,8 +190,6 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
       this.dateFieldValue = new Date(this.field.originalValue);
     }
     this.value = this.field.originalValue;
-    // this.field.value = this.field.originalValue;
-    // this.fieldChange.emit(this.field);
   }
 
 
