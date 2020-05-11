@@ -130,7 +130,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
     if (this.depth === 1) {
       return this.spacerWidthBaseDepthOne * this.depth;
     }
-    if (!this.hasExpandableChildren) {
+    if (!this.hasExpandableChildren && this.depth > 2) {
       return this.spacerWidthBase * this.depth - this.spacerWidthBase * .7;
     }
     return this.spacerWidthBase * this.depth;

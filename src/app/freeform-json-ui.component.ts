@@ -638,10 +638,11 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       else {
         const resultMessage = `XSOAR incident created from raw JSON with id ${res.id} on server '${endpoint}'`;
         this.messageAdd.emit( { severity: 'success', summary: 'Success', detail: resultMessage} );
-        this.showCreateIncidentFromJsonDialog = false;
       }
-
+      
     }
+    this.showCreateIncidentFromJsonDialog = false;
+    this.selectedRawJsonCreationEndpoints = [];
     
   }
 
