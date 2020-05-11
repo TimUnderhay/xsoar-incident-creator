@@ -16,6 +16,7 @@ import { FreeformJSONConfig } from './types/freeform-json-config';
 import { IncidentConfig, IncidentConfigs, IncidentFieldConfig, IncidentFieldsConfig } from './types/incident-config';
 import { InvestigationFields as investigationFields } from './investigation-fields';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
+import { newArray } from '@angular/compiler/src/util';
 declare var jmespath: any;
 
 @Component({
@@ -47,10 +48,12 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   }
   @Input() savedJsonConfigurations: string[];
   @Input() savedIncidentConfigurations: IncidentConfigs;
+  @Input() demistoEndpointsItems: SelectItem[]; // holds list of endpoints for PrimeNG
 
   // PrimeNG Messages Popup Inputs / Outputs
   @Output() messagesReplace = new EventEmitter<PMessageOption[]>();
   @Output() messageWithAutoClear = new EventEmitter<PMessageOption>();
+  @Output() messageAdd = new EventEmitter<PMessageOption>();
   @Output() freeformJsonConfigurationsChanged = new EventEmitter<void>();
   @Output() savedIncidentConfigurationsChanged = new EventEmitter<string>();
   
@@ -80,9 +83,11 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   
   // PrimeNG Selected Values
   selectedIncidentType: string;
+  selectedIncidentTypeAvailable = false;
   displayAddIncidentFieldDialog = false;
   selectedFieldsToAdd: string[];
   createInvestigation = true;
+  selectedRawJsonCreationEndpoints: string[] = [];
 
   // PrimeNG Items
   incidentTypeItems: SelectItem[];
@@ -106,6 +111,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     return this.savedJsonConfigurations.includes(this.saveAsConfigName);
   }
   loadedJsonConfigName: string;
+  showCreateIncidentFromJsonDialog = false;
   
 
   // UI Labels
@@ -135,10 +141,6 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   ngOnInit() {
     console.log('FreeformJsonUIComponent: ngOnInit(): fetchedIncidentFieldDefinitions:', this.fetchedIncidentFieldDefinitions);
 
-    if (this.fetchedIncidentTypes && this.fetchedIncidentFieldDefinitions) {
-      this.buildIncidentTypeItems();
-    }
-
     // setTimeout( () => this.json = SampleIncident ); // comment out before committing to dev/master
 
     // Take Subscriptions
@@ -157,8 +159,17 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   ngOnChanges(values: SimpleChanges) {
     // console.log('FreeformJsonUIComponent: ngOnChanges(): values:', values);
+
     if (utils.firstOrChangedSimpleChange('savedJsonConfigurations', values)) {
       this.freeformJsonConfigurationItems = this.savedJsonConfigurations.map( configName => ( { value: configName, label: configName } as SelectItem) ).sort();
+    }
+
+    if (utils.firstOrChangedSimpleChange('fetchedIncidentTypes', values)) {
+      this.buildIncidentTypeItems();
+    }
+
+    if (utils.changedSimpleChange('fetchedIncidentFieldDefinitions', values)) {
+      this.onFetchedIncidentFieldDefinitionsChanged();
     }
   }
 
@@ -179,6 +190,14 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       items.push(item);
     }
     this.incidentTypeItems = items;
+    
+    if (this.selectedIncidentType && !this.fetchedIncidentTypeNames.includes(this.selectedIncidentType)) {
+      // the selected incident type is no longer defined in XSOAR
+      this.selectedIncidentTypeAvailable = false;
+    }
+    else if (this.selectedIncidentType) {
+      this.selectedIncidentTypeAvailable = true;
+    }
   }
 
 
@@ -592,6 +611,38 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       this.messagesReplace.emit( [{ severity: 'success', summary: 'Success', detail: resultMessage}] );
     }
 
+  }
+
+
+
+  async onCreateIncidentFromJson() {
+    // console.log('FreeformJsonUIComponent: onCreateIncidentFromJson()');
+
+    this.messagesReplace.emit([]);
+
+    for (const endpoint of this.selectedRawJsonCreationEndpoints) {
+      const incident: any = {
+        serverId: endpoint,
+        json: this.json
+      };
+  
+      console.log('FreeformJsonUIComponent: onCreateIncidentFromJson(): incident:', incident);
+  
+      let res = await this.fetcherService.createDemistoIncidentFromJson(incident);
+      // console.log('FreeformJsonUIComponent: onCreateIncidentFromJson(): res:', res);
+
+      if (!res.success) {
+        const resultMessage = `Incident creation failed on '${endpoint}' with XSOAR status code ${res.statusCode}: "${res.statusMessage}"`;
+        this.messageAdd.emit( { severity: 'error', summary: 'Failure', detail: resultMessage} );
+      }
+      else {
+        const resultMessage = `XSOAR incident created from raw JSON with id ${res.id} on server '${endpoint}'`;
+        this.messageAdd.emit( { severity: 'success', summary: 'Success', detail: resultMessage} );
+        this.showCreateIncidentFromJsonDialog = false;
+      }
+
+    }
+    
   }
 
 
@@ -1070,17 +1121,29 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
       const fetchedField = this.fetchedIncidentFieldDefinitions[shortName];
 
+      if (!fetchedField) {
+        console.log(`Field '${fieldConfig.shortName}' has been removed from the XSOAR field definitions`);
+        newConfig.locked = true;
+        newConfig.lockedReason = 'Field is not defined in XSOAR';
+        newConfig.fieldType = 'undefined';
+        // delete newConfig.longName;
+      }
+
+      else if (fetchedField.isReadOnly) {
+        console.warn(`Not adding read-only incident field '${shortName}'`);
+        skippedIncidentFields.push(shortName);
+        return;
+      }
+
       // skip blacklisted field types
-      if (this.blacklistedFieldTypes.includes(fetchedField.type)) {
+      else if (this.blacklistedFieldTypes.includes(fetchedField.type)) {
         console.log(`Not adding field '${shortName}' of blacklisted type '${fetchedField.type}'`)
         skippedIncidentFields.push(shortName);
         return;
       }
 
-      if (fetchedField.isReadOnly) {
-        console.warn(`Not adding read-only incident field '${shortName}'`);
-        skippedIncidentFields.push(shortName);
-        return;
+      if (fetchedField) {
+        newConfig.longName = fetchedField.name;
       }
 
       chosenIncidentFields.push(newConfig);
@@ -1106,9 +1169,12 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     this.saveAsButtonEnabled = true;
     if (this.fetchedIncidentTypeNames.includes(selectedConfig.incidentType)) {
       this.selectedIncidentType = selectedConfig.incidentType;
+      this.selectedIncidentTypeAvailable = true;
     }
     else {
       // The incident type isn't defined in XSOAR
+      this.selectedIncidentType = selectedConfig.incidentType;
+      this.selectedIncidentTypeAvailable = false;
       this.updateChosenFieldLocks();
     }
   }
@@ -1312,6 +1378,25 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
+  /*onFetchedFieldDefinitionsChanged_NonDestructive() {
+    console.log('FreeformJsonUIComponent: onFetchedFieldDefinitionsChanged_NonDestructive()');
+  }*/
+
+
+
+  async onReloadFieldDefinitions(serverId = this.currentDemistoEndpointName) {
+    /*
+    Reload Demisto Incident Fields and Merge
+
+    Called from "Reload Definitions" button
+    */
+
+    console.log('FreeformJsonUIComponent: onReloadFieldDefinitions()');
+    this.reloadFieldDefinitions.emit(serverId);
+  }
+
+
+
   updateChosenFieldLocks() {
     console.log('FreeformJsonUIComponent: updateChosenFieldLocks()');
     // Locks chosen fields which are no longer available or applicable to the incident type, and unlocks fields which are available.
@@ -1389,21 +1474,79 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  /*onFetchedFieldDefinitionsChanged_NonDestructive() {
-    console.log('FreeformJsonUIComponent: onFetchedFieldDefinitionsChanged_NonDestructive()');
-  }*/
-
-
-
-  async onReloadFieldDefinitions(serverId = this.currentDemistoEndpointName) {
+  onFetchedIncidentFieldDefinitionsChanged(serverId = this.currentDemistoEndpointName) {
     /*
-    Reload Demisto Incident Fields and Merge
+    Recalculates field properties when server field definitions have possibly changed.
 
-    Called from "Reload Definitions" button
+    Called from onCreateBulkIncidents() and "Reload Definitions" button
     */
+    console.log('FreeformJsonUIComponent: onFetchedIncidentFieldDefinitionsChanged()');
 
-    console.log('FreeformJsonUIComponent: onReloadFieldDefinitions()');
-    this.reloadFieldDefinitions.emit(serverId);
+    if (!this.chosenIncidentFields) {
+      return;
+    }
+
+    this.chosenIncidentFields.forEach(field => {
+      // re-evaluate fields based on new defs
+
+      if (!field.custom) {
+        return;
+      }
+
+      const fieldFound = field.shortName in this.fetchedIncidentFieldDefinitions;
+      const fetchedFieldDefinition: FetchedIncidentField = fieldFound ? this.fetchedIncidentFieldDefinitions[field.shortName] : undefined;
+      const fieldTypesMatch = fieldFound ? field.fieldType === fetchedFieldDefinition.type : undefined;
+      const fieldLongNamesMatch = fieldFound ? field.longName === fetchedFieldDefinition.name : undefined;
+
+      if (!fieldFound) {
+        // look for fields that have been removed from the field definition
+        console.log(`Field '${field.shortName}' has been removed from the XSOAR field definitions`);
+        field.locked = true;
+        field.lockedReason = 'Field is not defined in XSOAR';
+        field.fieldType = 'undefined';
+        delete field.longName;
+      }
+
+      if (fieldFound && (!fieldTypesMatch || !fieldLongNamesMatch)) {
+        // look for fields that have changed in the field definition
+        console.log(`Field type '${field.shortName}' has changed in the XSOAR field definitions`);
+        console.log(`fieldTypesMatch: ${fieldTypesMatch}, fieldLongNamesMatch: ${fieldLongNamesMatch}`);
+        field.fieldType = fetchedFieldDefinition.type;
+        field.longName = fetchedFieldDefinition.name;
+        field.locked = false;
+        delete field.lockedReason;
+      }
+
+      if (fieldFound && field.locked && !this.blacklistedFieldTypes.includes(field.fieldType)) {
+        // look for fields that have been added to the field definition
+        console.log(`Previously-locked field '${field.shortName}' is again available in the XSOAR field definitions`);
+        field.locked = false;
+        if ('lockedReason' in field) {
+          delete field.lockedReason;
+        }
+        field.fieldType = fetchedFieldDefinition.type;
+        field.longName = fetchedFieldDefinition.name;
+      }
+
+      if (fieldFound && this.blacklistedFieldTypes.includes(field.fieldType)) {
+        // look for attachment fields and disable them
+        console.log(`Disabling field '${field.shortName}' as field type '${field.fieldType}' is blacklisted`);
+        field.locked = true;
+        field.lockedReason = `Field type ${field.fieldType} is not supported`;
+      }
+    });
+  }
+
+
+
+  onCreateIncidentFromRawJsonClicked() {
+    this.showCreateIncidentFromJsonDialog = true;
+  }
+
+
+
+  onCreateIncidentFromRawJsonCancelled() {
+    this.showCreateIncidentFromJsonDialog = false;
   }
 
 }

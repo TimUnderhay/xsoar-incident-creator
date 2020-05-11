@@ -75,6 +75,9 @@ ngx-json-viewer {
     // .segment-type-#{$type} > .segment-main > .segment-value {
     .segment-type-#{$type} > .segment-value {
       color: $color;
+      word-break: break-all;
+      // word-break: ;
+      overflow-wrap: anywhere;
     }
   }
   

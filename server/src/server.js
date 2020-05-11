@@ -672,6 +672,86 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
 
 
 
+app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
+  // This method will create an XSOAR incident, per the json property supplied by the client in the body
+
+  const currentUser = req.headers.authorization;
+  const body = req.body;
+
+  const requiredFields = ['serverId', 'json'];
+  try {
+    checkForRequiredFields(requiredFields, body);
+  }
+  catch(fieldName) {
+    res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+    return;
+  }
+  
+  const json = body.json;
+  let demistoServerConfig;
+  try {
+    const serverId = body.serverId;
+    demistoServerConfig = getDemistoApiConfig(serverId);
+  }
+  catch(error) {
+    return returnError('message' in error ? error.message : errror, res, { success: false, statusCode: 500, error });
+  }
+
+  // console.debug(body);
+
+  let result;
+  let options = {
+    url: demistoServerConfig.url + '/incident/json',
+    method: 'POST',
+    headers: {
+      Authorization: decrypt(demistoServerConfig.apiKey),
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    },
+    rejectUnauthorized: !demistoServerConfig.trustAny,
+    resolveWithFullResponse: true,
+    json: true,
+    body: json
+  };
+
+  try {
+    // send request to XSOAR
+    result = await request( options );
+    // console.log('result:', result);
+  }
+  catch (error) {
+    if ( error && 'response' in error && error.response && 'statusCode' in error.response && error.statusCode !== null) {
+      return returnError(`Caught error opening XSOAR incident: code ${error.response.status}: ${error.response.statusMessage}`, res, { success: false, statusCode: error.statusCode, statusMessage: error.response.statusMessage });
+    }
+    else if (error && 'message' in error) {
+      return returnError(`Caught error opening XSOAR incident: ${error.message}`, res, { success: false, statusCode: null, error: error.message });
+    }
+    else {
+      return returnError(`Caught unspecified error opening XSOAR incident: ${error}`, res, { success: false, statusCode: 500, error: 'unspecified' });
+    }
+    return;
+  }
+
+  // console.log('result body:', result.body);
+
+  if (result.body) {
+    const incidentId = result.body.id;
+    // send results to client
+    res.json( { id: incidentId, success: true, statusCode: result.statusCode, statusMessage: result.statusMessage } );
+    // console.debug(result);
+    console.log(`User ${currentUser} created XSOAR incident with id ${incidentId}`);
+  }
+
+  else {
+    // this can happen if an incident didn't get created, possibly due to preprocessing rules
+    const error = `XSOAR did not create an incident based off of the request.  It could be caused by pre-processing rules dropping the incident`
+    res.json( {success: false, statusCode: result.statusCode, statusMessage: error});
+  }
+
+} );
+
+
+
 function saveFreeJsonConfig() {
   return fs.promises.writeFile(freeJsonFile, JSON.stringify(freeJsonConfig, null, 2), { encoding: 'utf8', mode: 0o660});
 }

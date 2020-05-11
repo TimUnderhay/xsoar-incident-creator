@@ -165,6 +165,7 @@
       [loadedIncidentConfigName]="loadedIncidentConfigName"
       [loadedIncidentConfigId]="loadedIncidentConfigId"
       [loadDefaultChosenFields]="loadDefaultChosenFields"
+      [demistoEndpointsItems]="demistoEndpointsItems"
 
       [currentDemistoEndpointName]="currentDemistoEndpointName"
       [currentDemistoEndpointInit]="currentDemistoEndpointInit"
@@ -176,6 +177,7 @@
       (savedIncidentConfigurationsChanged)="onSavedIncidentConfigurationsChanged($event)"
 
       [savedJsonConfigurations]="savedJsonConfigurations"
+      (messageAdd)="messageAdd($event)"
       (messagesReplace)="messagesReplace($event)"
       (messageWithAutoClear)="messageWithAutoClear($event)"
       (freeformJsonConfigurationsChanged)="getSavedJsonConfigurations()"
@@ -464,57 +466,62 @@
 
 
   <!-- Bulk Create Incident Dialog -->
-  <p-dialog header="Bulk Incident Creation" [(visible)]="showBulkCreateDialog" [modal]="true" [style]="{width: '75%', maxHeight: '75%'}" styleClass="bulkCreateDialog">
+  <p-dialog
+    header="Bulk Incident Creation"
+    [(visible)]="showBulkCreateDialog"
+    [modal]="true"
+    [style]="{width: '75%', maxHeight: '75%'}"
+    styleClass="bulkCreateDialog">
 
 
-    <div class="bulkCreateContainer">
+      <div class="bulkCreateContainer">
 
-      <div class="bulkCreateContainerColumn">
+        <div class="bulkCreateContainerColumn">
 
-        <div class="formLabel">Select configurations to push to XSOAR</div>
+          <div class="formLabel">Select configurations to push to XSOAR</div>
 
-        <p-listbox
-          [options]="fieldsConfigItems"
-          [(ngModel)]="selectedBulkCreateConfigs"
-          [style]="{'width':'100%'}"
-          [multiple]="true"
-          [checkbox]="true"
-          [filter]="true">
-        </p-listbox>
+          <p-listbox
+            [options]="fieldsConfigItems"
+            [(ngModel)]="selectedBulkCreateConfigs"
+            [style]="{'width':'100%'}"
+            [multiple]="true"
+            [checkbox]="true"
+            [filter]="true">
+          </p-listbox>
+
+        </div>
+
+        <div class="bulkCreateContainerColumn">
+
+          <div class="formLabel">Select XSOAR servers to push to</div>
+
+          <p-listbox
+            [options]="demistoEndpointsItems"
+            [(ngModel)]="selectedBulkCreateEndpoints"
+            [style]="{'width':'100%'}"
+            [multiple]="true"
+            [checkbox]="true"
+            [filter]="true">
+          </p-listbox>
+
+        </div>
 
       </div>
 
-      <div class="bulkCreateContainerColumn">
+      <div style="margin-top: .5em; float: right;">
 
-        <div class="formLabel">Select XSOAR servers to push to</div>
+        <p-button
+          label="Create Incidents"
+          (onClick)="onCreateBulkIncidents()"
+          [disabled]="selectedBulkCreateConfigs.length === 0 || selectedBulkCreateEndpoints.length === 0">
+        </p-button>
 
-        <p-listbox
-          [options]="demistoEndpointsItems"
-          [(ngModel)]="selectedBulkCreateEndpoints"
-          [style]="{'width':'100%'}"
-          [multiple]="true"
-          [checkbox]="true"
-          [filter]="true">
-        </p-listbox>
+        <p-button
+          label="Cancel"
+          (onClick)="onBulkCreateCanceled()">
+        </p-button>
 
       </div>
-
-    </div>
-
-    <div style="margin-top: .5em; float: right;">
-
-      <p-button
-        label="Create Incidents"
-        (onClick)="onCreateBulkIncidents()"
-        [disabled]="selectedBulkCreateConfigs.length === 0 || selectedBulkCreateEndpoints.length === 0">
-      </p-button>
-
-      <p-button
-        label="Cancel"
-        (onClick)="onBulkCreateCanceled()">
-      </p-button>
-
-    </div>
 
   </p-dialog>
 

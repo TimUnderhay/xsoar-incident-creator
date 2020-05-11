@@ -228,6 +228,12 @@
             [disabled]="savedJsonConfigurations.length === 0">
           </p-button>
 
+          <p-button
+            label="Create Incident"
+            (onClick)="onCreateIncidentFromRawJsonClicked()"
+            [disabled]="!json || !demistoEndpointsItems || (demistoEndpointsItems && demistoEndpointsItems.length === 0)">
+          </p-button>
+
         </div>
 
         
@@ -290,34 +296,34 @@
 
 
 
-  <!-- Open Freeform JSON Config Dialog -->
-  <p-dialog header="Select a JSON Configuration" [(visible)]="showJsonOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="openJsonDialog">
+<!-- Open Freeform JSON Config Dialog -->
+<p-dialog header="Select a JSON Configuration" [(visible)]="showJsonOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="openJsonDialog">
 
-    <div class="formLabel">Configuration to open</div>
+  <div class="formLabel">Configuration to open</div>
 
-    <p-listbox
-      [options]="freeformJsonConfigurationItems"
-      [(ngModel)]="selectedOpenConfig"
-      [style]="{'width':'100%'}"
-      (onDblClick)="onJsonConfigOpened()"
-      [filter]="true">
-    </p-listbox>
+  <p-listbox
+    [options]="freeformJsonConfigurationItems"
+    [(ngModel)]="selectedOpenConfig"
+    [style]="{'width':'100%'}"
+    (onDblClick)="onJsonConfigOpened()"
+    [filter]="true">
+  </p-listbox>
 
-    <div style="margin-top: .5em;">
+  <div style="margin-top: .5em;">
 
-      <p-button
-        label="Open"
-        (onClick)="onJsonConfigOpened()">
-      </p-button>
+    <p-button
+      label="Open"
+      (onClick)="onJsonConfigOpened()">
+    </p-button>
 
-      <p-button
-        label="Cancel"
-        (onClick)="onJsonOpenCanceled()">
-      </p-button>
+    <p-button
+      label="Cancel"
+      (onClick)="onJsonOpenCanceled()">
+    </p-button>
 
-    </div>
+  </div>
 
-  </p-dialog>
+</p-dialog>
 
 
 
@@ -342,35 +348,35 @@
 
 
 
-  <!-- Delete JSON Config Dialog -->
-  <p-dialog header="Delete JSON Configuration" [(visible)]="showDeleteDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="deleteConfigDialog">
+<!-- Delete JSON Config Dialog -->
+<p-dialog header="Delete JSON Configuration" [(visible)]="showDeleteDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="deleteConfigDialog">
 
-    <div class="formLabel">JSON Configurations to delete</div>
+  <div class="formLabel">JSON Configurations to delete</div>
 
-    <p-listbox
-      [options]="freeformJsonConfigurationItems"
-      [(ngModel)]="selectedDeleteConfigs"
-      [multiple]="true"
-      [filter]="true"
-      [checkbox]="true"
-      [style]="{'width':'100%'}">
-    </p-listbox>
+  <p-listbox
+    [options]="freeformJsonConfigurationItems"
+    [(ngModel)]="selectedDeleteConfigs"
+    [multiple]="true"
+    [filter]="true"
+    [checkbox]="true"
+    [style]="{'width':'100%'}">
+  </p-listbox>
 
-    <div style="margin-top: .5em;">
+  <div style="margin-top: .5em;">
 
-      <p-button
-        label="Delete"
-        (onClick)="onJsonDeleteConfigAccepted()">
-      </p-button>
+    <p-button
+      label="Delete"
+      (onClick)="onJsonDeleteConfigAccepted()">
+    </p-button>
 
-      <p-button
-        label="Cancel"
-        (onClick)="onJsonDeleteConfigCanceled()">
-      </p-button>
+    <p-button
+      label="Cancel"
+      (onClick)="onJsonDeleteConfigCanceled()">
+    </p-button>
 
-    </div>
+  </div>
 
-  </p-dialog>
+</p-dialog>
 
 
 
@@ -390,5 +396,53 @@
     <p-button label="Cancel" (onClick)="onIncidentSaveAsCanceled()"></p-button>
 
   </div>
+
+</p-dialog>
+
+
+
+<!-- Create Incident from RAW JSON Dialog -->
+<p-dialog
+  header="Create Incident from Raw JSON"
+  [(visible)]="showCreateIncidentFromJsonDialog"
+  [modal]="true"
+  [style]="{width: '50%', maxHeight: '75%'}"
+  styleClass="bulkCreateDialog">
+
+    <div>
+
+      <div class="formLabel" style="margin-bottom: .5em;">
+        Incidents created using this method will go through incident classification & mapping under the "Demisto REST API" integration in the dropdown in Settings -> Integrations -> Classification & Mapping.  The '/incident/json' XSOAR API call is used for this.
+      </div>
+
+      <div class="formLabel">
+        Select XSOAR servers to push JSON incident to:
+      </div>
+
+      <p-listbox
+        [options]="demistoEndpointsItems"
+        [(ngModel)]="selectedRawJsonCreationEndpoints"
+        [style]="{'width':'100%'}"
+        [multiple]="true"
+        [checkbox]="true"
+        [filter]="true">
+      </p-listbox>
+
+    </div>
+
+    <div style="margin-top: .5em; float: right;">
+
+      <p-button
+        label="Create Incident"
+        (onClick)="onCreateIncidentFromJson()"
+        [disabled]="selectedRawJsonCreationEndpoints.length === 0">
+      </p-button>
+
+      <p-button
+        label="Cancel"
+        (onClick)="onCreateIncidentFromRawJsonCancelled()">
+      </p-button>
+
+    </div>
 
 </p-dialog>

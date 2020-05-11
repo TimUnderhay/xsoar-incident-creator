@@ -14,8 +14,17 @@
   </div>
 
   <!-- Field Name -->
-  <div class="fieldLabel" [class.locked]="field.locked" [pTooltip]="field.lockedReason" [tooltipDisabled]="!field.locked" showDelay="750">
-    &nbsp;{{displayShortNames ? field.shortName : (field.longName ? field.longName : field.shortName)}}&nbsp;
+  <div
+    class="fieldLabel"
+    [class.locked]="field.locked">
+      <span
+      *ngIf="field.locked"
+      class="pi pi-info-circle"
+      style="color: white; line-height: 14px; vertical-align: middle;"
+      [pTooltip]="field.locked ? field.lockedReason : undefined">
+    </span> 
+      {{displayShortNames ? field.shortName : (field.longName ? field.longName : field.shortName)}}
+      
   </div>
 
   <!-- Field Type -->

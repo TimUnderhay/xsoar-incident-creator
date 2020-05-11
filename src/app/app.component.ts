@@ -863,7 +863,7 @@ export class AppComponent implements OnInit {
   async switchCurrentDemistoEndpoint(serverId: string): Promise<void> {
     /*
     Called from onDemistoEndpointSelected()
-    Tests selected server
+    Tests selected server, then fetches the list of incident types, then fetches the field definitions.
     Sets currentDemistoEndpointName and currentDemistoEndpointInit
     */
     console.log('AppComponent: switchCurrentDemistoEndpoint(): serverId:', serverId);
@@ -873,7 +873,7 @@ export class AppComponent implements OnInit {
     const incidentConfigIsLoaded = this.loadedIncidentConfigName !== undefined;
 
     if (currentDemistoEndpointNameReselected) {
-      console.log('AppComponent: switchCurrentDemistoEndpoint(): currentDemistoEndpointName was reselected.  Returning');
+      console.log('AppComponent: switchCurrentDemistoEndpoint(): currentDemistoEndpointName was re-selected.  Returning');
       return;
     }
 
@@ -887,17 +887,22 @@ export class AppComponent implements OnInit {
     }
     catch (error) {
       this.currentDemistoEndpointInit = false;
-      if (testRes) {
-        console.error('AppComponent: switchCurrentDemistoEndpoint(): Error loading Demisto endpoint:', testRes);
-      }
-      else {
-        console.error('AppComponent: switchCurrentDemistoEndpoint(): Error loading Demisto endpoint:', error);
-      }
+      console.error('AppComponent: switchCurrentDemistoEndpoint(): Error loading Demisto endpoint:', testRes ? testRes : error);
     }
 
     if (this.currentDemistoEndpointInit) {
+      
+      // Refresh Demisto Incident Types
       try {
-        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName); // Refresh Demisto Incident Fields
+        await this.fetchIncidentTypes(this.currentDemistoEndpointName);
+      }
+      catch (error) {
+        console.error('AppComponent: switchCurrentDemistoEndpoint(): Caught error fetching Demisto incident types:', error);
+      }
+
+      try {
+        // Refresh Demisto Incident Fields
+        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName);
 
         if (incidentConfigIsLoaded && serverPreviouslySelected) {
           const message = `Do you want to attempt to keep your current field values and selections, or revert them to their saved state?`;
@@ -906,7 +911,8 @@ export class AppComponent implements OnInit {
             icon: '',
             
             acceptLabel: 'Keep Current Values & Selections',
-            accept: () => this.freeformJsonUIComponent.updateChosenFieldLocks(),
+            // accept: () => this.freeformJsonUIComponent.updateChosenFieldLocks(),
+            accept: () => this.freeformJsonUIComponent.onFetchedIncidentFieldDefinitionsChanged(),
             
             rejectLabel: 'Revert to Saved State',
             // blow away the current config
@@ -914,24 +920,19 @@ export class AppComponent implements OnInit {
             
           });
         }
+
         else if (incidentConfigIsLoaded && !serverPreviouslySelected) {
           // an incident config is loaded and no server was previously selected, but now one is selected
           // destructive
           const selectedConfig = this.savedIncidentConfigurations[this.loadedIncidentConfigName];
           this.freeformJsonUIComponent.buildChosenFieldsFromConfig(selectedConfig);
+          // this.freeformJsonUIComponent.updateChosenFieldLocks();
           // this.freeformJsonUIComponent.mergeLoadedFieldConfig(selectedConfig);
         }
+        
       }
       catch (error) {
         console.error('AppComponent: switchCurrentDemistoEndpoint(): Caught error fetching Demisto incident fields:', error);
-      }
-
-      // Refresh Demisto Incident Types
-      try {
-        await this.fetchIncidentTypes(this.currentDemistoEndpointName);
-      }
-      catch (error) {
-        console.error('AppComponent: switchCurrentDemistoEndpoint(): Caught error fetching Demisto incident types:', error);
       }
 
     }

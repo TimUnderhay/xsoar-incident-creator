@@ -186,6 +186,15 @@ export class FetcherService {
 
 
 
+  createDemistoIncidentFromJson( json: any ): Promise<any> {
+    let headers = this.buildHeaders(this.currentUser.username);
+    console.log('FetcherService: createDemistoIncidentFromJson(): Current User: ', this.currentUser.username);
+    return this.http.post(this.apiPath + '/createDemistoIncidentFromJson', json, { headers } )
+                    .toPromise();
+  }
+
+
+
   getIncidentFieldDefinitions(serverId): Promise<FetchedIncidentField[]> {
     serverId = encodeURIComponent(serverId);
     let headers = this.buildHeaders();
