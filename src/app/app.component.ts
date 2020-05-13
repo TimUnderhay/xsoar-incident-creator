@@ -912,11 +912,12 @@ export class AppComponent implements OnInit {
             
             acceptLabel: 'Keep Current Values & Selections',
             // accept: () => this.freeformJsonUIComponent.updateChosenFieldLocks(),
-            accept: () => this.freeformJsonUIComponent.onFetchedIncidentFieldDefinitionsChanged(),
+            // accept: () => this.freeformJsonUIComponent.fieldLockCheck(),
+            accept: () => {},
             
             rejectLabel: 'Revert to Saved State',
             // blow away the current config
-            reject: () => this.freeformJsonUIComponent.buildChosenFieldsFromConfig(this.savedIncidentConfigurations[this.loadedIncidentConfigName])
+            reject: () => this.freeformJsonUIComponent.onIncidentConfigOpened(this.savedIncidentConfigurations[this.loadedIncidentConfigName])
             
           });
         }
