@@ -1,7 +1,42 @@
+@font-face {
+  font-family: 'demisto';
+  src: url(/assets/demisto.woff) format('woff'),
+       url(/assets/demisto.svg#demisto) format('svg');
+  font-weight: normal;
+  font-style: normal;
+}/* Chrome hack: SVG is rendered more smooth in Windozze. 100% magic, uncomment if you need it. *//* Note, that will break hinting! In other OS-es font will be not as sharp as it could be */
+
 body {
   background-color: rgb(26, 50, 66);
   color: white;
   font-family: "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+/* transformer curly-bracket icon */
+.curly-bracket-button {
+  color: #66aeff;
+  cursor: pointer;
+  position: absolute;
+  // top: 9px;
+  top: 0;
+  right: 6px;
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+.curly-bracket-button:before {
+  display: inline-block;
+  content: '\E8FD';
+  box-sizing: border-box;
+  font-family: 'demisto';
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 24px;
+  text-align: center;
+  // text-decoration-color: rgb(102, 174, 255);
+  width: 24px;
+  -webkit-font-smoothing: antialiased;
 }
 
 .demistoForm {
@@ -19,6 +54,13 @@ body {
   grid-column-gap: 1em;
   // position: relative;
   // width: 100%;
+}
+
+.dateTransformGrid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-column-gap: 1em;
+  grid-row-gap: 1em;
 }
 
 /*.column {
@@ -138,7 +180,8 @@ body .ui-dialog-content {
 }
 
 incident-field-row,
-freeform-json-row {
+freeform-json-row,
+.dateTransformDialog {
   display: contents; // fixes css grid for incident-field-line components by passing-through content
 }
 
@@ -157,10 +200,19 @@ header {
   justify-content: space-between;
 }
 
+.spaceAround {
+  justify-content: space-evenly;
+}
+
 .verticalCenter {
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+
+.verticalTop {
+  justify-content: start;
+  padding-top: .5em;
 }
 
 .enabledIcon,
@@ -168,7 +220,8 @@ header {
   color: white;
 }
 
-.jmesPathError {
+.jmesPathError,
+.transformerError {
   color: red;
 }
 
@@ -178,8 +231,6 @@ header {
   justify-content: space-between;
   margin-top: 1em;
 }
-
-
 
 .disabledIcon {
   color: rgb(51, 51, 51);
@@ -282,32 +333,29 @@ body .ui-dropdown { //.ui-dropdown-list
 }
 
 
+
 /////////////////// PrimeNG ///////////////////
 
 * {
-  // undo PrimeNG's global box-sizing change
+  // undo PrimeNG's moronic global box-sizing imposition
   -moz-box-sizing: initial;
   -webkit-box-sizing: initial;
   box-sizing: initial;
 }
 
 
-
-
-
 .fieldLabel {
   color: rgb(126, 126, 126);
   vertical-align: middle;
-  // span { }
 }
 
+.fieldColour {
+  color: rgb(126, 126, 126);
+}
 
-
-/*.alignButton {
-  align-items: initial;
-}*/
-
-
+.dialogLabel {
+  font-weight: bold;
+}
 
 body p-fileupload {
   vertical-align: middle;

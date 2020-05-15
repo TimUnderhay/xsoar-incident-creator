@@ -1,5 +1,5 @@
 import { Component, OnInit, OnChanges, OnDestroy, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
-import { IncidentField } from './types/incident-fields';
+import { IncidentField, DatePrecision, DateConfig } from './types/incident-fields';
 import { SelectItem, ConfirmationService } from 'primeng/api';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
@@ -7,7 +7,16 @@ import { Subscription } from 'rxjs';
 import { FetcherService, FieldMappingSelection } from './fetcher-service';
 import * as utils from './utils';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
+import * as Moment from 'moment';
 declare var jmespath: any;
+
+const defaultDateConfig = {
+  autoParse: true,
+  formatter: '',
+  precision: 1,
+  utcOffsetEnabled: false,
+  utcOffset: 0
+};
 
 @Component({
   // tslint:disable-next-line:component-selector
@@ -63,6 +72,14 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     this.fieldChange.emit(this.field);
   }
 
+  get dateConfig(): DateConfig {
+    return 'dateConfig' in this.field ? this.field.dateConfig : undefined;
+  }
+  set dateConfig(value: DateConfig) {
+    this.field.dateConfig = value;
+    this.fieldChange.emit(this.field);
+  }
+
 
 
   private subscriptions = new Subscription();
@@ -78,14 +95,52 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     { value: 'jmespath', 'label': 'JMESPath' },
     // { value: 'randomised', 'label': 'Randomised' }
   ];
-  detectedFieldType: string;
+  datePrecisionItems: SelectItem[] = [
+    { value: 1, 'label': 'Seconds' },
+    { value: 1000, 'label': 'Milliseconds' },
+    { value: 1000000, 'label': 'Microseconds' },
+    { value: 1000000000, 'label': 'Nanoseconds' }
+  ]
+  
+  
+  valueType: string; // The js type of the value or resolved value.  Controls how field's value is displayed in the UI, i.e whether to display raw value or put "View JSON" or "Edit JSON"
   dateFieldValue: Date;
   // mappingMethodValue: MappingMethod = 'static';
   selectValueHovering = false;
   resetValueHovering = false;
-  resolvedValue: any;
-  jmesPathResolveError: string;
 
+  _resolvedValue: any;
+  get resolvedValue() : any {
+    return this._resolvedValue;
+  }
+  set resolvedValue(value: any) {
+    this._resolvedValue = value;
+    this.resolvedValueType = typeof value;
+  }
+  resolvedValueType: string;
+  jmesPathResolveError: string;
+  transformedValue: any;
+
+
+  // Date Transformations
+  dateAutoParse = true;
+  enableUtcOffset = false;
+  _dateUtcOffset = 0;
+  get dateUtcOffset(): number {
+    return this._dateUtcOffset;
+  }
+  set dateUtcOffset(value) {
+     this._dateUtcOffset = [null, undefined, ''].includes(value as any) ? 0 : value;
+  }
+
+  dateFormatter = '';
+  selectedDatePrecision = 1;
+  dateTransformError = false;
+
+
+  
+  // UI State
+  showDateTransformOptions = false;
   selectionModeActive = false;
 
 
@@ -104,19 +159,30 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
   ngOnChanges(values: SimpleChanges) {
     // console.log('FreeformJsonRowComponent: ngOnChanges(): values:', values);
     const fieldFirstOrChanged = utils.firstOrChangedSimpleChange('field', values);
+    const fieldFirst = utils.firstSimpleChange('field', values);
 
-    if (fieldFirstOrChanged && this.field.fieldType === 'undefined') {
-      this.detectedFieldType = this.identifyType(this.field.value);
+    if (fieldFirst && this.field.mappingMethod === 'jmespath' && this.field.fieldType === 'date' && !('dateConfig' in this.field)) {
+      // add dateConfig to date field, if not already present
+      this.dateConfig = defaultDateConfig;
     }
+    
+    if (this.field.mappingMethod === 'static') {
 
-    else if (fieldFirstOrChanged && this.field.fieldType === 'date') {
-      this.dateFieldValue = new Date(this.field.value);
+      if (fieldFirstOrChanged && this.field.fieldType === 'undefined') {
+        this.valueType = this.identifyType(this.field.value);
+      }
+  
+      else if (fieldFirstOrChanged && this.field.fieldType === 'date') {
+        this.dateFieldValue = new Date(this.field.value);
+      }
+
     }
 
     const jsonFirstOrChanged = utils.firstOrChangedSimpleChange('json', values);
     const useJMESPath = this.field && this.field.mappingMethod === 'jmespath' && this.field.jmesPath !== '';
     if (this.json && useJMESPath && (jsonFirstOrChanged || fieldFirstOrChanged)) {
-      this.jmesPathResolve(this.field.jmesPath);
+      const resolveDate = this.field.fieldType === 'date';
+      this.jmesPathResolve(this.field.jmesPath, resolveDate);
     }
     
   }
@@ -130,35 +196,9 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
 
 
   identifyType(value): string {
+    console.log('FreeformJsonRowComponent: identifyType(): value:', value);
     let valType: any = typeof value;
-    /*switch (valType) {
-
-      case 'object':
-        if (Array.isArray(valType)) {
-          return 'object';
-        }
-        if ('runStatus' in this.field.value && 'startDate' in this.field.value && 'endDate' in this.field.value) {
-          return 'timer';
-        }
-        return 'object';
-        break;
-
-      default:
-        return valType;
-    }*/
-    /*try {
-      const d = new Date(value);
-      valType = 'date';
-    }
-    catch {}*/
     return valType;
-  }
-
-
-
-  onEnabledSelectionChanged(value) {
-    console.log('FreeformJsonRowComponent: onEnabledSelectionChanged(): value:', value);
-    this.enabled = value;
   }
 
 
@@ -166,6 +206,13 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
   onValueChanged(value) {
     // console.log('FreeformJsonRowComponent: onValueChanged(): value:', value);
     // this.fieldChange.emit(this.field);
+  }
+
+
+
+  onEnabledSelectionChanged(value) {
+    console.log('FreeformJsonRowComponent: onEnabledSelectionChanged(): value:', value);
+    this.enabled = value;
   }
 
 
@@ -232,54 +279,9 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  massageData(value) {
-    switch(this.field.fieldType) {
-      case 'number':
-        return utils.toNumber(value);
-      case 'shortText':
-        return utils.toString(value);
-      case 'longText':
-        return utils.toString(value);
-      case 'boolean':
-        return utils.toBoolean(value);
-      case 'grid':
-        return utils.toGrid(value);
-      case 'url':
-        return utils.toString(value);
-      case 'html':
-        return utils.toString(value);
-      case 'markdown':
-        return utils.toString(value);
-      case 'role':
-        return utils.toStringArray(value);
-      case 'user':
-        return utils.toString(value);
-      case 'singleSelect':
-        return utils.toString(value);
-      case 'multiSelect':
-        return utils.toStringArray(value);
-      case 'internal':
-        // FINISH ME!!!
-        return value;
-      case 'date':
-        // FINISH ME!!!
-        return value;
-      case 'timer':
-        // FINISH ME!!!
-        return value;
-      case 'attachments':
-        // FINISH ME!!!
-        return value;
-      case 'tagsSelect':
-        // FINISH ME!!!
-        return value;
-    }
-  }
+  jmesPathResolve(path, resolveDate=false) {
+    // console.log('FreeformJsonRowComponent: jmesPathResolve(): path:', path);
 
-
-
-  jmesPathResolve(path) {
-    console.log('FreeformJsonRowComponent: jmesPathResolve()');
     this.jmesPath = path;
 
     if (path === '' || path.match(/^\s+$/)) {
@@ -287,26 +289,76 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     }
     try {
       let res = jmespath.search(this.json, path);
-      res = this.massageData(res);
+      res = utils.massageData(res, this.field.fieldType);
       this.jmesPathResolveError = undefined;
       if (res === null) {
         this.resolvedValue = 'null';
         return;
       }
       this.resolvedValue = res;
-      this.detectedFieldType = this.identifyType(this.value);
+      this.valueType = this.identifyType(this.resolvedValue);
+
+      if (resolveDate) {
+        this.transformDate(false);
+      }
     }
     catch(error) {
       // console.error(error);
       if (error.name === 'ParserError') {
-        console.log('JMESPath.search error:', 'message' in error ? error.message : error);
+        console.log('FreeformJsonRowComponent: jmesPathResolve(): JMESPath.search error:', 'message' in error ? error.message : error);
         this.jmesPathResolveError = error.message;
         this.resolvedValue = 'null';
      }
      else {
-       console.error('JMESPath.search error:', error);
+       console.error('FreeformJsonRowComponent: jmesPathResolve(): JMESPath.search error:', error);
      }
     }
+  }
+
+
+
+  transformDate(useUIValues=false): string {
+    // console.log('FreeformJsonRowComponent: transformDate(): resolvedValue:', this.resolvedValue);
+    
+    if (!this.resolvedValue || this.resolvedValue === '') {
+      return;
+    }
+
+    let value = this.resolvedValue;
+
+    let valueType = typeof value;
+
+    let moment: Moment.Moment;
+
+    const dateConfig: DateConfig = !useUIValues ? this.field.dateConfig : {
+      autoParse: this.dateAutoParse,
+      formatter: this.dateFormatter,
+      precision: this.selectedDatePrecision,
+      utcOffsetEnabled: this.enableUtcOffset,
+      utcOffset: this.dateUtcOffset
+    };
+
+    if (valueType === 'number') {
+      moment = dateConfig.precision === 1 ? Moment.unix(value) : Moment(value / dateConfig.precision * 1000);
+    }
+
+    else if (valueType === 'string') {
+      moment = dateConfig.autoParse ? Moment(value) : Moment(value, dateConfig.formatter);
+    }
+
+    const valid = moment.isValid();
+
+    if (valid && dateConfig.utcOffsetEnabled) {
+      moment.add(dateConfig.utcOffset, 'hours');
+    }
+
+    if (useUIValues) {
+      // toISOString() returns null if there's a problem.  We want to see 'Invalid date' instead, which format() will return.
+      return valid ? moment.toISOString() : moment.format();
+    }
+
+    this.transformedValue = valid ? moment.toISOString() : moment.format();
+    this.dateTransformError =  !valid ? true : false;
   }
 
 
@@ -333,7 +385,7 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
     if (this.field.mappingMethod === 'static') {
-      this.value = this.massageData(segment.value);
+      this.value = utils.massageData(segment.value, this.field.fieldType);
     }
     else if (this.field.mappingMethod === 'jmespath') {
       this.jmesPath = segment.path;
@@ -389,6 +441,60 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     };
     let dialogRef = this.dialogService.open(JsonEditorComponent, config);
     dialogRef.onClose.subscribe( value => this.onDialogClosed(value) );
+  }
+
+
+
+  syncDateUiToDateOptions() {
+    const dateConfig = this.dateConfig;
+
+    this.dateAutoParse = 'autoParse' in dateConfig ? dateConfig.autoParse : defaultDateConfig.autoParse;
+    this.dateFormatter = 'formatter' in dateConfig ? dateConfig.formatter : defaultDateConfig.formatter;
+    this.selectedDatePrecision = 'precision' in dateConfig ? dateConfig.precision : defaultDateConfig.precision;
+    this.enableUtcOffset = 'utcOffsetEnabled' in dateConfig ? dateConfig.utcOffsetEnabled : defaultDateConfig.utcOffsetEnabled;
+    this.dateUtcOffset = 'utcOffset' in dateConfig ? dateConfig.utcOffset : defaultDateConfig.utcOffset;
+  }
+
+
+
+  onShowDateTransformOptionsClicked() {
+    if (this.resolvedValue === undefined) {
+      return;
+    }
+    this.syncDateUiToDateOptions();
+    this.showDateTransformOptions = true;
+  }
+
+
+
+  onDateTransformOptionsCancelled() {
+    this.showDateTransformOptions = false;
+  }
+
+
+
+  onDateTransformOptionsAccepted() {
+    this.showDateTransformOptions = false;
+
+    const newDateConfig: DateConfig = {};
+
+    if (this.resolvedValueType === 'number') {
+      newDateConfig.precision = this.selectedDatePrecision;
+    }
+    else if (this.resolvedValueType === 'string') {
+      newDateConfig.autoParse = this.dateAutoParse;  
+      if (!newDateConfig.autoParse) {
+        newDateConfig.formatter = this.dateFormatter;
+      }
+    }
+
+    if (this.enableUtcOffset) {
+      newDateConfig.utcOffsetEnabled = true;
+      newDateConfig.utcOffset = this.dateUtcOffset;
+    }
+
+    this.dateConfig = newDateConfig;
+    this.transformDate();
   }
 
 

@@ -30,6 +30,14 @@ export function changedSimpleChange(field: string, values: SimpleChanges): boole
 
 
 
+export function firstSimpleChange(field: string, values: SimpleChanges): boolean {
+  const found = field in values;
+  const isFirstChange = found && values[field].isFirstChange();
+  return isFirstChange;
+}
+
+
+
 export function toString(value) {
   if (typeof value === 'string') {
     return value;
@@ -161,4 +169,49 @@ export function sortArrayNaturally(as, bs): number {
     else if(a1!= b1) return a1> b1? 1: -1;
   }
   return a.length - b.length;
+}
+
+
+
+export function massageData(value, fieldType) {
+  console.log(`massageData(): fieldType: ${fieldType}, value:`, value);
+
+  switch(fieldType) {
+    case 'number':
+      return toNumber(value);
+    case 'shortText':
+      return toString(value);
+    case 'longText':
+      return toString(value);
+    case 'boolean':
+      return toBoolean(value);
+    case 'grid':
+      return toGrid(value);
+    case 'url':
+      return toString(value);
+    case 'html':
+      return toString(value);
+    case 'markdown':
+      return toString(value);
+    case 'role':
+      return toStringArray(value);
+    case 'user':
+      return toString(value);
+    case 'singleSelect':
+      return toString(value);
+    case 'multiSelect':
+      return toStringArray(value);
+    case 'date':
+      if (typeof value === 'string' && value.match(/^\d+$/)) {
+        // convert string-wrapped numbers to type Number
+        value = Number(value);
+      }
+      return value;
+    case 'internal':
+      // FINISH ME!!!
+      return value;
+    case 'tagsSelect':
+      // FINISH ME!!!
+      return value;
+  }
 }

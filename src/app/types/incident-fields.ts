@@ -20,8 +20,19 @@ export interface IncidentField extends Object {
   selectValues?: any; // possible values that the field can hold.  For singleSelect and multiSelect fields 
   mappingMethod: MappingMethod;
   permitNullValue?: boolean;
+  dateConfig?: DateConfig; // used by date fields
 }
 
 export interface IncidentFields {
   [index: string]: IncidentField;
 }
+
+export interface DateConfig {
+  autoParse?: boolean; // for string values.  Tries to auto-parse the value
+  formatter?: string; // formatter string, used only if autoParse = false
+  precision?: number; // for numeric values, 1 for second, 1000 for ms, 1000000 for µs, 1000000000 for ns
+  utcOffsetEnabled?: boolean;
+  utcOffset?: number;
+}
+
+export type DatePrecision = 'seconds' | 'milliseconds' | 'microseconds' | 'nanoseconds';

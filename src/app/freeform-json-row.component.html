@@ -160,7 +160,7 @@
     <div style="flex-basis: auto; flex-grow: 1;">
 
       <!-- objects -->
-      <span *ngIf="detectedFieldType === 'object'; else text" (click)="onEditJSONClicked()" class="editJsonLink">View JSON</span>
+      <span *ngIf="valueType === 'object'; else text" (click)="onEditJSONClicked()" class="editJsonLink">View JSON</span>
 
       <ng-template #text>
         <span>{{field.value}}</span>
@@ -180,18 +180,44 @@
   <div class="valueContainer">
 
     <div style="flex-basis: auto; flex-grow: 1;">
-      
-      <!-- Input Box -->
-      <input
+
+      <div style="position: relative;">
+
+        <!-- Non-Date Field Input Box -->
+        <input
+        *ngIf="field.fieldType !== 'date'"
         pInputText
         type="text"
         [(ngModel)]="field.jmesPath"
         (ngModelChange)="jmesPathResolve(field.jmesPath)"
         class="inputDisplay"/>
 
+        <!-- Date Field Input Box -->
+        <input
+        *ngIf="field.fieldType === 'date'"
+        pInputText
+        type="text"
+        [(ngModel)]="field.jmesPath"
+        (ngModelChange)="jmesPathResolve(field.jmesPath, true)"
+        class="inputDisplay"/>
+
+        <!-- Transformer Curly-Bracket Icon -->
+        <div
+          *ngIf="field.fieldType === 'date'"
+          class="curly-bracket-button"
+          [class.disabledIcon]="resolvedValue === undefined"
+          (click)="onShowDateTransformOptionsClicked()"
+          [style.cursor]="resolvedValue !== undefined ? 'pointer' : 'default'"
+          pTooltip="Date Transform"
+          showDelay="750">
+        </div>
+
+      </div>
+           
+
       <!-- Resolved Non-Object Value -->
       <div
-        *ngIf="json && detectedFieldType !== 'object' && jmesPath !== ''"
+        *ngIf="json && valueType !== 'object' && jmesPath !== ''"
         class="jmesPathResolved"
         [class.jmesPathError]="jmesPathResolveError !== undefined">
           <span
@@ -200,11 +226,37 @@
             style="color: white;"
             [pTooltip]="jmesPathResolveError">
           </span>
+          <span
+            *ngIf="field.fieldType === 'date'"
+            style="font-weight: bold;"
+            class="fieldColour">
+              Resolved: 
+          </span>
           {{resolvedValue}}
       </div>
 
+      <!-- Transformed Date Value -->
       <div
-        *ngIf="json && detectedFieldType === 'object' && jmesPath !== ''"
+        *ngIf="json && field.fieldType === 'date' && jmesPath !== ''"
+        class="jmesPathResolved"
+        [class.transformerError]="dateTransformError">
+          <span
+            *ngIf="dateTransformError"
+            class="pi pi-info-circle"
+            style="color: white;"
+            pTooltip="moment.js failed to parse the date field.  Check the date transformer config.">
+          </span>
+          <span
+            style="font-weight: bold;"
+            class="fieldColour">
+              Transformed: 
+          </span>
+          {{transformedValue}}
+      </div>
+
+      <!-- Resolved Object Value -->
+      <div
+        *ngIf="json && valueType === 'object' && jmesPath !== ''"
         class="editJsonLink" (click)="onViewJSONClicked(resolvedValue)">
           View JSON
       </div>
@@ -217,40 +269,52 @@
   <div class="valueContainer">
 
     <!-- Select Value Icon -->
-    <div class="verticalCenter">
-      <div></div>
-      <div
-        style="margin-left: .1em; font-size: 2em;"
-        class="pi pi-arrow-circle-right"
-        [class.enabledIcon]="jsonLoaded"
-        [class.disabledIcon]="!jsonLoaded"
-        (mouseover)="selectValueHovering = true"
-        (mouseout)="selectValueHovering = false"
-        [style.cursor]="jsonLoaded && selectValueHovering ? 'pointer' : 'default'"
-        (click)="onJMESPathSelectValueFromJsonClicked()"
-        pTooltip="Select a JMESPath from JSON"
-        showDelay="750">
-      </div>
-      <div></div>
+    <div
+      class="verticalCenter"
+      [class.verticalTop]="field.fieldType === 'date'">
+        <div
+          style="margin-left: .1em; font-size: 2em;"
+          class="pi pi-arrow-circle-right"
+          [class.enabledIcon]="jsonLoaded"
+          [class.disabledIcon]="!jsonLoaded"
+          (mouseover)="selectValueHovering = true"
+          (mouseout)="selectValueHovering = false"
+          [style.cursor]="jsonLoaded && selectValueHovering ? 'pointer' : 'default'"
+          (click)="onJMESPathSelectValueFromJsonClicked()"
+          pTooltip="Select a JMESPath from JSON"
+          showDelay="750">
+        </div>
+        <div></div>
+        <div></div>
     </div>
 
     <!-- Permit Null Value Checkbox -->
-    <div class="verticalCenter">
-      <div></div>
-      <p-checkbox
-        [binary]="true"
-        [(ngModel)]="field.permitNullValue"
-        pTooltip="Permit null value in incident field"
-        showDelay="750">
-      </p-checkbox>
-      <div></div>
+    <div
+      *ngIf="field.fieldType !== 'date'"
+      class="verticalCenter">
+        <p-checkbox
+          [binary]="true"
+          [(ngModel)]="field.permitNullValue"
+          pTooltip="Permit null value in incident field"
+          showDelay="750">
+        </p-checkbox>
+        <div></div>
+        <div></div>
     </div>
 
     <!-- Delete Field -->
-    <div class="verticalCenter">
-      <div></div>
-      <div class="pi pi-times enabledIcon" style="margin-left: .1em; font-size: 2em;" (click)="onDeleteFieldClicked()" pTooltip="Delete field" showDelay="750"></div>
-      <div></div>
+    <div
+      class="verticalCenter"
+      [class.verticalTop]="field.fieldType === 'date'">
+        <div></div>
+        <div
+          class="pi pi-times enabledIcon"
+          style="font-size: 2em; cursor: pointer;"
+          (click)="onDeleteFieldClicked()"
+          pTooltip="Delete field"
+          showDelay="750">
+        </div>
+        <div></div>
     </div>
 
   </div>
@@ -258,3 +322,163 @@
   
 
 </ng-template>
+
+
+<!-- Date Transform Options Dialog -->
+<p-dialog
+  *ngIf="showDateTransformOptions"
+  header="Date Transform Options"
+  [(visible)]="showDateTransformOptions"
+  [modal]="true"
+  [style]="{maxWidth: '50%', maxHeight: '75%'}"
+  class="dateTransformDialog"
+  styleClass="bulkCreateDialog">
+
+    <div class="formLabel" style="margin-bottom: 1em;">
+      Select transformations to apply to the resolved date value:
+    </div>
+
+    <div class="dateTransformGrid">
+
+      <div class="dialogLabel">
+        JMESPath:
+      </div>
+
+      <div style="font-weight: bold; font-size: 1.2em;">
+        {{field.jmesPath}}
+      </div>
+
+      <div class="dialogLabel">
+        Resolved Value:
+      </div>
+      
+      <div style="font-weight: bold; font-size: 1.2em;">
+        {{resolvedValue}}
+      </div>
+
+      <div class="verticalCenter dialogLabel">
+        <div></div>
+        <div>
+          <!-- we don't use transformedValue here as we want the unaccepted results -->
+          Transformed Value:
+        </div>
+        <div></div>
+      </div>
+
+      <div style="color: black; font-weight: bolder; font-size: 1.5em;">
+        {{transformDate(true)}}
+      </div>
+
+      <div class="verticalCenter dialogLabel">
+        <div></div>
+        <div>Precision:&nbsp;</div>
+        <div></div>
+      </div>
+
+      <div>
+        <p-selectButton
+          [options]="datePrecisionItems"
+          [(ngModel)]="selectedDatePrecision">
+        </p-selectButton>
+       </div>
+
+      <ng-container *ngIf="resolvedValueType === 'string'">
+
+        <!-- Auto Transform -->
+        <div class="dialogLabel">
+          Parse Date String Automatically
+        </div>
+
+        <div>
+          <p-checkbox
+            [binary]="true"
+            name="auto"
+            [(ngModel)]="dateAutoParse">
+          </p-checkbox>
+        </div>
+
+        <!-- Formatter -->
+        <div class="verticalCenter dialogLabel">
+          <div></div>
+          <div>
+            Date Format String: 
+          </div>
+          <div></div>
+        </div>
+        
+        <div style="display: flex; flex-direction: row; flex-">
+
+          <div style="flex-grow: 1;">
+            <input
+              pInputText
+              id="date-formatter"
+              type="text"
+              size="30"
+              [(ngModel)]="dateFormatter"
+              [disabled]="dateAutoParse"
+              class="inputDisplay">
+          </div>
+
+          <div class="verticalCenter">
+            <div></div>
+            <div>
+              &nbsp;
+              <a href="https://momentjs.com/docs/#/parsing/string-format/" target="blank">Help</a>
+            </div>
+            <div></div>
+          </div>
+          
+        </div>
+      
+      </ng-container>
+      
+      <!-- UTC Offset -->
+      <div class="verticalCenter dialogLabel">
+        <div></div>
+        <div>
+          Source UTC Offset: 
+        </div>
+        <div></div>
+      </div>
+
+      <div>
+
+        <!-- Enable UTC Offset? -->
+        Enabled:&nbsp;
+        <p-checkbox
+          name="enableUtcOffset"
+          [binary]="true"
+          [(ngModel)]="enableUtcOffset">
+        </p-checkbox>
+        
+
+        <!-- UTC Offset Value -->
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+/- Hours:&nbsp;
+          <input
+            id="date-utc-offset"
+            type="number"
+            size="6"
+            pInputText
+            [(ngModel)]="dateUtcOffset"
+            min="-16"
+            max="16">
+
+      </div>
+     
+    </div>
+
+    <div style="margin-top: .5em; float: right;">
+
+      <p-button
+        label="Accept"
+        (onClick)="onDateTransformOptionsAccepted()">
+      </p-button>
+
+      <p-button
+        label="Cancel"
+        (onClick)="onDateTransformOptionsCancelled()">
+      </p-button>
+
+    </div>
+
+</p-dialog>

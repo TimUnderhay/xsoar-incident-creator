@@ -36,7 +36,7 @@ export const acceptableDataTypesPerFieldType = {
   'singleSelect': ['number', 'string', 'boolean', 'null'],
   'multiSelect': ['array', 'number', 'string', 'boolean', 'null'],
   'internal': [],
-  'date': [],
+  'date': ['string', 'number'],
   'attachments': [],
   'tagsSelect': ['string', 'null']
 };

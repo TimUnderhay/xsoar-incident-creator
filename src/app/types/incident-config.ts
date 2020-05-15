@@ -1,4 +1,4 @@
-import { FieldType, MappingMethod } from './incident-fields';
+import { FieldType, MappingMethod, DateConfig } from './incident-fields';
 
 // These interfaces deal with saved incident configurations
 
@@ -31,4 +31,5 @@ export interface IncidentFieldConfig {
   value?: any; // A static value
   jmesPath?: any; // A JMESPath expression
   permitNullValue?: boolean; // permit null values to be included in incident fields?
+  dateConfig?: DateConfig; // used by date fields for transformers
 }

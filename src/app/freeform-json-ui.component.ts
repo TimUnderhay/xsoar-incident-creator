@@ -5,7 +5,7 @@ import { SelectItem, ConfirmationService } from 'primeng/api';
 import { PMessageOption } from './types/message-options';
 import { Listbox } from 'primeng/listbox';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
-import { FieldType, IncidentField, IncidentFields } from './types/incident-fields';
+import { FieldType, IncidentField, IncidentFields, DateConfig } from './types/incident-fields';
 import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FreeformJsonRowComponent } from './freeform-json-row.component';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
@@ -16,7 +16,7 @@ import { FreeformJSONConfig } from './types/freeform-json-config';
 import { IncidentConfig, IncidentConfigs, IncidentFieldConfig, IncidentFieldsConfig } from './types/incident-config';
 import { InvestigationFields as investigationFields } from './investigation-fields';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
-import { newArray } from '@angular/compiler/src/util';
+import * as Moment from 'moment';
 declare var jmespath: any;
 
 @Component({
@@ -320,7 +320,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
         custom: !system,
         mappingMethod: 'static',
         jmesPath: '',
-        permitNullValue: false
+        permitNullValue: false,
+        dateConfig: {}
       }
 
       if (shortName === 'type') {
@@ -387,14 +388,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   buildFieldsToAddItems(availableFields: IncidentFields, chosenFields: IncidentField[]): SelectItem[] {
     // console.log('FreeformJsonUIComponent: buildFieldsToAddItems()');
     let fieldsAvailableToAddItems: SelectItem[] = [];
-    /*if (!chosenFields || Object.keys(chosenFields).length === 0) {
-      for (const field of Object.values(availableFields)) {
-        fieldsAvailableToAddItems.push({
-          label: `${field.longName} <${field.fieldType}>`,
-          value: field.shortName
-        });
-      }
-    }*/
+
     if (!chosenFields || chosenFields.length === 0) {
       for (const field of Object.values(availableFields)) {
         fieldsAvailableToAddItems.push({
@@ -403,6 +397,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
         });
       }
     }
+
     else {
       const chosenFieldKeys = chosenFields.map( field => field.shortName );
       for (const field of Object.values(availableFields)) {
@@ -414,17 +409,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
         }
       }
     }
-    /*else {
-      const chosenFieldKeys = Object.keys(chosenFields);
-      for (const field of Object.values(availableFields)) {
-        if (!chosenFieldKeys.includes(field.shortName)) {
-          fieldsAvailableToAddItems.push({
-            label: `${field.longName} <${field.fieldType}>`,
-            value: field.shortName
-          });
-        }
-      }
-    }*/
+
     return fieldsAvailableToAddItems;
   }
 
@@ -602,10 +587,20 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
       else if (field.mappingMethod === 'jmespath') {
         let value = this.jmesPathResolve(field.jmesPath);
-        value = this.massageData(value, field.fieldType);
+        value = utils.massageData(value, field.fieldType);
         if (value === null && !field.permitNullValue) {
           continue;
         }
+        if (field.fieldType === 'date' && value === null) {
+          continue;
+        }
+        if (field.fieldType === 'date') {
+          value = this.transformDate(value, field.dateConfig);
+          if (value === null) {
+            continue;
+          }
+        }
+        
         incident = updateIncident(field, value, incident);
       }
 
@@ -661,63 +656,49 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  massageData(value, fieldType) {
-    switch(fieldType) {
-      case 'number':
-        return utils.toNumber(value);
-      case 'shortText':
-        return utils.toString(value);
-      case 'longText':
-        return utils.toString(value);
-      case 'boolean':
-        return utils.toBoolean(value);
-      case 'grid':
-        return utils.toGrid(value);
-      case 'url':
-        return utils.toString(value);
-      case 'html':
-        return utils.toString(value);
-      case 'markdown':
-        return utils.toString(value);
-      case 'role':
-        return utils.toStringArray(value);
-      case 'user':
-        return utils.toString(value);
-      case 'singleSelect':
-        return utils.toString(value);
-      case 'multiSelect':
-        return utils.toStringArray(value);
-      case 'internal':
-        // FINISH ME!!!
-        return value;
-      case 'date':
-        // FINISH ME!!!
-        return value;
-      case 'tagsSelect':
-        // FINISH ME!!!
-        return value;
-    }
-  }
-
-
-
   jmesPathResolve(path) {
     console.log('FreeformJsonUIComponent: jmesPathResolve()');
-    // this.field.jmesPath = path;
-    // setTimeout( () => this.fieldChange.emit(this.field) );
     if (path === '' || path.match(/^\s+$/)) {
       return null;
     }
     try {
       const res = jmespath.search(this.json, path);
-      // this.jmesPathResolveError = undefined;
       // console.log('res:', res);
       return res;
     }
     catch(error) {
       console.log('JMESPath.search error:', 'message' in error ? error.message : error);
-      // this.jmesPathResolveError = error;
     }
+  }
+
+
+
+  transformDate(value: number | string, dateConfig: DateConfig): string {
+    // console.log('FreeformJsonUIComponent: transformDate(): resolvedValue:', this.resolvedValue);
+    
+    if (!value || value === '') {
+      return;
+    }
+
+    let valueType = typeof value;
+
+    let moment: Moment.Moment;
+
+    if (valueType === 'number') {
+      moment = dateConfig.precision === 1 ? Moment.unix(value as number) : Moment(value as number / dateConfig.precision * 1000);
+    }
+
+    else if (valueType === 'string') {
+      moment = dateConfig.autoParse ? Moment(value) : Moment(value, dateConfig.formatter);
+    }
+
+    const valid = moment.isValid();
+
+    if (valid && dateConfig.utcOffsetEnabled) {
+      moment.add(dateConfig.utcOffset, 'hours');
+    }
+
+    return moment.toISOString();
   }
 
 
@@ -1028,7 +1009,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
         custom: true,
         mappingMethod: 'static',
         jmesPath: '',
-        permitNullValue: false
+        permitNullValue: false,
+        dateConfig: {}
       };
 
       if (!this.fetchedIncidentFieldDefinitions) {
@@ -1093,6 +1075,14 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       permitNullValue: 'permitNullValue' in config ? config.permitNullValue : false,
       locked: false
     };
+    if ('dateConfig' in config) {
+      newConfig.dateConfig = {};
+      'autoParse' in config.dateConfig ? newConfig.dateConfig.autoParse = config.dateConfig.autoParse: {};
+      'formatter' in config.dateConfig ? newConfig.dateConfig.formatter = config.dateConfig.formatter : {};
+      'precision' in config.dateConfig ? newConfig.dateConfig.precision = config.dateConfig.precision : {};
+      'utcOffsetEnabled' in config.dateConfig ? newConfig.dateConfig.utcOffsetEnabled = config.dateConfig.utcOffsetEnabled : {};
+      'utcOffset' in config.dateConfig ? newConfig.dateConfig.utcOffset = config.dateConfig.utcOffset : {};
+    }
     return newConfig;
   }
 
@@ -1232,6 +1222,9 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       }
       else if (field.mappingMethod === 'jmespath') {
         newField.jmesPath = field.jmesPath;
+      }
+      if (field.fieldType === 'date') {
+        newField.dateConfig = field.dateConfig;
       }
       res[name] = newField;
     }
@@ -1415,7 +1408,6 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     for (const field of this.chosenIncidentFields) {
 
       if (!field.custom) {
-        console.log('got to 0');
         continue;
       }
 
@@ -1434,21 +1426,18 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
       if (!foundFieldDefinitions) {
         // no fields currently defined
-        console.log('got to 1');
         field.locked = true;
         field.fieldType = 'undefined';
         field.lockedReason = 'No fields are currently available from XSOAR';
       }
 
       else if (!incidentTypeFoundInXSOAR) {
-        console.log('got to 2');
         field.locked = true;
         field.fieldType = newFieldType;
         field.lockedReason = 'The selected incident type is not defined in XSOAR'
       }
 
       else if (!fieldFoundInFieldDefinitions) {
-        console.log('got to 4');
         // field isn't defined in Demisto
         field.locked = true;
         field.fieldType = 'undefined';
@@ -1458,21 +1447,18 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
       else if (!fieldTypeSupported) {
         // field type not supported
-        console.log('got to 3');
         field.locked = true;
         field.fieldType = newFieldType;
         field.lockedReason = `Field type '${newFieldType}' is not supported`;
       }
 
       else if (!fieldTypeApplicable) {
-        console.log('got to 5');
         field.locked = true;
         field.fieldType = newFieldType;
         field.lockedReason = 'Field is not associated to the selected incident type in XSOAR'
       }
 
       else if (fieldFoundInFieldDefinitions) {
-        console.log('got to 6');
         field.locked = false;
         field.lockedReason = undefined;
         field.fieldType = this.fetchedIncidentFieldDefinitions[shortName].type;
