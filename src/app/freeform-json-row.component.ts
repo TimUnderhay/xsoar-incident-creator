@@ -318,7 +318,7 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
 
 
   transformDate(useUIValues=false): string {
-    // console.log('FreeformJsonRowComponent: transformDate(): resolvedValue:', this.resolvedValue);
+    console.log('FreeformJsonRowComponent: transformDate(): resolvedValue:', this.resolvedValue);
     
     if (!this.resolvedValue || this.resolvedValue === '') {
       return;
@@ -339,7 +339,7 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     };
 
     if (valueType === 'number') {
-      moment = dateConfig.precision === 1 ? Moment.unix(value) : Moment(value / dateConfig.precision * 1000);
+      moment = dateConfig.precision === 1 ? Moment.unix(value).utc() : Moment(value / dateConfig.precision * 1000).utc();
     }
 
     else if (valueType === 'string') {
@@ -389,11 +389,11 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     }
     else if (this.field.mappingMethod === 'jmespath') {
       this.jmesPath = segment.path;
-      this.jmesPathResolve(this.field.jmesPath);
+      const resolveDate = this.field.fieldType === 'date';
+      this.jmesPathResolve(this.field.jmesPath, resolveDate);
     }
     this.enabled = true;
     this.selectionModeActive = false;
-    // this.fetcherService.fieldMappingSelectionEnded.next();
   }
 
 

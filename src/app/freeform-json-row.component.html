@@ -341,10 +341,18 @@
     <div class="dateTransformGrid">
 
       <div class="dialogLabel">
+        Field:
+      </div>
+
+      <div style="font-weight: bold; font-size: 1.1em;">
+        {{field.shortName}}
+      </div>
+
+      <div class="dialogLabel">
         JMESPath:
       </div>
 
-      <div style="font-weight: bold; font-size: 1.2em;">
+      <div style="font-weight: bold; font-size: 1.1em;">
         {{field.jmesPath}}
       </div>
 
@@ -352,7 +360,7 @@
         Resolved Value:
       </div>
       
-      <div style="font-weight: bold; font-size: 1.2em;">
+      <div style="font-weight: bold; font-size: 1.1em;">
         {{resolvedValue}}
       </div>
 
@@ -360,7 +368,7 @@
         <div></div>
         <div>
           <!-- we don't use transformedValue here as we want the unaccepted results -->
-          Transformed Value:
+          Transformed Value (in UTC):
         </div>
         <div></div>
       </div>
@@ -369,24 +377,28 @@
         {{transformDate(true)}}
       </div>
 
-      <div class="verticalCenter dialogLabel">
-        <div></div>
-        <div>Precision:&nbsp;</div>
-        <div></div>
-      </div>
+      <ng-container *ngIf="resolvedValueType === 'number'">
 
-      <div>
-        <p-selectButton
-          [options]="datePrecisionItems"
-          [(ngModel)]="selectedDatePrecision">
-        </p-selectButton>
-       </div>
+        <div class="verticalCenter dialogLabel">
+          <div></div>
+          <div>Precision:&nbsp;</div>
+          <div></div>
+        </div>
+
+        <div>
+          <p-selectButton
+            [options]="datePrecisionItems"
+            [(ngModel)]="selectedDatePrecision">
+          </p-selectButton>
+        </div>
+
+      </ng-container>
 
       <ng-container *ngIf="resolvedValueType === 'string'">
 
         <!-- Auto Transform -->
         <div class="dialogLabel">
-          Parse Date String Automatically
+          Parse Date String Automatically:
         </div>
 
         <div>
@@ -436,7 +448,7 @@
       <div class="verticalCenter dialogLabel">
         <div></div>
         <div>
-          Source UTC Offset: 
+          Source{{valueType === 'number' ? ' UTC' : undefined}} Offset:
         </div>
         <div></div>
       </div>

@@ -685,7 +685,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     let moment: Moment.Moment;
 
     if (valueType === 'number') {
-      moment = dateConfig.precision === 1 ? Moment.unix(value as number) : Moment(value as number / dateConfig.precision * 1000);
+      moment = dateConfig.precision === 1 ? Moment.unix(value as number).utc() : Moment(value as number / dateConfig.precision * 1000).utc();
     }
 
     else if (valueType === 'string') {
