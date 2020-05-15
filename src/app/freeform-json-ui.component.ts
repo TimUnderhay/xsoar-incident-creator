@@ -16,7 +16,7 @@ import { FreeformJSONConfig } from './types/freeform-json-config';
 import { IncidentConfig, IncidentConfigs, IncidentFieldConfig, IncidentFieldsConfig } from './types/incident-config';
 import { InvestigationFields as investigationFields } from './investigation-fields';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
-import * as Moment from 'moment';
+import * as Moment from 'node_modules/moment/min/moment.min.js';
 declare var jmespath: any;
 
 @Component({

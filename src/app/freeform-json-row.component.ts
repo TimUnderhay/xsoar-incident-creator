@@ -7,7 +7,7 @@ import { Subscription } from 'rxjs';
 import { FetcherService, FieldMappingSelection } from './fetcher-service';
 import * as utils from './utils';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
-import * as Moment from 'moment';
+import * as Moment from 'node_modules/moment/min/moment.min.js';
 declare var jmespath: any;
 
 const defaultDateConfig = {
