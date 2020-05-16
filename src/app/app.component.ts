@@ -1162,7 +1162,6 @@ export class AppComponent implements OnInit {
         message: `Proceed with creating a new JSON mapping?  Any unsaved changes will be lost.`,
         accept: () => {
           this.showJsonMappingUI = false;
-          // this.showIncidentFieldsUI = false;
           this.loadedIncidentConfigName = undefined;
           this.loadedIncidentConfigId = undefined;
           this.changeDetector.detectChanges();
@@ -1179,7 +1178,6 @@ export class AppComponent implements OnInit {
     else {
       this.showJsonMappingUI = true;
       this.loadDefaultChosenFields = true;
-      // this.showIncidentFieldsUI = false;
       this.loadedIncidentConfigName = undefined;
       this.loadedIncidentConfigId = undefined;
       this.loadedIncidentConfigName = undefined;
@@ -1201,7 +1199,6 @@ export class AppComponent implements OnInit {
     catch (error) {
       console.error('AppComponent: getSavedIncidentConfigurations(): Caught error fetching fields configuration:', error);
     }
-
   }
 
 

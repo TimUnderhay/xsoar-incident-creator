@@ -9,6 +9,7 @@ export interface IncidentConfig {
   chosenFields: IncidentFieldsConfig;
   createInvestigation: boolean;
   incidentType: string;
+  defaultJsonName?: string; // the json file to load when opening incident
 }
 
 export interface IncidentConfigs {
@@ -32,4 +33,10 @@ export interface IncidentFieldConfig {
   jmesPath?: any; // A JMESPath expression
   permitNullValue?: boolean; // permit null values to be included in incident fields?
   dateConfig?: DateConfig; // used by date fields for transformers
+}
+
+export interface IncidentJsonFileConfig {
+  // for API call to set default JSON name for an incident config
+  configName: string; // the incident config name
+  jsonName: string | null; // the json config name -- set to null to clear
 }

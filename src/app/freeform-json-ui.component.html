@@ -166,7 +166,7 @@
   <!-- JSON Container -->
   <div style="min-width: 0;">
 
-    <p-card header="Freeform JSON Data">
+    <p-card header="JSON Data">
 
       <div *ngIf="!json && (!savedJsonConfigurations || savedJsonConfigurations.length === 0) else menuBar">
 
@@ -203,7 +203,7 @@
         <header
           *ngIf="loadedJsonConfigName"
           style="margin: .25em 0 .25em 0;">
-            Loaded: <span style="color: white">{{loadedJsonConfigName}}</span>
+            Loaded{{loadedJsonConfigName === defaultJsonConfigName ? ' (*Default)' : undefined}}: <span style="color: white">{{loadedJsonConfigName}}</span>
         </header>
 
         <!-- Menu Bar -->
@@ -231,6 +231,13 @@
             label="Delete"
             (onClick)="onJsonDeleteConfigClicked()"
             [disabled]="savedJsonConfigurations.length === 0">
+          </p-button>
+
+          <p-button
+            [label]="defaultJsonConfigName && defaultJsonConfigName === loadedJsonConfigName ? 'Unset Default' : 'Set as Default'"
+            (onClick)="onSetDefaultIncidentJsonFile(defaultJsonConfigName && defaultJsonConfigName === loadedJsonConfigName)"
+            [disabled]="savedJsonConfigurations.length === 0 || !loadedIncidentConfigName || loadedIncidentConfigName === ''"
+            [pTooltip]="loadedIncidentConfigName ? 'Sets this as the default JSON to load when opening the incident config \'' + loadedIncidentConfigName + '\'' : 'Sets this as the default JSON to load when opening a given incident config'">
           </p-button>
 
           <p-button
@@ -308,7 +315,7 @@
 
   <p-listbox
     [options]="freeformJsonConfigurationItems"
-    [(ngModel)]="selectedOpenConfig"
+    [(ngModel)]="selectedJsonOpenConfig"
     [style]="{'width':'100%'}"
     (onDblClick)="onJsonConfigOpened()"
     [filter]="true">

@@ -10,7 +10,7 @@ import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FreeformJsonRowComponent } from './freeform-json-row.component';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
 import { SampleIncident } from './sample-json';
-import { Subject, Subscription } from 'rxjs';
+import { Subject, Subscription, config } from 'rxjs';
 import * as utils from './utils';
 import { FreeformJSONConfig } from './types/freeform-json-config';
 import { IncidentConfig, IncidentConfigs, IncidentFieldConfig, IncidentFieldsConfig } from './types/incident-config';
@@ -46,7 +46,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   get fetchedIncidentTypeNames() {
     return this.fetchedIncidentTypes.map( incidentType => incidentType.name );
   }
-  @Input() savedJsonConfigurations: string[];
+
   @Input() savedIncidentConfigurations: IncidentConfigs;
   @Input() demistoEndpointsItems: SelectItem[]; // holds list of endpoints for PrimeNG
 
@@ -54,7 +54,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   @Output() messagesReplace = new EventEmitter<PMessageOption[]>();
   @Output() messageWithAutoClear = new EventEmitter<PMessageOption>();
   @Output() messageAdd = new EventEmitter<PMessageOption>();
-  @Output() freeformJsonConfigurationsChanged = new EventEmitter<void>();
+
   @Output() savedIncidentConfigurationsChanged = new EventEmitter<string>();
   
   // NEW
@@ -73,7 +73,14 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     'type',
   ]
   whitelistedInternalFieldNames = ['attachment', 'feedbased', 'labels'];
+  
+  // JSON
   json: Object;
+  defaultJsonConfigName: string;
+  loadedJsonConfigName: string;
+  @Input() savedJsonConfigurations: string[];
+  @Output() freeformJsonConfigurationsChanged = new EventEmitter<void>();
+
   get selectedFieldsToAddLen(): number {
     return this.selectedFieldsToAdd.length;
   }
@@ -117,15 +124,12 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   get saveAsOkayButtonDisabled(): boolean {
     return this.savedJsonConfigurations.includes(this.saveAsConfigName);
   }
-  loadedJsonConfigName: string;
   showCreateIncidentFromJsonDialog = false;
   
 
   // UI Labels
   longNamesLabel = 'Short Names';
   shortNamesLabel = 'Long Names';
-
-  private subscriptions = new Subscription();
 
   enabledFieldsCount = 0;
 
@@ -135,7 +139,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   // JSON Open dialog
   showJsonOpenDialog = false;
-  selectedOpenConfig = '';
+  selectedJsonOpenConfig = '';
 
   // Save as dialog
   _saveAsButtonEnabled = false;
@@ -143,6 +147,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     this._saveAsButtonEnabled = value;
     this.saveAsButtonEnabledChange.emit(value);
   }
+
+  private subscriptions = new Subscription();
 
 
   ngOnInit() {
@@ -817,6 +823,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
     if (this.selectedDeleteConfigs.includes(this.loadedJsonConfigName)) {
       this.loadedJsonConfigName = undefined;
+      this.defaultJsonConfigName = undefined;
     }
 
     this.messageWithAutoClear.emit({severity: 'success', summary: 'Successful', detail: `Configuration${utils.sPlural(this.selectedDeleteConfigs)} ${this.selectedDeleteConfigs.join(', ')} ${utils.werePlural(this.selectedDeleteConfigs)} successfully deleted`});
@@ -838,21 +845,28 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
+  async getJsonConfig(configName) {
+    // we want the calling function to use its own try/catch blocks, as error handling can differ depending on use case.
+    this.json = await this.fetcherService.getSavedJSONConfiguration(configName);
+    this.loadedJsonConfigName = configName;
+  }
+
+
+
   async onJsonConfigOpened() {
     console.log('FreeformJsonUIComponent: onJsonConfigOpened()');
     this.showJsonOpenDialog = false;
     this.changeDetector.detectChanges();
 
     try {
-      this.json = await this.fetcherService.getSavedJSONConfiguration(this.selectedOpenConfig);
-      this.loadedJsonConfigName = this.selectedOpenConfig;
-      this.selectedOpenConfig = ''; // reset selection
+      await this.getJsonConfig(this.selectedJsonOpenConfig);
+      this.selectedJsonOpenConfig = ''; // reset selection
     }
     catch(error) {
       console.error('FreeformJsonUIComponent: onJsonConfigOpened(): error:', error);
       this.messagesReplace.emit([ {
         severity: 'error',
-        detail: `Error loading JSON configuration ${this.selectedOpenConfig}.  See console log for more info`,
+        detail: `Error loading JSON configuration ${this.selectedJsonOpenConfig}.  See console log for more info`,
         summary: 'Error'
       } ]);
     }
@@ -1162,7 +1176,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  onIncidentConfigOpened(selectedConfig: IncidentConfig) {
+  async onIncidentConfigOpened(selectedConfig: IncidentConfig) {
     // console.log('FreeformJsonUIComponent: onIncidentConfigOpened()');
     // this.json = selectedConfig.incident;
     // console.log('FreeformJsonUIComponent: onIncidentConfigOpened(): json:', this.json);
@@ -1173,9 +1187,25 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     this.saveAsButtonEnabled = true;
     this.selectedIncidentType = selectedConfig.incidentType;
     this.setSelectedIncidentTypeIsAvailable();
+    this.defaultJsonConfigName = 'defaultJsonName' in selectedConfig ? selectedConfig.defaultJsonName : undefined;
     
     if (!this.fetchedIncidentTypeNames.includes(selectedConfig.incidentType)) {
       this.updateChosenFieldLocks();
+    }
+
+    if (this.defaultJsonConfigName) {
+      try {
+        await this.getJsonConfig(this.defaultJsonConfigName);
+      }
+      catch(error) {
+        console.error('FreeformJsonUIComponent: onIncidentConfigOpened(): error:', error);
+        this.messagesReplace.emit([ {
+          severity: 'error',
+          detail: `Error loading default JSON configuration ${this.defaultJsonConfigName}.  See console log for more info`,
+          summary: 'Error'
+        } ]);
+      }
+      
     }
   }
 
@@ -1189,6 +1219,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     this.setSelectedIncidentTypeIsAvailable();
     this.createInvestigation = true;
     this.saveAsButtonEnabled = true;
+    this.defaultJsonConfigName = undefined;
   }
 
 
@@ -1319,6 +1350,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       this.loadedIncidentConfigId = undefined;
       this.createInvestigation = true;
       this.saveAsButtonEnabled = true;
+      this.defaultJsonConfigName = undefined;
       
       this.selectedIncidentType = incidentType;
       this.setSelectedIncidentTypeIsAvailable();
@@ -1503,6 +1535,32 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   onCreateIncidentFromRawJsonCancelled() {
     this.showCreateIncidentFromJsonDialog = false;
+  }
+
+
+
+  async onSetDefaultIncidentJsonFile(unset=false) {
+    console.log('FreeformJsonUIComponent: onSetDefaultIncidentJsonFile()');
+    if (!unset) {
+      try {
+        await this.fetcherService.setDefaultIncidentJsonFile(this.loadedIncidentConfigName, this.loadedJsonConfigName);
+        this.defaultJsonConfigName = this.loadedJsonConfigName;
+        this.savedIncidentConfigurationsChanged.emit(this.loadedIncidentConfigName);
+      }
+      catch(error) {
+        console.error(`FreeformJsonUIComponent: onSetDefaultIncidentJsonFile(): Caught error setting default JSON file for incident config ${this.loadedIncidentConfigName}:`, error);
+      }
+    }
+    else {
+      try {
+        await this.fetcherService.clearDefaultIncidentJsonFile(this.loadedIncidentConfigName);
+        this.defaultJsonConfigName = undefined;
+        this.savedIncidentConfigurationsChanged.emit(this.loadedIncidentConfigName);
+      }
+      catch(error) {
+        console.error(`FreeformJsonUIComponent: onSetDefaultIncidentJsonFile(): Caught error clearing default JSON file for incident config ${this.loadedIncidentConfigName}:`, error);
+      }
+    }
   }
 
 }

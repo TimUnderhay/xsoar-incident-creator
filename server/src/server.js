@@ -935,6 +935,46 @@ app.post(apiPath + '/incidentConfig/update', async (req, res) => {
 
 
 
+app.post(apiPath + '/incidentConfig/defaultJson', async (req, res) => {
+  // update an existing field config
+  const body = req.body;
+  const requiredFields = ['configName', 'jsonName'];
+
+  try {
+    checkForRequiredFields(requiredFields, body);
+  }
+  catch(fieldName) {
+    return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+  }
+
+  const configName = body.configName;
+  const jsonName = body.jsonName; // set to null to clear default
+
+  if (!(configName in incidentsConfig)) {
+    return res.status(400).json({error: `Incident config ${configName} is not defined`});
+  }
+
+  if (jsonName !== null && !(jsonName in freeJsonConfig)) {
+    return res.status(400).json({error: `JSON config ${jsonName} is not defined`});
+  }
+
+  const incidentConfig = incidentsConfig[configName];
+  if (jsonName === null && 'defaultJsonName' in incidentConfig) {
+    delete incidentConfig['defaultJsonName'];
+    console.log(`Cleared default JSON config for incident config ${incidentConfig.name}`);
+  }
+  else if (jsonName !== null) {
+    incidentConfig['defaultJsonName'] = jsonName;
+    console.log(`Set default JSON config to ${jsonName} for incident config ${incidentConfig.name}`);
+  }
+
+  await saveIncidentsConfig();
+
+  res.status(200).json({success: true});; // send 'OK'
+} );
+
+
+
 app.get(apiPath + '/incidentConfig/all', async (req, res) => {
   // retrieve all field configs -- must come before /incidentConfig/:name
   res.status(200).json(incidentsConfig);

@@ -4,7 +4,7 @@ import { User } from './types/user';
 import { DemistoEndpointStatus } from './types/demisto-endpoint-status';
 import { FetchedIncidentField } from './types/fetched-incident-field';
 import { FetchedIncidentType } from './types/fetched-incident-types';
-import { IncidentConfig, IncidentConfigs } from './types/incident-config';
+import { IncidentConfig, IncidentConfigs, IncidentJsonFileConfig } from './types/incident-config';
 import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
 import { DefaultDemistoEndpoint } from './types/default-demisto-endpoint';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
@@ -277,6 +277,30 @@ export class FetcherService {
   saveIncidentConfiguration(config: IncidentConfig): Promise<any> {
     let headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/incidentConfig/update', config, { headers } )
+                    .toPromise();
+  }
+
+
+
+  setDefaultIncidentJsonFile(incidentConfigName, jsonConfigName): Promise<any> {
+    let headers = this.buildHeaders();
+    const config: IncidentJsonFileConfig = {
+      configName: incidentConfigName,
+      jsonName: jsonConfigName
+    }
+    return this.http.post(this.apiPath + '/incidentConfig/defaultJson', config, { headers } )
+                    .toPromise();
+  }
+
+
+
+  clearDefaultIncidentJsonFile(incidentConfigName): Promise<any> {
+    let headers = this.buildHeaders();
+    const config: IncidentJsonFileConfig = {
+      configName: incidentConfigName,
+      jsonName: null
+    }
+    return this.http.post(this.apiPath + '/incidentConfig/defaultJson', config, { headers } )
                     .toPromise();
   }
 
