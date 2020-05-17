@@ -119,6 +119,16 @@
           [disabled]="savedIncidentConfigurationsLen === 0">
         </p-button>
 
+        <!-- JSON Groups -->
+        <p-button
+        type="button"
+        label="JSON Groups"
+        name="jsonGroupButton"
+        (onClick)="onJsonGroupButtonClicked()"
+        [disabled]="!savedJsonConfigurations || savedJsonConfigurations.length === 0"
+        pTooltip="Reload the field definitions from XSOAR">
+      </p-button>
+
         <!-- Bulk Create -->
         <p-button
           label="Bulk Create"
@@ -626,6 +636,132 @@
 
       </div>
     </form>
+
+  </p-dialog>
+
+
+
+  <!-- JSON Groups Dialog -->
+  <p-dialog
+    header="JSON Groups"
+    [(visible)]="showJsonGroupsDialog"
+    [modal]="true"
+    [style]="{minWidth: '50%', maxWidth: '75%', maxHeight: '75%'}">
+
+      <!-- header bar -->
+      <div>
+
+        <!-- New -->
+        <p-button
+          label="New"
+          (onClick)="onNewJsonGroupClicked()"
+          styleClass="alignButton">
+        </p-button>
+
+        <!-- Delete -->
+        <p-button
+          *ngIf="demistoEndpointsLen !== 0"
+          label="Delete"
+          (onClick)="onDeleteJsonGroupClicked()"
+          styleClass="alignButton"
+          [disabled]="!selectedDemistoEndpointName">
+        </p-button>
+
+      </div>
+
+      <div
+        *ngIf="jsonGroupConfigurationsItems.length === 0"
+        style="margin-top: 1em; font-weight: bold;">
+          Create a new JSON Group
+      </div>
+
+
+      <div *ngIf="jsonGroupConfigurationsItems.length !== 0" class="bulkCreateContainer">
+
+        <div class="bulkCreateContainerColumn">
+
+          <div *ngIf="jsonGroupConfigurationsItems.length !== 0" class="formLabel">Select a JSON Group to Configure</div>
+
+          <p-listbox
+            [options]="jsonGroupConfigurationsItems"
+            [(ngModel)]="jsonGroupDialogJsonGroupSelection"
+            [style]="{'width':'100%'}"
+            [multiple]="false"
+            [checkbox]="false"
+            [filter]="true">
+          </p-listbox>
+
+        </div>
+
+        <div class="bulkCreateContainerColumn">
+
+          <div *ngIf="!jsonGroupDialogJsonGroupSelection || jsonGroupDialogJsonGroupSelection === ''">
+              Select a JSON Group
+          </div>
+
+          <div *ngIf="!['', undefined].includes(jsonGroupDialogJsonGroupSelection)">
+              Select JSON Configurations to Include in Group
+          </div>
+
+          <p-listbox
+            *ngIf="jsonGroupDialogJsonGroupSelection"
+            [options]="savedJsonConfigurationItems"
+            [(ngModel)]="jsonGroupDialogSelections[jsonGroupDialogJsonGroupSelection]"
+            [style]="{'width':'100%'}"
+            [multiple]="true"
+            [checkbox]="true"
+            [filter]="true">
+          </p-listbox>
+
+        </div>
+
+      </div>
+
+      <div style="margin-top: .5em; float: right;">
+
+        <p-button
+          label="Accept Changes"
+          (onClick)="{}"
+          [disabled]="selectedBulkCreateConfigs.length === 0 || selectedBulkCreateEndpoints.length === 0">
+        </p-button>
+
+        <p-button
+          label="Cancel"
+          (onClick)="showJsonGroupsDialog = false">
+        </p-button>
+
+      </div>
+
+  </p-dialog>
+
+
+
+  <!-- New JSON Group As Dialog -->
+  <p-dialog
+    header="New JSON Group"
+    [(visible)]="showNewJsonConfigDialog"
+    [modal]="true"
+    [style]="{width: '300px'}"
+    styleClass="newJsonGroupConfigDialog">
+
+      <div style="margin-bottom: .5em;" class="formLabel">JSON Group Name</div>
+
+      <input
+        pInputText
+        #saveAsJsonInput
+        type="text"
+        [(ngModel)]="newJsonGroupConfigName"
+        class="inputDisplay"/>
+
+      <div style="margin-top: .5em;">{{newJsonGroupAcceptButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+
+      <div style="margin-top: .5em; float: right;">
+
+        <p-button label="Save" (onClick)="onNewJsonGroupAccepted()" [disabled]="newJsonGroupAcceptButtonDisabled"></p-button>
+
+        <p-button label="Cancel" (onClick)="showNewJsonConfigDialog = false"></p-button>
+
+      </div>
 
   </p-dialog>
 

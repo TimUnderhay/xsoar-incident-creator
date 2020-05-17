@@ -28,6 +28,8 @@ const incidentsFile = `${configDir}/incidents.json`;
 const foundIncidentsFile = fs.existsSync(incidentsFile);
 const freeJsonFile = `${configDir}/json.json`;
 const foundFreeJsonFile = fs.existsSync(freeJsonFile);
+const jsonGroupsFile = `${configDir}/json_groups.json`;
+const foundJsonGroupsFile = fs.existsSync(jsonGroupsFile);
 
 // Certificates
 const sslDir = `${configDir}/certs`;
@@ -51,6 +53,9 @@ var incident_fields = {};
 
 // Freeform JSON Config
 var freeJsonConfig;
+
+// JSON Groups Config
+var jsonGroupsConfig;
 
 
 
@@ -88,21 +93,109 @@ function logConnection(req, res, next) {
 app.use(logConnection);
 
 
+////////////////////// Support Functions //////////////////////
+
+function validateJsonGroups(jsonGroups) {
+  if (!isArray(jsonGroups)) {
+    throw `jsonGroups is not an array`;
+  }
+  for (const value of jsonGroups) {
+    const valueType = typeof value;
+    if (valueType !== 'string') {
+      throw `jsonGroups contains non-string values`;
+    }
+  }
+}
+
+function isArray(value) {
+  if (typeof value === 'object' && Array.isArray(value)) {
+    return true;
+  }
+  return false;
+}
 
 
-////////////////////// API //////////////////////
 
-app.get(apiPath + '/whoami', (req, res) => {
-  let currentUser = randomElement(users);
-  res.status(200).json( currentUser );
-});
+function saveFreeJsonConfig() {
+  return fs.promises.writeFile(freeJsonFile, JSON.stringify(freeJsonConfig, null, 2), { encoding: 'utf8', mode: 0o660});
+}
 
 
 
-app.get(apiPath + '/publicKey', (req, res) => {
-  // sends the internal public key
-  res.json( { publicKey: internalPubKey } );
-});
+function saveJsonGroupsConfig() {
+  return fs.promises.writeFile(jsonGroupsFile, JSON.stringify(jsonGroupsConfig, null, 2), { encoding: 'utf8', mode: 0o660});
+}
+
+
+
+function checkForRequiredFields(fields, body) {
+  for (const fieldName of fields) {
+    if (!(fieldName in body)) {
+      throw `${fieldName}`;
+    }
+  }
+}
+
+
+
+function checkBodyForKeys(keys, body) {
+  let success = true;
+  for (let i = 0; i < keys.length; i++) {
+    let key = keys[i];
+
+    if (! key in body) {
+      console.error(`Client body was missing key "${key}"`);
+      success = false;
+    }
+  }
+  return success;
+}
+
+
+
+function keysToLower(obj) {
+  let key;
+  let keys = Object.keys(obj);
+  let n = keys.length;
+  let newobj = {};
+  while (n--) {
+    key = keys[n];
+    newobj[key.toLowerCase()] = obj[key];
+  }
+  return newobj;
+}
+
+
+
+function removeNullValues(obj) {
+  let key;
+  let keys = Object.keys(obj);
+  let n = keys.length;
+  let newobj = {};
+  while (n--) {
+    key = keys[n];
+    if (obj[key] !== null ) {
+      newobj[key.toLowerCase()] = obj[key];
+    }
+  }
+  return newobj;
+}
+
+
+
+function removeEmptyValues(obj) {
+  let key;
+  let keys = Object.keys(obj);
+  let n = keys.length;
+  let newobj = {};
+  while (n--) {
+    key = keys[n];
+    if (obj[key] !== '' ) {
+      newobj[key.toLowerCase()] = obj[key];
+    }
+  }
+  return newobj;
+}
 
 
 
@@ -153,6 +246,154 @@ async function testApi(url, apiKey, trustAny) {
     return res;
   }
 }
+
+
+
+function getDemistoApiConfig(serverId) {
+  return demistoApiConfigs[serverId];
+}
+
+
+
+async function getIncidentFields(demistoUrl) {
+  // This method will get incident field definitions from a XSOAR server
+
+  let demistoServerConfig = getDemistoApiConfig(demistoUrl);
+
+  console.log(`Fetching incident fields from '${demistoServerConfig.url}'`);
+
+  let result;
+  let options = {
+    url: demistoServerConfig.url + '/incidentfields',
+    method: 'GET',
+    headers: {
+      Authorization: decrypt(demistoServerConfig.apiKey),
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    },
+    rejectUnauthorized: !demistoServerConfig.trustAny,
+    resolveWithFullResponse: true,
+    json: true
+  }
+
+  try {
+    // send request to XSOAR
+    result = await request( options );
+
+    // 'result' contains non-incident fields, as well, so let's make a version containing only incident fields
+    let fields = result.body.reduce( (result, field) => {
+      // console.log(field)
+      if ('id' in field && field.id.startsWith('incident_')) {
+        result.push(field)
+      };
+      return result;
+    }, []);
+
+    // console.log(fields);
+
+    console.log(`Successfully fetched incident fields from '${demistoServerConfig.url}'`);
+    return fields;
+  }
+  catch (error) {
+    if ('message' in error) {
+      console.error('Caught error fetching XSOAR fields configuration:', error.message);
+      return;
+    }
+    console.error('Caught error fetching XSOAR fields configuration:', error);
+  }
+}
+
+
+
+async function getIncidentTypes(demistoUrl) {
+// This method will get incident type definitions from a XSOAR server
+
+  let demistoServerConfig = getDemistoApiConfig(demistoUrl);
+
+  console.log(`Fetching incident types from '${demistoServerConfig.url}'`);
+
+  let result;
+  let options = {
+    url: demistoServerConfig.url + '/incidenttype',
+    method: 'GET',
+    headers: {
+      Authorization: decrypt(demistoServerConfig.apiKey),
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    },
+    rejectUnauthorized: !demistoServerConfig.trustAny,
+    resolveWithFullResponse: true,
+    json: true
+  }
+
+  try {
+    // send request to XSOAR
+    result = await request( options );
+
+    // console.log(fields);
+
+    console.log(`Successfully fetched incident types from '${demistoServerConfig.url}'`);
+    return result.body;
+  }
+  catch (error) {
+    if ('message' in error) {
+      console.error('Caught error fetching XSOAR types configuration:', error.message);
+      return;
+    }
+    console.error('Caught error fetching XSOAR types configuration:', error);
+  }
+}
+
+
+
+function saveIncidentsConfig() {
+  return fs.promises.writeFile(incidentsFile, JSON.stringify(incidentsConfig, null, 2), { encoding: 'utf8', mode: 0o660});
+}
+
+
+
+function returnError(error, res, body = null, statusCode = 500 ) {
+  console.error(error);
+  if (!body) {
+    body = {success: false, error};
+  }
+  res.status(statusCode).json(body);
+}
+
+
+
+function dos2unix(str) {
+  return str.replace(/\r\n/g, '\n');
+}
+
+
+
+function decrypt(str, encoding = 'utf8') {
+  return encryptor.decrypt(str, encoding);
+}
+
+
+
+function encrypt(str, encoding = 'utf8') {
+  return encryptor.encrypt(str, encoding);
+}
+
+
+
+
+////////////////////// API //////////////////////
+
+app.get(apiPath + '/whoami', (req, res) => {
+  let currentUser = randomElement(users);
+  res.status(200).json( currentUser );
+});
+
+
+
+app.get(apiPath + '/publicKey', (req, res) => {
+  // sends the internal public key
+  res.json( { publicKey: internalPubKey } );
+});
 
 
 
@@ -415,160 +656,6 @@ app.get(apiPath + '/demistoEndpoint', async (req, res) => {
 
 
 
-
-function checkBodyForKeys(keys, body) {
-  let success = true;
-  for (let i = 0; i < keys.length; i++) {
-    let key = keys[i];
-
-    if (! key in body) {
-      console.error(`Client body was missing key "${key}"`);
-      success = false;
-    }
-  }
-  return success;
-}
-
-
-
-function keysToLower(obj) {
-  let key;
-  let keys = Object.keys(obj);
-  let n = keys.length;
-  let newobj = {};
-  while (n--) {
-    key = keys[n];
-    newobj[key.toLowerCase()] = obj[key];
-  }
-  return newobj;
-}
-
-
-
-function removeNullValues(obj) {
-  let key;
-  let keys = Object.keys(obj);
-  let n = keys.length;
-  let newobj = {};
-  while (n--) {
-    key = keys[n];
-    if (obj[key] !== null ) {
-      newobj[key.toLowerCase()] = obj[key];
-    }
-  }
-  return newobj;
-}
-
-
-
-function removeEmptyValues(obj) {
-  let key;
-  let keys = Object.keys(obj);
-  let n = keys.length;
-  let newobj = {};
-  while (n--) {
-    key = keys[n];
-    if (obj[key] !== '' ) {
-      newobj[key.toLowerCase()] = obj[key];
-    }
-  }
-  return newobj;
-}
-
-
-
-
-async function getIncidentFields(demistoUrl) {
-  // This method will get incident field definitions from a XSOAR server
-
-  let demistoServerConfig = getDemistoApiConfig(demistoUrl);
-
-  console.log(`Fetching incident fields from '${demistoServerConfig.url}'`);
-
-  let result;
-  let options = {
-    url: demistoServerConfig.url + '/incidentfields',
-    method: 'GET',
-    headers: {
-      Authorization: decrypt(demistoServerConfig.apiKey),
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
-    },
-    rejectUnauthorized: !demistoServerConfig.trustAny,
-    resolveWithFullResponse: true,
-    json: true
-  }
-
-  try {
-    // send request to XSOAR
-    result = await request( options );
-
-    // 'result' contains non-incident fields, as well, so let's make a version containing only incident fields
-    let fields = result.body.reduce( (result, field) => {
-      // console.log(field)
-      if ('id' in field && field.id.startsWith('incident_')) {
-        result.push(field)
-      };
-      return result;
-    }, []);
-
-    // console.log(fields);
-
-    console.log(`Successfully fetched incident fields from '${demistoServerConfig.url}'`);
-    return fields;
-  }
-  catch (error) {
-    if ('message' in error) {
-      console.error('Caught error fetching XSOAR fields configuration:', error.message);
-      return;
-    }
-    console.error('Caught error fetching XSOAR fields configuration:', error);
-  }
-}
-
-
-
-async function getIncidentTypes(demistoUrl) {
-// This method will get incident type definitions from a XSOAR server
-
-let demistoServerConfig = getDemistoApiConfig(demistoUrl);
-
-console.log(`Fetching incident types from '${demistoServerConfig.url}'`);
-
-let result;
-let options = {
-  url: demistoServerConfig.url + '/incidenttype',
-  method: 'GET',
-  headers: {
-    Authorization: decrypt(demistoServerConfig.apiKey),
-    Accept: 'application/json',
-    'Content-Type': 'application/json'
-  },
-  rejectUnauthorized: !demistoServerConfig.trustAny,
-  resolveWithFullResponse: true,
-  json: true
-}
-
-try {
-  // send request to XSOAR
-  result = await request( options );
-
-  // console.log(fields);
-
-  console.log(`Successfully fetched incident types from '${demistoServerConfig.url}'`);
-  return result.body;
-}
-catch (error) {
-  if ('message' in error) {
-    console.error('Caught error fetching XSOAR types configuration:', error.message);
-    return;
-  }
-  console.error('Caught error fetching XSOAR types configuration:', error);
-}
-}
-
-
-
 app.get(apiPath + '/sampleIncident', async (req, res) => {
   let data;
   const fileName = 'testIncidentFields.json';
@@ -752,22 +839,6 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
 
 
 
-function saveFreeJsonConfig() {
-  return fs.promises.writeFile(freeJsonFile, JSON.stringify(freeJsonConfig, null, 2), { encoding: 'utf8', mode: 0o660});
-}
-
-
-
-function checkForRequiredFields(fields, body) {
-  for (const fieldName of fields) {
-    if (!(fieldName in body)) {
-      throw `${fieldName}`;
-    }
-  }
-}
-
-
-
 app.post(apiPath + '/json', async (req, res) => {
   // save new freeform JSON
   let body = req.body;
@@ -845,12 +916,6 @@ app.get(apiPath + '/json/:name', async (req, res) => {
     return;
   }
 } );
-
-
-
-function saveIncidentsConfig() {
-  return fs.promises.writeFile(incidentsFile, JSON.stringify(incidentsConfig, null, 2), { encoding: 'utf8', mode: 0o660});
-}
 
 
 
@@ -1128,20 +1193,119 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
 } );
 
 
+// JSON GROUPS //
 
-function returnError(error, res, body = null, statusCode = 500 ) {
-  console.error(error);
-  if (!body) {
-    body = {success: false, error};
+app.post(apiPath + '/jsonGroup', async (req, res) => {
+  // save a new JSON group config
+  let body = req.body;
+  const requiredFields = ['name', 'jsonGroups'];
+
+  try {
+    checkForRequiredFields(requiredFields, body);
   }
-  res.status(statusCode).json(body);
-}
+  catch(fieldName) {
+    res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+    return;
+  }
+
+  const name = body.name;
+  const jsonGroups = body.jsonGroups;
+
+  try {
+    validateJsonGroups(jsonGroups);
+  }
+  catch(error) {
+    res.status(400).json({error: `Invalid request: ${error}`});
+    return;
+  }
+
+  // check for existing config name
+  if (name in jsonGroupsConfig) {
+    const error = `Invalid request: JSON Group '${name}' is already defined`;
+    return res.status(400).json({error});
+  }
+
+  jsonGroupsConfig[name] = jsonGroups;
+  await saveJsonGroupsConfig();
+
+  res.status(201).json({success: true}); // send 'created'
+} );
+
+
+
+app.post(apiPath + '/jsonGroup/update', async (req, res) => {
+  // update an existing JSON group config
+  const body = req.body;
+  const requiredFields = ['name', 'jsonGroups'];;
+
+  try {
+    checkForRequiredFields(requiredFields, body);
+  }
+  catch(fieldName) {
+    res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+    return;
+  }
+
+  const name = body.name;
+  const jsonGroups = body.jsonGroups;
+
+  try {
+    validateJsonGroups(jsonGroups);
+  }
+  catch(error) {
+    res.status(400).json({error: `Invalid request: ${error}`});
+    return;
+  }
+
+  // check for existing config name
+  if (!(name in jsonGroupsConfig)) {
+    const error = `Invalid request: JSON Group '${name}' is not defined`;
+    return res.status(400).json({error});
+  }
+
+  jsonGroupsConfig[name] = jsonGroups;
+  await saveJsonGroupsConfig();
+
+  res.status(200).json({success: true});; // send 'OK'
+} );
+
+
+
+app.get(apiPath + '/jsonGroup/all', async (req, res) => {
+  // retrieve all JSON Group config names
+  const config = {};
+  for (const groupName of Object.keys(jsonGroupsConfig)) {
+    config[groupName] = {
+      name: groupName,
+      jsonGroups: jsonGroupsConfig[groupName]
+    };
+  }
+  res.status(200).json(config);
+} );
+
+
+
+app.delete(apiPath + '/jsonGroup/:name', async (req, res) => {
+  // delete a JSON Group config
+  const name = req.params.name;
+  if (name in jsonGroupsConfig) {
+      delete jsonGroupsConfig[name];
+      await saveJsonGroupsConfig();
+      res.status(200).json({name, success: true});
+      return;
+    }
+    else {
+      const error = `JSON Group '${name}' not found`;
+      res.status(400).json({error, name, success: false});
+      return;
+    }
+} );
 
 
 
 
 
-///// UTILITY FUNCTIONS //////
+///// STARTUP UTILITY FUNCTIONS //////
 
 async function loadDemistoApiConfigs() {
   // Read XSOAR API configs
@@ -1217,7 +1381,7 @@ async function loadDemistoApiConfigs() {
 function loadIncidentsConfig() {
   // Read Field Configs
   if (!foundIncidentsFile) {
-    console.log('Fields configuration file was not found');
+    console.log(`Incidents configuration file ${incidentsFile} was not found`);
     incidentsConfig = {};
   }
   else {
@@ -1236,7 +1400,7 @@ function loadIncidentsConfig() {
 function loadFreeJsonConfig() {
   // Read Freeform JSON Configs
   if (!foundFreeJsonFile) {
-    console.log('Freeform JSON configuration file was not found');
+    console.log(`Freeform JSON configuration file ${freeJsonFile} was not found`);
     freeJsonConfig = {};
   }
   else {
@@ -1252,26 +1416,21 @@ function loadFreeJsonConfig() {
 
 
 
-function getDemistoApiConfig(serverId) {
-  return demistoApiConfigs[serverId];
-}
 
-
-
-function dos2unix(str) {
-  return str.replace(/\r\n/g, '\n');
-}
-
-
-
-function decrypt(str, encoding = 'utf8') {
-  return encryptor.decrypt(str, encoding);
-}
-
-
-
-function encrypt(str, encoding = 'utf8') {
-  return encryptor.encrypt(str, encoding);
+function loadJsonGroupsConfig() {
+  // Read JSON Config Groups
+  jsonGroupsConfig = {};
+  if (!foundJsonGroupsFile) {
+    console.log(`JSON Groups configuration file ${jsonGroupsFile} was not found`);
+  }
+  else {
+    try {
+      jsonGroupsConfig = JSON.parse(fs.readFileSync(jsonGroupsFile, 'utf8'));
+    }
+    catch (error) {
+      console.error(`Error parsing ${jsonGroupsFile}:`, error);
+    }
+  }
 }
 
 
@@ -1463,6 +1622,7 @@ function initSSL() {
 
   loadIncidentsConfig();
   loadFreeJsonConfig();
+  loadJsonGroupsConfig();
 
   if (foundDist && !devMode) {
     // Serve compiled Angular files statically

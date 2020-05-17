@@ -14,6 +14,7 @@ import { IncidentField } from './types/incident-fields';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
 import { IncidentFieldRowComponent } from './incident-field-row.component';
 import { FreeformJSONConfig } from './types/freeform-json-config';
+import { JsonGroup, JsonGroups } from './types/json-group';
 
 export interface FieldMappingSelection {
   field: IncidentField;
@@ -64,6 +65,8 @@ export class FetcherService {
 
 
 
+  ///////// AUTHENTICATION /////////
+
   getLoggedInUser(): Promise<User> {
     let headers = new HttpHeaders( {
       Accept: 'application/json'
@@ -77,6 +80,9 @@ export class FetcherService {
   }
 
 
+
+
+  ///////// XSOAR ENDPOINTS /////////
 
   testDemistoEndpointById(serverId: string): Promise<DemistoEndpointStatus> {
     let headers = new HttpHeaders( {
@@ -177,6 +183,8 @@ export class FetcherService {
 
 
 
+  ///////// INCIDENTS /////////
+
   createDemistoIncident( params: any ): Promise<any> {
     let headers = this.buildHeaders(this.currentUser.username);
     console.log('FetcherService: createDemistoIncident(): Current User: ', this.currentUser.username);
@@ -233,6 +241,74 @@ export class FetcherService {
 
 
 
+  saveNewIncidentConfiguration(config: IncidentConfig): Promise<any> {
+    let headers = this.buildHeaders();
+    return this.http.post(this.apiPath + '/incidentConfig', config, { headers } )
+                    .toPromise();
+  }
+
+
+
+  saveIncidentConfiguration(config: IncidentConfig): Promise<any> {
+    let headers = this.buildHeaders();
+    return this.http.post(this.apiPath + '/incidentConfig/update', config, { headers } )
+                    .toPromise();
+  }
+
+
+
+  deleteIncidentConfiguration(name: string): Promise<any> {
+    let headers = this.buildHeaders();
+    return this.http.delete(this.apiPath + `/incidentConfig/${name}`, { headers } )
+                    .toPromise();
+  }
+
+
+
+  createInvestigation(incidentId, serverId): Promise<boolean> {
+    let headers = this.buildHeaders();
+    return this.http.post(this.apiPath + '/createInvestigation', {incidentId, serverId}, { headers } )
+                    .toPromise()
+                    .then( (value: any) => value.success);
+  }
+
+
+
+  demistoIncidentImport(incidentId, serverId): Promise<DemistoIncidentImportResult> {
+    let headers = this.buildHeaders();
+    return this.http.post(this.apiPath + '/demistoIncidentImport', {incidentId, serverId}, { headers } )
+                    .toPromise()
+                    .then( (res: DemistoIncidentImportResult) => res);
+  }
+
+
+
+
+  getPublicKey(): Promise<void> {
+    let headers = this.buildHeaders();
+    return this.http.get(this.apiPath + '/publicKey', { headers } )
+                    .toPromise()
+                    .then( (value: any) => this.publicKey = value.publicKey );
+  }
+
+
+
+  async initEncryption(): Promise<any> {
+    await this.getPublicKey();
+    this.encryptor = new JSEncrypt.JSEncrypt();
+    this.encryptor.setPublicKey(this.publicKey);
+  }
+
+
+
+  encrypt(str): string {
+    return this.encryptor.encrypt(str);
+  }
+
+
+
+  ///////// JSON /////////
+
   getSavedJSONConfigurationNames(): Promise<string[]> {
     let headers = this.buildHeaders();
     return this.http.get(this.apiPath + '/json', { headers } )
@@ -266,22 +342,6 @@ export class FetcherService {
 
 
 
-  saveNewIncidentConfiguration(config: IncidentConfig): Promise<any> {
-    let headers = this.buildHeaders();
-    return this.http.post(this.apiPath + '/incidentConfig', config, { headers } )
-                    .toPromise();
-  }
-
-
-
-  saveIncidentConfiguration(config: IncidentConfig): Promise<any> {
-    let headers = this.buildHeaders();
-    return this.http.post(this.apiPath + '/incidentConfig/update', config, { headers } )
-                    .toPromise();
-  }
-
-
-
   setDefaultIncidentJsonFile(incidentConfigName, jsonConfigName): Promise<any> {
     let headers = this.buildHeaders();
     const config: IncidentJsonFileConfig = {
@@ -306,51 +366,37 @@ export class FetcherService {
 
 
 
-  deleteIncidentConfiguration(name: string): Promise<any> {
+  ///////// JSON GROUPS /////////
+
+  getSavedJsonGroupConfigurations(): Promise<JsonGroups> {
     let headers = this.buildHeaders();
-    return this.http.delete(this.apiPath + `/incidentConfig/${name}`, { headers } )
+    return this.http.get(this.apiPath + '/jsonGroup/all', { headers } )
+                    .toPromise()
+                    .then(value => value as JsonGroups);
+  }
+
+
+
+  saveNewJsonGroupConfiguration(config: JsonGroup): Promise<any> {
+    let headers = this.buildHeaders();
+    return this.http.post(this.apiPath + '/jsonGroup', config, { headers } )
                     .toPromise();
   }
 
 
 
-  createInvestigation(incidentId, serverId): Promise<boolean> {
+  saveJsonGroupConfiguration(config: JsonGroup): Promise<any> {
     let headers = this.buildHeaders();
-    return this.http.post(this.apiPath + '/createInvestigation', {incidentId, serverId}, { headers } )
-                    .toPromise()
-                    .then( (value: any) => value.success);
+    return this.http.post(this.apiPath + '/jsonGroup/update', config, { headers } )
+                    .toPromise();
   }
 
 
 
-  demistoIncidentImport(incidentId, serverId): Promise<DemistoIncidentImportResult> {
+  deleteJsonGroupConfiguration(name: string): Promise<any> {
     let headers = this.buildHeaders();
-    return this.http.post(this.apiPath + '/demistoIncidentImport', {incidentId, serverId}, { headers } )
-                    .toPromise()
-                    .then( (res: DemistoIncidentImportResult) => res);
-  }
-
-
-
-  getPublicKey(): Promise<void> {
-    let headers = this.buildHeaders();
-    return this.http.get(this.apiPath + '/publicKey', { headers } )
-                    .toPromise()
-                    .then( (value: any) => this.publicKey = value.publicKey );
-  }
-
-
-
-  async initEncryption(): Promise<any> {
-    await this.getPublicKey();
-    this.encryptor = new JSEncrypt.JSEncrypt();
-    this.encryptor.setPublicKey(this.publicKey);
-  }
-
-
-
-  encrypt(str): string {
-    return this.encryptor.encrypt(str);
+    return this.http.delete(this.apiPath + `/jsonGroup/${name}`, { headers } )
+                    .toPromise();
   }
 
 }

@@ -11,10 +11,10 @@ import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/f
 import { IncidentConfig, IncidentConfigs } from './types/incident-config';
 import { PMessageOption } from './types/message-options';
 import { BulkCreateResult } from './types/bulk-create-result';
-// import { IncidentFieldsUIComponent } from './incident-fields-ui.component.ts.disabled';
 import { FreeformJsonUIComponent } from './freeform-json-ui.component';
 import { Subscription } from 'rxjs';
 import * as utils from './utils';
+import { JsonGroup, JsonGroups } from './types/json-group';
 
 type DemistoServerEditMode = 'edit' | 'new';
 
@@ -33,7 +33,6 @@ export class AppComponent implements OnInit {
     private changeDetector: ChangeDetectorRef
   ) {}
 
-  // @ViewChild(IncidentFieldsUIComponent) incidentFieldsUIComponent: IncidentFieldsUIComponent;
   @ViewChild(FreeformJsonUIComponent) freeformJsonUIComponent: FreeformJsonUIComponent;
 
   loggedInUser: User;
@@ -110,10 +109,6 @@ export class AppComponent implements OnInit {
 
   saveAsButtonEnabled = false;
   loadDefaultChosenFields = false;
-  
-
-  // Incident Fields UI
-  // showIncidentFieldsUI = false;
 
   // Json Mapping UI
   showJsonMappingUI = false;
@@ -132,7 +127,32 @@ export class AppComponent implements OnInit {
 
   // Freeform JSON Configs
   savedJsonConfigurations: string[] = [];
+  get savedJsonConfigurationItems(): SelectItem[] {
+    return this.savedJsonConfigurations.map( value => ({value, label: value} as SelectItem));
+  }
 
+  // JSON Groups Config & UI
+  _jsonGroupConfigurations: JsonGroups = {}
+  get jsonGroupConfigurations(): JsonGroups {
+    return this._jsonGroupConfigurations
+  };
+  set jsonGroupConfigurations(value: JsonGroups) {
+    console.log('groupvalue:', value);
+    this._jsonGroupConfigurations = value;
+    this.jsonGroupConfigurationsItems = Object.values(this._jsonGroupConfigurations).map( jsonConfig => ({ value: jsonConfig.name, label: jsonConfig.name} as SelectItem) );
+  }
+  jsonGroupConfigurationsItems: SelectItem[] = [];
+  jsonGroupDialogJsonGroupSelection: string;
+  showJsonGroupsDialog = false;
+  showNewJsonConfigDialog = false;
+  newJsonGroupConfigName: string;
+  showJsonGroupDeleteDialog = false;
+  jsonGroupToDelete: string;
+  jsonGroupDialogItems = {}; // temporary holder for group membership items in JSON Groups dialog
+  jsonGroupDialogSelections = {}; // temporary holder for group membership selections in JSON Groups dialog
+  get newJsonGroupAcceptButtonDisabled(): boolean {
+    return this.newJsonGroupConfigName in this._jsonGroupConfigurations;
+  }
   
   private subscriptions = new Subscription();
   
@@ -190,6 +210,8 @@ export class AppComponent implements OnInit {
 
     await this.getSavedJsonConfigurations();
 
+    await this.getSavedJsonGroupConfigurations();
+
   }
 
 
@@ -201,6 +223,18 @@ export class AppComponent implements OnInit {
     }
     catch (error) {
       console.error('AppComponent: getSavedJsonConfigurations(): Caught error fetching Freeform JSON configurations:', error);
+    }
+  }
+
+
+
+  async getSavedJsonGroupConfigurations() {
+    try {
+      this.jsonGroupConfigurations = await this.fetcherService.getSavedJsonGroupConfigurations();
+      console.log('AppComponent: getSavedJsonGroupConfigurations(): savedJsonConfigurations:', this.jsonGroupConfigurations);
+    }
+    catch (error) {
+      console.error('AppComponent: getSavedJsonGroupConfigurations(): Caught error fetching JSON Groups configurations:', error);
     }
   }
 
@@ -998,7 +1032,7 @@ export class AppComponent implements OnInit {
 
 
   async onDeleteDemistoEndpointClicked() {
-    console.log(`onDeleteDemistoEndpointClicked(): ${this.demistoEndpointToDelete}`);
+    console.log(`AppComponent: onDeleteDemistoEndpointClicked(): ${this.demistoEndpointToDelete}`);
     this.showDemistoEndpointOpenDialog = false;
     this.showDeleteDemistoEndpointDialog = true;
     this.demistoEndpointToDelete = this.selectedDemistoEndpointName;
@@ -1290,6 +1324,85 @@ export class AppComponent implements OnInit {
   onFieldMappingSelectionEnded() {
     this.showFieldMappingSelectionBox = false;
   }
+
+
+
+  refreshJsonGroupUIConfig(updateSelections=true) {
+    console.log('AppComponent: refreshJsonGroupUIConfig()');
+    console.log('AppComponent: refreshJsonGroupUIConfig(): jsonGroupConfigurationsItems:', this.jsonGroupConfigurationsItems);
+    
+    /*const jsonGroupDialogItems = {};
+    for (const jsonGroupName of Object.keys(this.jsonGroupConfigurations)) {
+      jsonGroupDialogItems[jsonGroupName] = Object.assign(this.savedJsonConfigurationItems, []);
+    }
+    this.jsonGroupDialogItems = jsonGroupDialogItems;
+    console.log('AppComponent: refreshJsonGroupUIConfig(): jsonGroupDialogItems:', jsonGroupDialogItems);*/
+
+    if (updateSelections) {
+      const jsonGroupDialogSelections = {};
+      for (const jsonGroup of Object.values(this.jsonGroupConfigurations)) {
+        jsonGroupDialogSelections[jsonGroup.name] = Object.assign(jsonGroup.jsonGroups);
+      }
+      this.jsonGroupDialogSelections = jsonGroupDialogSelections;
+    }
+  }
+
+
+
+  onJsonGroupButtonClicked() {
+    console.log('AppComponent: onJsonGroupButtonClicked()');
+    this.showJsonGroupsDialog = true;
+    this.refreshJsonGroupUIConfig();
+  }
+
+
+
+  /*onJsonGroupSelected_JsonGroupDialog() {
+    console.log('AppComponent: onJsonGroupSelected_JsonGroupDialog()');
+  }*/
+
+
+
+  async onNewJsonGroupClicked() {
+    console.log('AppComponent: onNewJsonGroupClicked()');
+    this.showNewJsonConfigDialog = true;
+    // this.showJsonGroupsDialog = false;
+    this.newJsonGroupConfigName = '';
+    setTimeout( () =>
+      document.getElementsByClassName('newJsonGroupConfigDialog')[0].getElementsByTagName('input')[0].focus()
+      , 100);
+  }
+
+
+
+  async onNewJsonGroupAccepted() {
+    console.log('AppComponent: onNewJsonGroupAccepted()');
+    const newJsonGroupConfig: JsonGroup = {
+      name: this.newJsonGroupConfigName,
+      jsonGroups: []
+    };
+    this.showNewJsonConfigDialog = false;
+    try {
+      await this.fetcherService.saveNewJsonGroupConfiguration(newJsonGroupConfig);
+    }
+    catch(error) {
+      console.error('AppComponent: onNewJsonGroupAccepted(): Caught error saving JSON Groups configurations:', error);
+      return;
+    }
+
+    await this.getSavedJsonGroupConfigurations();
+    this.refreshJsonGroupUIConfig(false);
+  }
+
+
+
+  async onDeleteJsonGroupClicked() {
+    console.log(`AppComponent: onDeleteJsonGroupClicked(): ${this.jsonGroupDialogJsonGroupSelection}`);
+    this.showJsonGroupDeleteDialog = true;
+    // this.showJsonGroupsDialog = false;
+    this.jsonGroupToDelete = this.jsonGroupDialogJsonGroupSelection;
+  }
+
 
 
 

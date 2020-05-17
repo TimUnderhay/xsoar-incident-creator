@@ -84,7 +84,7 @@
           <!-- Create Investigation Toggle -->
           <p-toggleButton
             [onLabel]="'Create Investigation On'"
-            offLabel="Create Investigation: Off"
+            offLabel="Create Investigation Off"
             [(ngModel)]="createInvestigation"
             pTooltip="If enabled, this option will cause an investigation to be created along with a new incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so."
             showDelay="750">
@@ -94,7 +94,7 @@
           <p-button
             type="button"
             label="Reload Definitions"
-            name="createIncident"
+            name="createIncidentButton"
             (onClick)="onReloadFieldDefinitions()"
             [disabled]="!currentDemistoEndpointInit"
             pTooltip="Reload the field definitions from XSOAR">
