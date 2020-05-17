@@ -95,14 +95,14 @@ app.use(logConnection);
 
 ////////////////////// Support Functions //////////////////////
 
-function validateJsonGroups(jsonGroups) {
-  if (!isArray(jsonGroups)) {
-    throw `jsonGroups is not an array`;
+function validateJsonGroup(jsonConfigs) {
+  if (!isArray(jsonConfigs)) {
+    throw `jsonConfigs is not an array`;
   }
-  for (const value of jsonGroups) {
+  for (const value of jsonConfigs) {
     const valueType = typeof value;
     if (valueType !== 'string') {
-      throw `jsonGroups contains non-string values`;
+      throw `jsonConfigs contains non-string values`;
     }
   }
 }
@@ -1198,7 +1198,7 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
 app.post(apiPath + '/jsonGroup', async (req, res) => {
   // save a new JSON group config
   let body = req.body;
-  const requiredFields = ['name', 'jsonGroups'];
+  const requiredFields = ['name', 'jsonConfigs'];
 
   try {
     checkForRequiredFields(requiredFields, body);
@@ -1209,10 +1209,10 @@ app.post(apiPath + '/jsonGroup', async (req, res) => {
   }
 
   const name = body.name;
-  const jsonGroups = body.jsonGroups;
+  const jsonConfigs = body.jsonConfigs;
 
   try {
-    validateJsonGroups(jsonGroups);
+    validateJsonGroup(jsonConfigs);
   }
   catch(error) {
     res.status(400).json({error: `Invalid request: ${error}`});
@@ -1220,12 +1220,12 @@ app.post(apiPath + '/jsonGroup', async (req, res) => {
   }
 
   // check for existing config name
-  if (name in jsonGroupsConfig) {
+  if (name in jsonConfigs) {
     const error = `Invalid request: JSON Group '${name}' is already defined`;
     return res.status(400).json({error});
   }
 
-  jsonGroupsConfig[name] = jsonGroups;
+  jsonGroupsConfig[name] = jsonConfigs;
   await saveJsonGroupsConfig();
 
   res.status(201).json({success: true}); // send 'created'
@@ -1236,7 +1236,7 @@ app.post(apiPath + '/jsonGroup', async (req, res) => {
 app.post(apiPath + '/jsonGroup/update', async (req, res) => {
   // update an existing JSON group config
   const body = req.body;
-  const requiredFields = ['name', 'jsonGroups'];;
+  const requiredFields = ['name', 'jsonConfigs'];;
 
   try {
     checkForRequiredFields(requiredFields, body);
@@ -1247,10 +1247,10 @@ app.post(apiPath + '/jsonGroup/update', async (req, res) => {
   }
 
   const name = body.name;
-  const jsonGroups = body.jsonGroups;
+  const jsonConfigs = body.jsonConfigs;
 
   try {
-    validateJsonGroups(jsonGroups);
+    validateJsonGroup(jsonConfigs);
   }
   catch(error) {
     res.status(400).json({error: `Invalid request: ${error}`});
@@ -1263,7 +1263,7 @@ app.post(apiPath + '/jsonGroup/update', async (req, res) => {
     return res.status(400).json({error});
   }
 
-  jsonGroupsConfig[name] = jsonGroups;
+  jsonGroupsConfig[name] = jsonConfigs;
   await saveJsonGroupsConfig();
 
   res.status(200).json({success: true});; // send 'OK'
@@ -1277,7 +1277,7 @@ app.get(apiPath + '/jsonGroup/all', async (req, res) => {
   for (const groupName of Object.keys(jsonGroupsConfig)) {
     config[groupName] = {
       name: groupName,
-      jsonGroups: jsonGroupsConfig[groupName]
+      jsonConfigs: jsonGroupsConfig[groupName]
     };
   }
   res.status(200).json(config);

@@ -126,11 +126,16 @@ export class AppComponent implements OnInit {
   showFieldMappingSelectionBox = false;
 
   // Freeform JSON Configs
-  savedJsonConfigurations: string[] = [];
-  get savedJsonConfigurationItems(): SelectItem[] {
-    return this.savedJsonConfigurations.map( value => ({value, label: value} as SelectItem));
+  _savedJsonConfigurations: string[] = [];
+  get savedJsonConfigurations(): string[] {
+    return this._savedJsonConfigurations;
   }
-
+  set savedJsonConfigurations(value: string[]) {
+    this._savedJsonConfigurations = value;
+    this.savedJsonConfigurationItems = this.savedJsonConfigurations.map( val => ({value: val, label: val} as SelectItem))
+  }
+  savedJsonConfigurationItems: SelectItem[];
+  
   // JSON Groups Config & UI
   _jsonGroupConfigurations: JsonGroups = {}
   get jsonGroupConfigurations(): JsonGroups {
@@ -141,13 +146,12 @@ export class AppComponent implements OnInit {
     this._jsonGroupConfigurations = value;
     this.jsonGroupConfigurationsItems = Object.values(this._jsonGroupConfigurations).map( jsonConfig => ({ value: jsonConfig.name, label: jsonConfig.name} as SelectItem) );
   }
-  jsonGroupConfigurationsItems: SelectItem[] = [];
-  jsonGroupDialogJsonGroupSelection: string;
   showJsonGroupsDialog = false;
+  jsonGroupConfigurationsItems: SelectItem[] = [];
+  jsonGroupSelection_JsonGroupDialog: string;
   showNewJsonConfigDialog = false;
   newJsonGroupConfigName: string;
   showJsonGroupDeleteDialog = false;
-  jsonGroupToDelete: string;
   jsonGroupDialogItems = {}; // temporary holder for group membership items in JSON Groups dialog
   jsonGroupDialogSelections = {}; // temporary holder for group membership selections in JSON Groups dialog
   get newJsonGroupAcceptButtonDisabled(): boolean {
@@ -264,18 +268,18 @@ export class AppComponent implements OnInit {
 
   async demistoEndpointInit() {
     /*
-    Loads the list of Demisto endpoint configs.
-    Gets the default Demisto endpoint
-    If there are no server configs, set currentDemistoEndpointInit = false and display a message and do nothing else
-    If the server as serts that a default server is defined:
-      Set defaultDemistoEndpointName
-      Set currentDemistoEndpointName
-      Test the current/default Demisto endpoint.
-        If successful, display a success message
-        If unsuccessful, display a failure message
-      Finally, build the options for the server selection PrimeNG widget from our updated server list
+      Loads the list of Demisto endpoint configs.
+      Gets the default Demisto endpoint
+      If there are no server configs, set currentDemistoEndpointInit = false and display a message and do nothing else
+      If the server as serts that a default server is defined:
+        Set defaultDemistoEndpointName
+        Set currentDemistoEndpointName
+        Test the current/default Demisto endpoint.
+          If successful, display a success message
+          If unsuccessful, display a failure message
+        Finally, build the options for the server selection PrimeNG widget from our updated server list
 
-    Called only from ngOnInit()
+      Called only from ngOnInit()
     */
     console.log('AppComponent: demistoEndpointInit()');
     try {
@@ -343,17 +347,17 @@ export class AppComponent implements OnInit {
 
   async refreshDemistoEndpoints(setDefault = false) {
     /*
-    Called from onNewDemistoEndpointSaved(), onDeleteDemistoEndpointConfirmed(), onSetDefaultDemistoEndpoint(), onRefreshDemistoEndpoints(), and onDemistoEndpointUpdated()
+      Called from onNewDemistoEndpointSaved(), onDeleteDemistoEndpointConfirmed(), onSetDefaultDemistoEndpoint(), onRefreshDemistoEndpoints(), and onDemistoEndpointUpdated()
 
-    Loads the list of Demisto endpoint configs.
-    Gets the default Demisto endpoint, as it may have changed.
-    If there are no configs, set currentDemistoEndpointInit = false and currentDemistoEndpointName = undefined
-    If the server says the default Demisto endpoint is defined, set defaultDemistoEndpointName to be the default Demisto endpoint
-    if the current server no longer exists after the refresh, then set currentDemistoEndpointName to undefined
-    If a server is selected (currentDemistoEndpointName), test it and save result to currentDemistoEndpointInit
-    Finally, build the options for the server selection PrimeNG widget from our updated server list
+      Loads the list of Demisto endpoint configs.
+      Gets the default Demisto endpoint, as it may have changed.
+      If there are no configs, set currentDemistoEndpointInit = false and currentDemistoEndpointName = undefined
+      If the server says the default Demisto endpoint is defined, set defaultDemistoEndpointName to be the default Demisto endpoint
+      if the current server no longer exists after the refresh, then set currentDemistoEndpointName to undefined
+      If a server is selected (currentDemistoEndpointName), test it and save result to currentDemistoEndpointInit
+      Finally, build the options for the server selection PrimeNG widget from our updated server list
 
-    setDefault = true means that defaultDemistoEndpointName should be set automatically if this is the first server to be added, typically only upon a create or delete operation.  Only used when called from onNewDemistoEndpointSaved()
+      setDefault = true means that defaultDemistoEndpointName should be set automatically if this is the first server to be added, typically only upon a create or delete operation.  Only used when called from onNewDemistoEndpointSaved()
     */
 
     console.log('AppComponent: refreshDemistoEndpoints()');
@@ -403,20 +407,6 @@ export class AppComponent implements OnInit {
     }
 
     this.buildDemistoEndpointItems();
-
-    /*
-    const currentDemistoServerChanged = this.currentDemistoEndpointInit && lastCurrentDemistoEndpointName !== this.currentDemistoEndpointName; // the current endpoint may have changed if it was edited
-
-    if (currentDemistoServerChanged) {
-      // Refresh Demisto Incident Fields
-      try {
-        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName);
-      }
-      catch (error) {
-        console.error('AppComponent: refreshDemistoEndpoints(): Caught error fetching Demisto incident fields:', error);
-      }
-    }
-    */
   }
 
 
@@ -442,7 +432,6 @@ export class AppComponent implements OnInit {
       if ( 'success' in result && result.success ) {
         // test successful
         testResult = 'Test successful';
-        // this.currentDemistoEndpointInit = true;
         this.messageWithAutoClear({ severity: 'success', summary: 'Success', detail: 'XSOAR endpoint communication test success'});
         return true;
       }
@@ -460,7 +449,6 @@ export class AppComponent implements OnInit {
           summary: 'Failure',
           detail: `XSOAR endpoint communication is not initialised. ${testResult}`
         }];
-        // this.currentDemistoEndpointInit = false;
         return false;
       }
     }
@@ -471,7 +459,6 @@ export class AppComponent implements OnInit {
         summary: 'Failure',
         detail: `XSOAR endpoint communication is not initialised. ${testResult}`
       }];
-      // this.currentDemistoEndpointInit = false;
       return false;
     }
   }
@@ -480,9 +467,9 @@ export class AppComponent implements OnInit {
 
   async fetchIncidentFieldDefinitions(serverId): Promise<boolean> {
     /*
-    Called from ngOnInit(), onReloadFieldDefinitions(), refreshDemistoEndpoints(), switchCurrentDemistoEndpoint()
-    Fetches incident field definitions from Demisto
-    Saves them to fetchedIncidentFieldDefinitions
+      Called from ngOnInit(), onReloadFieldDefinitions(), refreshDemistoEndpoints(), switchCurrentDemistoEndpoint()
+      Fetches incident field definitions from Demisto
+      Saves them to fetchedIncidentFieldDefinitions
     */
     console.log('AppComponent: fetchIncidentFieldDefinitions()');
     try {
@@ -492,15 +479,6 @@ export class AppComponent implements OnInit {
 
       console.log('AppComponent: fetchedIncidentFieldDefinitions:', this.fetchedIncidentFieldDefinitions);
       return true;
-
-      // for identification purposes, output all the field types
-      /*let fieldTypes = fetchedIncidentFieldDefinitions.reduce( (result: string[], field: FetchedIncidentField) => {
-        if (!result.includes(field.type)) {
-          result.push(field.type);
-        }
-        return result;
-      }, []);
-      console.log('AppComponent: fetchIncidentFieldDefinitions(): fieldTypes:', fieldTypes);*/
     }
     catch (err) {
       console.log('AppComponent: fetchIncidentFieldDefinitions(): Caught error fetching Demisto incident fields:', err);
@@ -523,8 +501,8 @@ export class AppComponent implements OnInit {
 
   async fetchIncidentTypes(serverId): Promise<boolean> {
     /*
-    Called from ngOnInit()
-    Fetches incident types from Demisto
+      Called from ngOnInit()
+      Fetches incident types from Demisto
     */
     console.log('AppComponent: fetchIncidentTypes()');
     try {
@@ -551,7 +529,6 @@ export class AppComponent implements OnInit {
       try {
         const parsedIncidentJson = JSON.parse(reader.result as string);
         console.log('AppComponent: onIncidentJsonUploaded(): parsedIncidentJson:', parsedIncidentJson);
-        // this.showIncidentFieldsUI = true;
         this.showJsonMappingUI = true;
         this.loadDefaultChosenFields = false;
         this.loadedIncidentConfigName = undefined;
@@ -570,31 +547,9 @@ export class AppComponent implements OnInit {
 
 
 
-  /*onIncidentConfigOpened() {
-  // onConfigOpened() {
-    // legacy - for use with incident-fields-ui.component
-    console.log('AppComponent: onIncidentConfigOpened()');
-    this.showOpenDialog = false;
-    // this.showIncidentFieldsUI = true;
-    this.showJsonMappingUI = false;
-    this.changeDetector.detectChanges();
-    
-    const selectedConfig = this.savedIncidentConfigurations[this.selectedOpenConfig];
-    this.loadedIncidentConfigName = selectedConfig.name;
-    this.loadedIncidentConfigId = selectedConfig.id;
-    this.incidentFieldsUIComponent.onConfigOpened(selectedConfig);
-
-    this.selectedOpenConfig = ''; // reset selection
-  }*/
-
-
-
   onConfigOpened() {
-  // onNewConfigOpened() {
-    // new - uses freeform-json-ui.component
     console.log('AppComponent: onConfigOpened()');
     this.showOpenDialog = false;
-    // this.showIncidentFieldsUI = true;
     this.showJsonMappingUI = true;
     this.loadDefaultChosenFields = false;
     this.changeDetector.detectChanges();
@@ -610,23 +565,13 @@ export class AppComponent implements OnInit {
   onSaveAsClicked() {
     console.log('AppComponent: onSaveAsClicked()');
     this.freeformJsonUIComponent.onIncidentSaveAsClicked();
-    /*if (this.showIncidentFieldsUI) {
-      this.incidentFieldsUIComponent.onSaveAsClicked();
-    }
-    else if (this.showJsonMappingUI) {
-      this.freeformJsonUIComponent.onSaveAsClicked();
-    }*/
   }
 
 
 
   async onSaveClicked() {
     console.log('AppComponent: onSaveClicked()');
-    /*if (this.showIncidentFieldsUI) {
-      await this.incidentFieldsUIComponent.onSaveClicked();
-      this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration '${this.selectedOpenConfig}' has been saved`});
-    }*/
-    
+   
     await this.freeformJsonUIComponent.onIncidentSaveClicked();
     this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration '${this.selectedOpenConfig}' has been saved`});
 
@@ -1277,7 +1222,6 @@ export class AppComponent implements OnInit {
     console.log('AppComponent: loadFromDemistoAccepted()');
     this.showJsonMappingUI = true;
     this.loadDefaultChosenFields = false;
-    // this.showIncidentFieldsUI = true;
     this.loadedIncidentConfigName = undefined;
     this.loadedIncidentConfigId = undefined;
     this.changeDetector.detectChanges();
@@ -1327,24 +1271,15 @@ export class AppComponent implements OnInit {
 
 
 
-  refreshJsonGroupUIConfig(updateSelections=true) {
+  refreshJsonGroupUIConfig() {
     console.log('AppComponent: refreshJsonGroupUIConfig()');
     console.log('AppComponent: refreshJsonGroupUIConfig(): jsonGroupConfigurationsItems:', this.jsonGroupConfigurationsItems);
-    
-    /*const jsonGroupDialogItems = {};
-    for (const jsonGroupName of Object.keys(this.jsonGroupConfigurations)) {
-      jsonGroupDialogItems[jsonGroupName] = Object.assign(this.savedJsonConfigurationItems, []);
-    }
-    this.jsonGroupDialogItems = jsonGroupDialogItems;
-    console.log('AppComponent: refreshJsonGroupUIConfig(): jsonGroupDialogItems:', jsonGroupDialogItems);*/
 
-    if (updateSelections) {
-      const jsonGroupDialogSelections = {};
-      for (const jsonGroup of Object.values(this.jsonGroupConfigurations)) {
-        jsonGroupDialogSelections[jsonGroup.name] = Object.assign(jsonGroup.jsonGroups);
-      }
-      this.jsonGroupDialogSelections = jsonGroupDialogSelections;
+    const jsonGroupDialogSelections = {};
+    for (const jsonGroup of Object.values(this.jsonGroupConfigurations)) {
+      jsonGroupDialogSelections[jsonGroup.name] = Object.assign(jsonGroup.jsonConfigs);
     }
+    this.jsonGroupDialogSelections = jsonGroupDialogSelections;
   }
 
 
@@ -1379,28 +1314,84 @@ export class AppComponent implements OnInit {
     console.log('AppComponent: onNewJsonGroupAccepted()');
     const newJsonGroupConfig: JsonGroup = {
       name: this.newJsonGroupConfigName,
-      jsonGroups: []
+      jsonConfigs: []
     };
     this.showNewJsonConfigDialog = false;
+    
     try {
       await this.fetcherService.saveNewJsonGroupConfiguration(newJsonGroupConfig);
+      await this.getSavedJsonGroupConfigurations();
+      this.jsonGroupSelection_JsonGroupDialog = this.newJsonGroupConfigName;
+      this.jsonGroupDialogSelections[this.newJsonGroupConfigName] = [];
     }
     catch(error) {
       console.error('AppComponent: onNewJsonGroupAccepted(): Caught error saving JSON Groups configurations:', error);
       return;
     }
-
-    await this.getSavedJsonGroupConfigurations();
-    this.refreshJsonGroupUIConfig(false);
   }
 
 
 
-  async onDeleteJsonGroupClicked() {
-    console.log(`AppComponent: onDeleteJsonGroupClicked(): ${this.jsonGroupDialogJsonGroupSelection}`);
+  async onDeleteJsonGroupConfirmed(jsonGroupToDelete: string) {
+    console.log(`AppComponent: onDeleteJsonGroupConfirmed(): jsonGroupToDelete: ${jsonGroupToDelete}`);
+    try {
+      await this.fetcherService.deleteJsonGroupConfiguration(jsonGroupToDelete);
+      await this.getSavedJsonGroupConfigurations();
+      if (jsonGroupToDelete === this.jsonGroupSelection_JsonGroupDialog) {
+        this.jsonGroupSelection_JsonGroupDialog = undefined;
+      }
+      delete this.jsonGroupDialogSelections[jsonGroupToDelete];
+    }
+    catch(error) {
+      console.error(`AppComponent: onDeleteJsonGroupConfirmed(): Caught error deleting JSON Group configuration '${jsonGroupToDelete}':`, error);
+      return;
+    }
+  }
+
+
+
+  onDeleteJsonGroupClicked() {
+    console.log(`AppComponent: onDeleteJsonGroupClicked(): ${this.jsonGroupSelection_JsonGroupDialog}`);
     this.showJsonGroupDeleteDialog = true;
     // this.showJsonGroupsDialog = false;
-    this.jsonGroupToDelete = this.jsonGroupDialogJsonGroupSelection;
+    const jsonGroupToDelete = this.jsonGroupSelection_JsonGroupDialog;
+    this.confirmationService.confirm( {
+      header: `Confirm Deletion`,
+      message: `Are you sure that you would like to delete JSON group '${jsonGroupToDelete}'`,
+      accept: () => this.onDeleteJsonGroupConfirmed(this.jsonGroupSelection_JsonGroupDialog),
+      icon: 'pi pi-exclamation-triangle'
+    });
+  }
+
+
+
+  async onAcceptJsonGroupChanges() {
+    console.log(`AppComponent: onAcceptJsonGroupChanges()`);
+    for (const jsonGroupName of Object.keys(this.jsonGroupDialogSelections)) {
+      const jsonSelections = this.jsonGroupDialogSelections[jsonGroupName];
+      // console.log(`jsonSelection:`, jsonSelections);
+      const groupConfig: JsonGroup = {
+        name: jsonGroupName,
+        jsonConfigs: jsonSelections
+      };
+      await this.fetcherService.saveJsonGroupConfiguration(groupConfig);
+    }
+    await this.getSavedJsonGroupConfigurations();
+    this.showJsonGroupsDialog = false;
+  }
+
+
+
+  onSelectAllJsonConfigurations() {
+    console.log(`AppComponent: onSelectAllJsonConfigurations()`);
+    this.jsonGroupDialogSelections[this.jsonGroupSelection_JsonGroupDialog] = Object.assign(this.savedJsonConfigurations, []);
+  }
+
+
+
+  onUnselectAllJsonConfigurations() {
+    console.log(`AppComponent: onUnselectAllJsonConfigurations()`);
+    this.jsonGroupDialogSelections[this.jsonGroupSelection_JsonGroupDialog] = [];
   }
 
 

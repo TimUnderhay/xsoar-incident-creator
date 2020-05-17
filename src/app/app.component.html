@@ -150,25 +150,7 @@
     </p-card>
 
 
-    <!-- Incident Fields UI -->
-    <!--
-    <incident-fields-ui
-      *ngIf="fetchedIncidentFieldDefinitions && showIncidentFieldsUI"
-      [loadedIncidentConfigName]="loadedIncidentConfigName"
-      [loadedIncidentConfigId]="loadedIncidentConfigId"
-      [currentDemistoEndpointName]="currentDemistoEndpointName"
-      [currentDemistoEndpointInit]="currentDemistoEndpointInit"
-      [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
-      [savedIncidentConfigurations]="savedIncidentConfigurations"
-      (saveAsButtonEnabledChange)="saveAsButtonEnabled = $event"
-      (savedIncidentConfigurationsChanged)="onSavedIncidentConfigurationsChanged($event)" 
-      (messagesReplace)="messagesReplace($event)"
-      (messageWithAutoClear)="messageWithAutoClear($event)"
-      (reloadFieldDefinitions)="fetchIncidentFieldDefinitions($event)">
-    </incident-fields-ui>-->
-
-
-
+    <!-- Freeform JSON UI -->
     <freeform-json-ui
       *ngIf="showJsonMappingUI && fetchedIncidentFieldDefinitions && fetchedIncidentTypes"
 
@@ -664,7 +646,7 @@
           label="Delete"
           (onClick)="onDeleteJsonGroupClicked()"
           styleClass="alignButton"
-          [disabled]="!selectedDemistoEndpointName">
+          [disabled]="!jsonGroupSelection_JsonGroupDialog || jsonGroupSelection_JsonGroupDialog === ''">
         </p-button>
 
       </div>
@@ -680,37 +662,63 @@
 
         <div class="bulkCreateContainerColumn">
 
-          <div *ngIf="jsonGroupConfigurationsItems.length !== 0" class="formLabel">Select a JSON Group to Configure</div>
+          <div *ngIf="jsonGroupConfigurationsItems.length !== 0" class="formLabel">Select a JSON group to configure</div>
 
           <p-listbox
             [options]="jsonGroupConfigurationsItems"
-            [(ngModel)]="jsonGroupDialogJsonGroupSelection"
+            [(ngModel)]="jsonGroupSelection_JsonGroupDialog"
             [style]="{'width':'100%'}"
             [multiple]="false"
             [checkbox]="false"
-            [filter]="true">
+            [filter]="false">
           </p-listbox>
 
         </div>
 
         <div class="bulkCreateContainerColumn">
 
-          <div *ngIf="!jsonGroupDialogJsonGroupSelection || jsonGroupDialogJsonGroupSelection === ''">
+          <div
+            *ngIf="!jsonGroupSelection_JsonGroupDialog || jsonGroupSelection_JsonGroupDialog === ''"
+            class="formLabel">
               Select a JSON Group
           </div>
 
-          <div *ngIf="!['', undefined].includes(jsonGroupDialogJsonGroupSelection)">
-              Select JSON Configurations to Include in Group
+          <div
+            *ngIf="!['', undefined].includes(jsonGroupSelection_JsonGroupDialog)">
+
+            <span class="formLabel">
+              JSON Configurations
+            </span>
+            
+            <div style="float: right;">
+
+              <span
+                (click)="onSelectAllJsonConfigurations()"
+                class="selectAllControl">
+                  Select All
+                </span>
+  
+              | 
+              
+              <span
+              (click)="onUnselectAllJsonConfigurations()"
+                class="selectAllControl">
+                None
+              </span>
+
+            </div>
+
           </div>
 
           <p-listbox
-            *ngIf="jsonGroupDialogJsonGroupSelection"
+            *ngIf="jsonGroupSelection_JsonGroupDialog"
             [options]="savedJsonConfigurationItems"
-            [(ngModel)]="jsonGroupDialogSelections[jsonGroupDialogJsonGroupSelection]"
+            [(ngModel)]="jsonGroupDialogSelections[jsonGroupSelection_JsonGroupDialog]"
             [style]="{'width':'100%'}"
             [multiple]="true"
             [checkbox]="true"
-            [filter]="true">
+            [filter]="false"
+            [showToggleAll]="false">
           </p-listbox>
 
         </div>
@@ -721,8 +729,7 @@
 
         <p-button
           label="Accept Changes"
-          (onClick)="{}"
-          [disabled]="selectedBulkCreateConfigs.length === 0 || selectedBulkCreateEndpoints.length === 0">
+          (onClick)="onAcceptJsonGroupChanges()">
         </p-button>
 
         <p-button

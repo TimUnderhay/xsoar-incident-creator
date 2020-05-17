@@ -285,6 +285,11 @@ textarea[read-only].jsonTextAreaDisplay {
   border-radius: 1em;
 }
 
+.selectAllControl {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 
 
 /* Input Text Fields */
