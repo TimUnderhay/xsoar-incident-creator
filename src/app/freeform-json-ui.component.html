@@ -224,7 +224,8 @@
 
           <p-button
             label="Save As"
-            (onClick)="onJsonSaveAsClicked()">
+            (onClick)="onJsonSaveAsClicked()"
+            [disabled]="!json">
           </p-button>
 
           <p-button

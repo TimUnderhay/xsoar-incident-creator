@@ -28,7 +28,7 @@ const incidentsFile = `${configDir}/incidents.json`;
 const foundIncidentsFile = fs.existsSync(incidentsFile);
 const freeJsonFile = `${configDir}/json.json`;
 const foundFreeJsonFile = fs.existsSync(freeJsonFile);
-const jsonGroupsFile = `${configDir}/json_groups.json`;
+const jsonGroupsFile = `${configDir}/json-groups.json`;
 const foundJsonGroupsFile = fs.existsSync(jsonGroupsFile);
 
 // Certificates
@@ -880,9 +880,23 @@ app.post(apiPath + '/json', async (req, res) => {
 app.delete(apiPath + '/json/:name', async (req, res) => {
   // delete a freeform JSON config
   const name = req.params.name;
+  let saveGroups = false;
   if (name in freeJsonConfig) {
       delete freeJsonConfig[name];
+      for (const jsonGroup of Object.values(jsonGroupsConfig)) {
+        // remove deleted JSON from groups
+        for (let i = jsonGroup.length - 1; i >= 0; i--) {
+          const jsonConfigName = jsonGroup[i];
+          if (jsonConfigName === name) {
+            jsonGroup.splice(i, 1);
+            saveGroups = true;
+          }
+        }
+      }
       await saveFreeJsonConfig();
+      if (saveGroups) {
+        await saveJsonGroupsConfig();
+      }
       res.status(200).json({name, success: true});
       return;
     }
