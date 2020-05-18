@@ -10,7 +10,7 @@ import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
 import { IncidentConfig, IncidentConfigs } from './types/incident-config';
 import { PMessageOption } from './types/message-options';
-import { BulkCreateResult } from './types/bulk-create-result';
+import { BulkCreateConfigurationToPush, BulkCreateConfigurationsToPush, BulkCreateSelection, BulkCreateSelections, BulkCreateResult } from './types/bulk-create';
 import { FreeformJsonUIComponent } from './freeform-json-ui.component';
 import { Subscription } from 'rxjs';
 import * as utils from './utils';
@@ -50,10 +50,17 @@ export class AppComponent implements OnInit {
   messages: PMessageOption[] = [];
   messagesClearTimeout: ReturnType<typeof setTimeout> = null;
   demistoEndpointsItems: SelectItem[]; // holds list of endpoints for PrimeNG
-  fieldsConfigItems: SelectItem[] = []; // dropdown/listbox options object for all field configs
+  savedIncidentConfigItems: SelectItem[] = []; // dropdown/listbox options object for all incident configs
 
   // Saved Incident Configurations
-  savedIncidentConfigurations: IncidentConfigs = {};
+  _savedIncidentConfigurations: IncidentConfigs = {};
+  get savedIncidentConfigurations(): IncidentConfigs {
+    return this._savedIncidentConfigurations;
+  }
+  set savedIncidentConfigurations(value: IncidentConfigs) {
+    this._savedIncidentConfigurations = value;
+
+  }
   get savedIncidentConfigurationsLen(): number {
     // returns the number of saved field configs
     return Object.keys(this.savedIncidentConfigurations).length;
@@ -71,8 +78,10 @@ export class AppComponent implements OnInit {
 
   // Bulk create dialog
   showBulkCreateDialog = false;
-  selectedBulkCreateConfigs: string[] = [];
+  bulkCreateSelections: BulkCreateSelections;
+  selectedBulkCreateIncidentConfig: string;
   selectedBulkCreateEndpoints: string[] = [];
+  bulkConfigurationsToPush: BulkCreateConfigurationsToPush;
 
   // Bulk results dialog
   showBulkResultsDialog = false;
@@ -147,7 +156,7 @@ export class AppComponent implements OnInit {
     this.jsonGroupConfigurationsItems = Object.values(this._jsonGroupConfigurations).map( jsonConfig => ({ value: jsonConfig.name, label: jsonConfig.name} as SelectItem) );
   }
   showJsonGroupsDialog = false;
-  jsonGroupConfigurationsItems: SelectItem[] = [];
+  jsonGroupConfigurationsItems: SelectItem[] = [];  
   jsonGroupSelection_JsonGroupDialog: string;
   showNewJsonConfigDialog = false;
   newJsonGroupConfigName: string;
@@ -669,9 +678,53 @@ export class AppComponent implements OnInit {
 
 
 
+  buildBulkConfigurationsToPushItems() {
+    console.log('AppComponent: buildBulkConfigurationsToPushItems()');
+    const bulkConfigurationsToPush: BulkCreateConfigurationsToPush = {};
+    for (const incidentConfigName of Object.keys(this.bulkCreateSelections)) {
+      const incidentConfig = this.bulkCreateSelections[incidentConfigName];
+
+      const jsonGroupsGood = incidentConfig.jsonGroups.length !== 0;
+      const endpointsGood = incidentConfig.endpoints.length !== 0;
+
+      if (jsonGroupsGood && endpointsGood) {
+        bulkConfigurationsToPush[incidentConfigName] = {
+          jsonGroups: incidentConfig.jsonGroups.join(', '),
+          endpoints: incidentConfig.endpoints.join(', ')
+        }
+      }
+    }
+    this.bulkConfigurationsToPush = bulkConfigurationsToPush;
+  }
+
+
+
+  buildBulkCreateGroups() {
+    console.log('AppComponent: buildBulkCreateGroups()');
+    // console.log('AppComponent: buildBulkCreateGroups(): jsonGroupConfigurationsItems:', this.jsonGroupConfigurationsItems);
+
+    const selections: BulkCreateSelections = {};
+    for (const incidentConfig of Object.values(this.savedIncidentConfigItems)) {
+      const incidentConfigName = incidentConfig.value;
+      selections[incidentConfigName] = {
+        jsonGroups: [],
+        endpoints: []
+      };
+      // selections[incidentConfigName]['jsonGroups'] = [];
+      // selections[incidentConfigName]['endpoints'] = [];
+    }
+    /*for (const jsonGroup of Object.values(this.jsonGroupConfigurations)) {
+      selections[jsonGroup.name]['jsonGroups'] = Object.assign(jsonGroup.jsonConfigs);
+    }*/
+    this.bulkCreateSelections = selections;
+  }
+
+
+
   onBulkCreateClicked() {
     console.log('AppComponent: onBulkCreateClicked()');
     this.showBulkCreateDialog = true;
+    this.buildBulkCreateGroups();
     setTimeout( () => {
       // focus input element
       // cannot use ViewChild due to way modal is inserted into the DOM
@@ -1170,7 +1223,7 @@ export class AppComponent implements OnInit {
     try {
       this.savedIncidentConfigurations = await this.fetcherService.getSavedIncidentConfigurations();
       // console.log('AppComponent: getSavedIncidentConfigurations(): savedIncidentConfigurations:', this.savedIncidentConfigurations);
-      this.fieldsConfigItems = this.buildFieldsConfigItems(this.savedIncidentConfigurations);
+      this.savedIncidentConfigItems = this.buildFieldsConfigItems(this.savedIncidentConfigurations);
       if (this.loadedIncidentConfigName) {
         this.loadedIncidentConfigId = this.savedIncidentConfigurations[this.loadedIncidentConfigName].id;
       }

@@ -394,8 +394,14 @@ body p-fileupload {
   justify-content: space-around;
   align-items: stretch;
 
-  > :first-child {
+  > :not(:last-child) {
     margin-right: 1em;
+  }
+}
+
+.bulkIncidentsToPush {
+  > :not(:last-child) {
+    margin-bottom: 1em;
   }
 }
 

@@ -400,7 +400,7 @@
     <div class="formLabel">Configuration to open</div>
 
     <p-listbox
-      [options]="fieldsConfigItems"
+      [options]="savedIncidentConfigItems"
       [(ngModel)]="selectedOpenConfig"
       [style]="{'width':'100%'}"
       (onDblClick)="onConfigOpened()"
@@ -431,7 +431,7 @@
     <div class="formLabel">Configurations to delete</div>
 
     <p-listbox
-      [options]="fieldsConfigItems"
+      [options]="savedIncidentConfigItems"
       [(ngModel)]="selectedDeleteConfigs"
       [multiple]="true"
       [filter]="true"
@@ -462,42 +462,110 @@
     header="Bulk Incident Creation"
     [(visible)]="showBulkCreateDialog"
     [modal]="true"
-    [style]="{width: '75%', maxHeight: '75%'}"
+    [style]="{maxWidth: '85%', maxHeight: '75%'}"
     styleClass="bulkCreateDialog">
 
 
-      <div class="bulkCreateContainer">
+      <div *ngIf="bulkCreateSelections" class="bulkCreateContainer">
 
         <div class="bulkCreateContainerColumn">
 
           <div class="formLabel">Select configurations to push to XSOAR</div>
 
           <p-listbox
-            [options]="fieldsConfigItems"
-            [(ngModel)]="selectedBulkCreateConfigs"
+            [options]="savedIncidentConfigItems"
+            [(ngModel)]="selectedBulkCreateIncidentConfig"
             [style]="{'width':'100%'}"
-            [multiple]="true"
-            [checkbox]="true"
+            [multiple]="false"
+            [checkbox]="false"
             [filter]="true">
           </p-listbox>
 
         </div>
 
-        <div class="bulkCreateContainerColumn">
+        <div
+          *ngIf="selectedBulkCreateIncidentConfig && jsonGroupConfigurationsItems"
+          class="bulkCreateContainerColumn">
+
+            <div class="formLabel">Select JSON configs or groups</div>
+
+            <p-listbox
+              [options]="jsonGroupConfigurationsItems"
+              [(ngModel)]="bulkCreateSelections[selectedBulkCreateIncidentConfig].jsonGroups"
+              [style]="{'width':'100%'}"
+              [multiple]="true"
+              [checkbox]="true"
+              [filter]="true"
+              [disabled]="!selectedBulkCreateIncidentConfig"
+              (onChange)="buildBulkConfigurationsToPushItems()">
+            </p-listbox>
+
+        </div>
+
+        <div
+          *ngIf="selectedBulkCreateIncidentConfig && demistoEndpointsItems"
+          class="bulkCreateContainerColumn">
 
           <div class="formLabel">Select XSOAR servers to push to</div>
 
           <p-listbox
             [options]="demistoEndpointsItems"
-            [(ngModel)]="selectedBulkCreateEndpoints"
+            [(ngModel)]="bulkCreateSelections[selectedBulkCreateIncidentConfig].endpoints"
             [style]="{'width':'100%'}"
             [multiple]="true"
             [checkbox]="true"
-            [filter]="true">
+            [filter]="true"
+            [disabled]="!selectedBulkCreateIncidentConfig"
+            (onChange)="buildBulkConfigurationsToPushItems()">
           </p-listbox>
 
         </div>
 
+      </div>
+
+      <div *ngIf="bulkConfigurationsToPush">
+        
+        <span
+          style="color: black;"
+          class="dialogLabel">
+            Incidents that will be pushed:
+        </span>
+
+        <div
+          class="bulkIncidentsToPush"
+          style="margin-top: 1em;">
+
+          <div *ngFor="let item of bulkConfigurationsToPush | keyvalue">
+            
+            <span class="dialogLabel">
+              {{item.key}}
+            </span> :
+
+            <div style="margin-left: 3em;">
+              
+              <span
+                class="dialogLabel">
+                  Incidents: 
+              </span>
+              
+              <span>{{item.value.jsonGroups}}</span>
+            
+            </div>
+
+            <div style="margin-left: 3em;">
+              
+              <span
+                class="dialogLabel">
+                  Endpoints: 
+              </span>
+              
+              <span>{{item.value.endpoints}}</span>
+            
+            </div>
+
+          </div>
+
+        </div>
       </div>
 
       <div style="margin-top: .5em; float: right;">
@@ -505,7 +573,7 @@
         <p-button
           label="Create Incidents"
           (onClick)="onCreateBulkIncidents()"
-          [disabled]="selectedBulkCreateConfigs.length === 0 || selectedBulkCreateEndpoints.length === 0">
+          [disabled]="false">
         </p-button>
 
         <p-button
