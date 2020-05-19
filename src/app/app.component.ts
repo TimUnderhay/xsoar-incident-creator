@@ -682,18 +682,26 @@ export class AppComponent implements OnInit {
     console.log('AppComponent: buildBulkConfigurationsToPushItems()');
     const bulkConfigurationsToPush: BulkCreateConfigurationsToPush = {};
     for (const incidentConfigName of Object.keys(this.bulkCreateSelections)) {
-      const incidentConfig = this.bulkCreateSelections[incidentConfigName];
+      const bulkCreateSelection = this.bulkCreateSelections[incidentConfigName];
 
-      const jsonGroupsGood = incidentConfig.jsonGroups.length !== 0;
-      const endpointsGood = incidentConfig.endpoints.length !== 0;
+      const jsonGroupsGood = bulkCreateSelection.jsonGroups.length !== 0;
+      const endpointsGood = bulkCreateSelection.endpoints.length !== 0;
+      const jsonRequired = this.savedIncidentConfigurations[incidentConfigName].requiresJson;
 
-      if (jsonGroupsGood && endpointsGood) {
+      if (jsonGroupsGood && endpointsGood && jsonRequired) {
         bulkConfigurationsToPush[incidentConfigName] = {
-          jsonGroups: incidentConfig.jsonGroups.join(', '),
-          endpoints: incidentConfig.endpoints.join(', ')
+          jsonGroups: bulkCreateSelection.jsonGroups.join(', '),
+          endpoints: bulkCreateSelection.endpoints.join(', ')
         }
       }
+      else if (endpointsGood && !jsonRequired) {
+        bulkConfigurationsToPush[incidentConfigName] = {
+          endpoints: bulkCreateSelection.endpoints.join(', ')
+        }
+      }
+
     }
+    console.log('AppComponent: buildBulkConfigurationsToPushItems(): bulkConfigurationsToPush:', bulkConfigurationsToPush);
     this.bulkConfigurationsToPush = bulkConfigurationsToPush;
   }
 
@@ -756,13 +764,15 @@ export class AppComponent implements OnInit {
     /*
     Steps to complete:
 
-    1.  Load config
+    1.  Load incident config
     2.  Test server
     3.  Load server fields
-    4.  Check for keys that can't be pushed
-    5.  Display them in a column
-    6.  Push case with all other fields
-    7.  Display results in a column
+    4.  Check whether incident requires JSON file
+    5.  Load JSON file, if needed
+    6.  Check for keys that can't be pushed
+    7.  Display them in a column
+    8.  Push case with all other fields
+    9.  Display results in a column
     */
 
     /*
@@ -1222,7 +1232,7 @@ export class AppComponent implements OnInit {
     // Get Fields Configurations
     try {
       this.savedIncidentConfigurations = await this.fetcherService.getSavedIncidentConfigurations();
-      // console.log('AppComponent: getSavedIncidentConfigurations(): savedIncidentConfigurations:', this.savedIncidentConfigurations);
+      console.log('AppComponent: getSavedIncidentConfigurations(): savedIncidentConfigurations:', this.savedIncidentConfigurations);
       this.savedIncidentConfigItems = this.buildFieldsConfigItems(this.savedIncidentConfigurations);
       if (this.loadedIncidentConfigName) {
         this.loadedIncidentConfigId = this.savedIncidentConfigurations[this.loadedIncidentConfigName].id;

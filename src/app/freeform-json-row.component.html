@@ -115,8 +115,7 @@
   <div class="valueContainer">
 
     <!-- Select Value Icon -->
-    <div class="verticalCenter">
-      <div></div>
+    <vertical-center>
       <div
         style="margin-left: .1em; font-size: 2em;"
         class="pi pi-arrow-circle-right"
@@ -129,12 +128,11 @@
         pTooltip="Select value from JSON"
         showDelay="750">
       </div>
-      <div></div>
-    </div>
+    </vertical-center>
+
   
     <!-- Reset Value Icon -->
-    <div class="verticalCenter">
-      <div></div>
+    <vertical-center>
       <div
         style="margin-left: .1em; font-size: 2em;"
         class="pi pi-refresh"
@@ -147,15 +145,12 @@
         pTooltip="Resets the value"
         showDelay="750">
       </div>
-      <div></div>
-    </div>
+    </vertical-center>
   
     <!-- Delete Field -->
-    <div class="verticalCenter">
-      <div></div>
+    <vertical-center>
       <div class="pi pi-times enabledIcon" style="margin-left: .1em; font-size: 2em;" (click)="onDeleteFieldClicked()" pTooltip="Delete field" showDelay="750"></div>
-      <div></div>
-    </div>
+    </vertical-center>
 
   </div>
 
@@ -281,6 +276,7 @@
   <div class="valueContainer">
 
     <!-- Select Value Icon -->
+    <!--- not using vertical-center here due to non-standard usage-->
     <div
       class="verticalCenter"
       [class.verticalTop]="field.fieldType === 'date'">
@@ -301,6 +297,7 @@
     </div>
 
     <!-- Permit Null Value Checkbox -->
+    <!--- not using vertical-center here due to non-standard usage-->
     <div
       *ngIf="field.fieldType !== 'date'"
       class="verticalCenter">
@@ -315,6 +312,7 @@
     </div>
 
     <!-- Delete Field -->
+    <!--- not using vertical-center here due to non-standard usage-->
     <div
       class="verticalCenter"
       [class.verticalTop]="field.fieldType === 'date'">
@@ -327,9 +325,8 @@
           showDelay="750">
         </div>
         <div></div>
+      </div>
     </div>
-
-  </div>
       
   
 
@@ -376,14 +373,10 @@
         {{resolvedValue}}
       </div>
 
-      <div class="verticalCenter dialogLabel">
-        <div></div>
-        <div>
-          <!-- we don't use transformedValue here as we want the unaccepted results -->
-          Transformed Value (in UTC):
-        </div>
-        <div></div>
-      </div>
+      <vertical-center class="dialogLabel">
+        <!-- we don't use transformedValue here as we want the unaccepted results -->
+        Transformed Value (in UTC):
+      </vertical-center>
 
       <div style="color: black; font-weight: bolder; font-size: 1.5em;">
         {{transformDate(true)}}
@@ -391,11 +384,9 @@
 
       <ng-container *ngIf="resolvedValueType === 'number'">
 
-        <div class="verticalCenter dialogLabel">
-          <div></div>
-          <div>Precision:&nbsp;</div>
-          <div></div>
-        </div>
+        <vertical-center class="dialogLabel">
+          Precision:&nbsp;
+        </vertical-center>
 
         <div>
           <p-selectButton
@@ -422,13 +413,9 @@
         </div>
 
         <!-- Formatter -->
-        <div class="verticalCenter dialogLabel">
-          <div></div>
-          <div>
-            Date Format String: 
-          </div>
-          <div></div>
-        </div>
+        <vertical-center class="dialogLabel">
+          Date Format String: 
+        </vertical-center>
         
         <div style="display: flex; flex-direction: row;">
 
@@ -443,27 +430,19 @@
               class="inputDisplay">
           </div>
 
-          <div class="verticalCenter">
-            <div></div>
-            <div>
-              &nbsp;
+          <vertical-center>
+            &nbsp;
               <a href="https://momentjs.com/docs/#/parsing/string-format/" target="blank">Help</a>
-            </div>
-            <div></div>
-          </div>
+          </vertical-center>
           
         </div>
       
       </ng-container>
       
       <!-- UTC Offset -->
-      <div class="verticalCenter dialogLabel">
-        <div></div>
-        <div>
-          Source{{valueType === 'number' ? ' UTC' : undefined}} Offset:
-        </div>
-        <div></div>
-      </div>
+      <vertical-center class="dialogLabel">
+        Source{{valueType === 'number' ? ' UTC' : undefined}} Offset:
+      </vertical-center>
 
       <div>
 

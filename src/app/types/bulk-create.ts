@@ -8,7 +8,7 @@ export interface BulkCreateResult extends Object {
 }
 
 export interface BulkCreateConfigurationToPush {
-  jsonGroups: string;
+  jsonGroups?: string;
   endpoints: string;
 }
 

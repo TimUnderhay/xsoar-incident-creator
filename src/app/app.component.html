@@ -484,25 +484,6 @@
         </div>
 
         <div
-          *ngIf="selectedBulkCreateIncidentConfig && jsonGroupConfigurationsItems"
-          class="bulkCreateContainerColumn">
-
-            <div class="formLabel">Select JSON configs or groups</div>
-
-            <p-listbox
-              [options]="jsonGroupConfigurationsItems"
-              [(ngModel)]="bulkCreateSelections[selectedBulkCreateIncidentConfig].jsonGroups"
-              [style]="{'width':'100%'}"
-              [multiple]="true"
-              [checkbox]="true"
-              [filter]="true"
-              [disabled]="!selectedBulkCreateIncidentConfig"
-              (onChange)="buildBulkConfigurationsToPushItems()">
-            </p-listbox>
-
-        </div>
-
-        <div
           *ngIf="selectedBulkCreateIncidentConfig && demistoEndpointsItems"
           class="bulkCreateContainerColumn">
 
@@ -520,6 +501,35 @@
           </p-listbox>
 
         </div>
+
+        <vertical-center
+          *ngIf="selectedBulkCreateIncidentConfig && !savedIncidentConfigurations[selectedBulkCreateIncidentConfig].requiresJson; else jsonRequired">
+              No JSON is required for the selected incident config
+        </vertical-center>
+        
+
+        <ng-template #jsonRequired>
+
+          <div
+            *ngIf="selectedBulkCreateIncidentConfig && jsonGroupConfigurationsItems"
+            class="bulkCreateContainerColumn">
+
+              <div class="formLabel">Select JSON configs or groups</div>
+
+              <p-listbox
+                [options]="jsonGroupConfigurationsItems"
+                [(ngModel)]="bulkCreateSelections[selectedBulkCreateIncidentConfig].jsonGroups"
+                [style]="{'width':'100%'}"
+                [multiple]="true"
+                [checkbox]="true"
+                [filter]="true"
+                [disabled]="!selectedBulkCreateIncidentConfig"
+                (onChange)="buildBulkConfigurationsToPushItems()">
+              </p-listbox>
+
+          </div>
+
+        </ng-template>
 
       </div>
 
@@ -541,7 +551,7 @@
               {{item.key}}
             </span> :
 
-            <div style="margin-left: 3em;">
+            <div *ngIf="item.value.jsonGroups" style="margin-left: 3em;">
               
               <span
                 class="dialogLabel">

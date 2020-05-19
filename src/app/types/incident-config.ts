@@ -10,6 +10,7 @@ export interface IncidentConfig {
   createInvestigation: boolean;
   incidentType: string;
   defaultJsonName?: string; // the json file to load when opening incident
+  requiresJson?: boolean; // returned by the server
 }
 
 export interface IncidentConfigs {

@@ -12,6 +12,7 @@ import { JsonViewerComponent } from './json-viewer/json-viewer.component';
 import { FreeformJsonUIComponent } from './freeform-json-ui.component';
 import { FreeformJsonRowComponent } from './freeform-json-row.component';
 import { NgxJsonViewerComponent } from './ngx-json-viewer/ngx-json-viewer.component';
+import { VerticalCenterComponent } from './vertical-center.component';
 
 // PrimeNG Imports
 import { ListboxModule } from 'primeng/listbox';
@@ -47,7 +48,8 @@ import { ClickOutsideModule } from 'ng-click-outside';
     JsonEditorComponent,
     JsonViewerComponent,
     FreeformJsonUIComponent,
-    NgxJsonViewerComponent
+    NgxJsonViewerComponent,
+    VerticalCenterComponent
   ],
   imports: [
     BrowserModule,
