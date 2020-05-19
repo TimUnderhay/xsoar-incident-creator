@@ -10,10 +10,7 @@ export interface BulkCreateResult extends Object {
 export interface BulkCreateConfigurationToPush {
   jsonGroups?: string;
   endpoints: string;
-}
-
-export interface BulkCreateConfigurationsToPush {
-  [configName: string]: BulkCreateConfigurationToPush;
+  incidentConfigName: string;
 }
 
 export interface BulkCreateSelection {

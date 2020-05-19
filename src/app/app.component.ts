@@ -10,7 +10,7 @@ import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
 import { IncidentConfig, IncidentConfigs } from './types/incident-config';
 import { PMessageOption } from './types/message-options';
-import { BulkCreateConfigurationToPush, BulkCreateConfigurationsToPush, BulkCreateSelection, BulkCreateSelections, BulkCreateResult } from './types/bulk-create';
+import { BulkCreateConfigurationToPush, BulkCreateSelection, BulkCreateSelections, BulkCreateResult } from './types/bulk-create';
 import { FreeformJsonUIComponent } from './freeform-json-ui.component';
 import { Subscription } from 'rxjs';
 import * as utils from './utils';
@@ -81,7 +81,7 @@ export class AppComponent implements OnInit {
   bulkCreateSelections: BulkCreateSelections;
   selectedBulkCreateIncidentConfig: string;
   selectedBulkCreateEndpoints: string[] = [];
-  bulkConfigurationsToPush: BulkCreateConfigurationsToPush;
+  bulkConfigurationsToPush: BulkCreateConfigurationToPush[] = [];
 
   // Bulk results dialog
   showBulkResultsDialog = false;
@@ -679,9 +679,10 @@ export class AppComponent implements OnInit {
 
 
   buildBulkConfigurationsToPushItems() {
-    console.log('AppComponent: buildBulkConfigurationsToPushItems()');
-    const bulkConfigurationsToPush: BulkCreateConfigurationsToPush = {};
-    for (const incidentConfigName of Object.keys(this.bulkCreateSelections)) {
+    // console.log('AppComponent: buildBulkConfigurationsToPushItems()');
+    const bulkConfigurationsToPush: BulkCreateConfigurationToPush[] = [];
+
+    for (const incidentConfigName of Object.keys(this.bulkCreateSelections).sort(utils.sortArrayNaturally)) {
       const bulkCreateSelection = this.bulkCreateSelections[incidentConfigName];
 
       const jsonGroupsGood = bulkCreateSelection.jsonGroups.length !== 0;
@@ -689,19 +690,21 @@ export class AppComponent implements OnInit {
       const jsonRequired = this.savedIncidentConfigurations[incidentConfigName].requiresJson;
 
       if (jsonGroupsGood && endpointsGood && jsonRequired) {
-        bulkConfigurationsToPush[incidentConfigName] = {
+        bulkConfigurationsToPush.push({
+          incidentConfigName,
           jsonGroups: bulkCreateSelection.jsonGroups.join(', '),
           endpoints: bulkCreateSelection.endpoints.join(', ')
-        }
+        });
       }
       else if (endpointsGood && !jsonRequired) {
-        bulkConfigurationsToPush[incidentConfigName] = {
+        bulkConfigurationsToPush.push({
+          incidentConfigName,
           endpoints: bulkCreateSelection.endpoints.join(', ')
-        }
+        });
       }
 
     }
-    console.log('AppComponent: buildBulkConfigurationsToPushItems(): bulkConfigurationsToPush:', bulkConfigurationsToPush);
+    // console.log('AppComponent: buildBulkConfigurationsToPushItems(): bulkConfigurationsToPush:', bulkConfigurationsToPush);
     this.bulkConfigurationsToPush = bulkConfigurationsToPush;
   }
 
@@ -1245,11 +1248,17 @@ export class AppComponent implements OnInit {
 
 
 
+  selectItemsSort(a: SelectItem, b: SelectItem): number {
+    return utils.sortArrayNaturally(a.label, b.label);
+  }
+
+
+
   buildFieldsConfigItems(configs: IncidentConfigs): SelectItem[] {
     let items: SelectItem[] = Object.values(configs).map( (config: IncidentConfig) =>
       ({ label: config.name, value: config.name })
     );
-    return items;
+    return items.sort(this.selectItemsSort);
   }
 
 

@@ -545,20 +545,20 @@
           class="bulkIncidentsToPush"
           style="margin-top: 1em;">
 
-          <div *ngFor="let item of bulkConfigurationsToPush | keyvalue">
+          <div *ngFor="let item of bulkConfigurationsToPush">
             
             <span class="dialogLabel">
-              {{item.key}}
+              {{item.incidentConfigName}}
             </span> :
 
-            <div *ngIf="item.value.jsonGroups" style="margin-left: 3em;">
+            <div *ngIf="item.jsonGroups" style="margin-left: 3em;">
               
               <span
                 class="dialogLabel">
                   Incidents: 
               </span>
               
-              <span>{{item.value.jsonGroups}}</span>
+              <span>{{item.jsonGroups}}</span>
             
             </div>
 
@@ -569,7 +569,7 @@
                   Endpoints: 
               </span>
               
-              <span>{{item.value.endpoints}}</span>
+              <span>{{item.endpoints}}</span>
             
             </div>
 
