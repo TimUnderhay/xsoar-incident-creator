@@ -14,6 +14,7 @@ import { Subject, Subscription, config } from 'rxjs';
 import * as utils from './utils';
 import { FreeformJSONConfig } from './types/freeform-json-config';
 import { IncidentConfig, IncidentConfigs, IncidentFieldConfig, IncidentFieldsConfig } from './types/incident-config';
+import { IncidentCreationConfig } from './types/incident-config';
 import { InvestigationFields as investigationFields } from './investigation-fields';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
 import * as Moment from 'node_modules/moment/min/moment.min.js';
@@ -558,13 +559,11 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     // console.log('FreeformJsonUIComponent: onCreateIncident(): incidentFields:', this.incidentFields);
     // console.log('FreeformJsonUIComponent: onCreateIncident(): customFields:', this.customFields);
 
-    let incident: any = {
-      serverId: this.currentDemistoEndpointName
+    let incident: IncidentCreationConfig = {
+      serverId: this.currentDemistoEndpointName,
+      createInvestigation: this.createInvestigation
     };
 
-    if (this.createInvestigation) {
-      incident['createInvestigation'] = true;
-    }
 
     function updateIncident(field, value, incident) {
       // value is not taken from field as it may be resolved from JMESPath
@@ -579,6 +578,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       }
       return incident;
     }
+
 
     for (const freeformRowComponent of this.freeformRowComponents) {
       const field = freeformRowComponent.field;

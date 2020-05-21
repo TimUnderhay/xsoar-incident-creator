@@ -3,18 +3,20 @@ import { NgForm } from '@angular/forms';
 import { FetcherService } from './fetcher-service';
 import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
 import { User } from './types/user';
-import { DemistoEndpointStatus } from './types/demisto-endpoint-status';
+import { DemistoEndpointTestResult, DemistoEndpointTestResults } from './types/demisto-endpoint-status';
 import { SelectItem, ConfirmationService } from 'primeng/api';
-import { IncidentField, IncidentFields } from './types/incident-fields';
+import { IncidentField, IncidentFields, DateConfig } from './types/incident-fields';
 import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
-import { IncidentConfig, IncidentConfigs } from './types/incident-config';
+import { IncidentConfig, IncidentConfigs, IncidentCreationConfig } from './types/incident-config';
 import { PMessageOption } from './types/message-options';
-import { BulkCreateConfigurationToPush, BulkCreateSelection, BulkCreateSelections, BulkCreateResult } from './types/bulk-create';
+import { BulkCreateConfigurationToPush, BulkCreateSelection, BulkCreateSelections, BulkCreateResult, EndpointIncidentTypes, EndpointIncidentTypeNames } from './types/bulk-create';
 import { FreeformJsonUIComponent } from './freeform-json-ui.component';
 import { Subscription } from 'rxjs';
 import * as utils from './utils';
 import { JsonGroup, JsonGroups } from './types/json-group';
+import * as Moment from 'node_modules/moment/min/moment.min.js';
+declare var jmespath: any;
 
 type DemistoServerEditMode = 'edit' | 'new';
 
@@ -80,7 +82,6 @@ export class AppComponent implements OnInit {
   showBulkCreateDialog = false;
   bulkCreateSelections: BulkCreateSelections;
   selectedBulkCreateIncidentConfig: string;
-  selectedBulkCreateEndpoints: string[] = [];
   bulkConfigurationsToPush: BulkCreateConfigurationToPush[] = [];
 
   // Bulk results dialog
@@ -141,7 +142,8 @@ export class AppComponent implements OnInit {
   }
   set savedJsonConfigurations(value: string[]) {
     this._savedJsonConfigurations = value;
-    this.savedJsonConfigurationItems = this.savedJsonConfigurations.map( val => ({value: val, label: val} as SelectItem))
+    this.savedJsonConfigurationItems = this.savedJsonConfigurations.map( val => ({value: val, label: val} as SelectItem));
+    this.buildJsonFileAndGroupConfigurationsItems();
   }
   savedJsonConfigurationItems: SelectItem[];
   
@@ -151,12 +153,15 @@ export class AppComponent implements OnInit {
     return this._jsonGroupConfigurations
   };
   set jsonGroupConfigurations(value: JsonGroups) {
-    console.log('groupvalue:', value);
     this._jsonGroupConfigurations = value;
-    this.jsonGroupConfigurationsItems = Object.values(this._jsonGroupConfigurations).map( jsonConfig => ({ value: jsonConfig.name, label: jsonConfig.name} as SelectItem) );
+    this.jsonGroupConfigurationsItems = Object.values(this._jsonGroupConfigurations).map( jsonConfig => ({
+      value: jsonConfig.name,
+      label: jsonConfig.name} as SelectItem) );
+      this.buildJsonFileAndGroupConfigurationsItems();
   }
   showJsonGroupsDialog = false;
-  jsonGroupConfigurationsItems: SelectItem[] = [];  
+  jsonGroupConfigurationsItems: SelectItem[] = [];
+  jsonFileAndGroupConfigurationsItems: SelectItem[] = [];
   jsonGroupSelection_JsonGroupDialog: string;
   showNewJsonConfigDialog = false;
   newJsonGroupConfigName: string;
@@ -208,7 +213,7 @@ export class AppComponent implements OnInit {
 
       // Demisto Incident Types
       try {
-        await this.fetchIncidentTypes(this.currentDemistoEndpointName);
+        this.fetchedIncidentTypes = await this.fetchIncidentTypes(this.currentDemistoEndpointName);
       }
       catch (error) {
         console.error('AppComponent: ngOnInit(): Caught error fetching Demisto incident types:', error);
@@ -508,22 +513,15 @@ export class AppComponent implements OnInit {
 
 
 
-  async fetchIncidentTypes(serverId): Promise<boolean> {
+  async fetchIncidentTypes(serverId): Promise<FetchedIncidentType[]> {
     /*
-      Called from ngOnInit()
+      Called from ngOnInit(), onCreateBulkIncidents()
       Fetches incident types from Demisto
     */
-    console.log('AppComponent: fetchIncidentTypes()');
-    try {
-      const fetchedIncidentTypes: FetchedIncidentType[] = await this.fetcherService.getIncidentTypes(serverId);
-      console.log('AppComponent: fetchIncidentTypes():', fetchedIncidentTypes);
-      this.fetchedIncidentTypes = fetchedIncidentTypes;
-
-    }
-    catch (err) {
-      console.log('AppComponent: fetchIncidentTypes(): Caught error fetching Demisto incident types:', err);
-      return false;
-    }
+    // console.log('AppComponent: fetchIncidentTypes()');
+    const fetchedIncidentTypes: FetchedIncidentType[] = await this.fetcherService.getIncidentTypes(serverId);
+    console.log('AppComponent: fetchIncidentTypes():', fetchedIncidentTypes);
+    return fetchedIncidentTypes;
   }
 
 
@@ -678,6 +676,195 @@ export class AppComponent implements OnInit {
 
 
 
+  jmesPathResolve(path, json: Object) {
+    console.log('AppComponent: jmesPathResolve()');
+    if (path === '' || path.match(/^\s+$/)) {
+      return null;
+    }
+    try {
+      const res = jmespath.search(json, path);
+      // console.log('res:', res);
+      return res;
+    }
+    catch(error) {
+      console.log('JMESPath.search error:', 'message' in error ? error.message : error);
+    }
+  }
+
+
+
+  transformDate(value: number | string, dateConfig: DateConfig): string {
+    // console.log('AppComponent: transformDate(): resolvedValue:', this.resolvedValue);
+    
+    if (!value || value === '') {
+      return;
+    }
+
+    let valueType = typeof value;
+
+    let moment: Moment.Moment;
+
+    if (valueType === 'number') {
+      moment = dateConfig.precision === 1 ? Moment.unix(value as number).utc() : Moment(value as number / dateConfig.precision * 1000).utc();
+    }
+
+    else if (valueType === 'string') {
+      moment = dateConfig.autoParse ? Moment(value) : Moment(value, dateConfig.formatter);
+    }
+
+    const valid = moment.isValid();
+
+    if (valid && dateConfig.utcOffsetEnabled) {
+      moment.add(dateConfig.utcOffset, 'hours');
+    }
+
+    return moment.toISOString();
+  }
+
+
+
+  getValidBulkConfigurations(): BulkCreateSelections {
+    const validConfigs: BulkCreateSelections = {};
+    for (const incidentConfigName of Object.keys(this.bulkCreateSelections)) {
+      const bulkCreateSelection: BulkCreateSelection = this.bulkCreateSelections[incidentConfigName];
+      const [jsonGroups, jsonFiles] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection);
+
+      const jsonGroupsGood = jsonGroups && jsonGroups.length !== 0;
+      const jsonFilesGood = jsonFiles && jsonFiles.length !== 0;
+      const endpointsGood = bulkCreateSelection.endpoints.length !== 0;
+      const jsonRequired = this.savedIncidentConfigurations[incidentConfigName].requiresJson;
+
+      if ((jsonGroupsGood || jsonFilesGood) && endpointsGood && jsonRequired) {
+        validConfigs[incidentConfigName] = bulkCreateSelection;
+      }
+      else if (endpointsGood && !jsonRequired) {
+        validConfigs[incidentConfigName] = bulkCreateSelection;
+      }
+    }
+    return validConfigs;
+  }
+
+
+
+  reduceBulkConfigurationServersToTest(bulkSelections: BulkCreateSelections): string[] {
+    const serversToTest = Object.keys(bulkSelections).reduce( (result, incidentConfigName) => {
+      const bulkCreateSelection: BulkCreateSelection = this.bulkCreateSelections[incidentConfigName];
+
+      for (const serverId of bulkCreateSelection.endpoints) {
+        if (!result.includes(serverId)) {
+          result.push(serverId);
+        }
+      }
+    
+      return result;
+    }, [] );
+
+    return serversToTest;
+  }
+
+
+
+  getAllJsonFilesForBulkConfiguration(bulkSelection: BulkCreateSelection): BulkCreateSelection {
+    const [jsonGroups, jsonFiles] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkSelection);
+    for (const jsonGroupName of jsonGroups) {
+      const jsonConfigs = this.jsonGroupConfigurations[jsonGroupName].jsonConfigs;
+      for (const jsonFile of jsonConfigs) {
+        !jsonFiles.includes(jsonFile) ? jsonFiles.push(jsonFile) : undefined;
+      }
+    }
+    bulkSelection.jsonFiles = jsonFiles;
+    return bulkSelection;
+  }
+
+
+
+  reduceBulkConfigurationServersToGood(bulkSelections: BulkCreateSelections, successfulServers: string[]): BulkCreateSelections {
+    // runs the endpoints of a bulCreateSelections through an array of endpoints that have tested successully, and returns the sanitised result
+
+    for (let bulkSelection of Object.values(bulkSelections)) {
+      const successfulEndpoints = [];
+      const failedEndpoints = [];
+      for (const serverId of bulkSelection.endpoints) {
+        successfulServers.includes(serverId) ? successfulEndpoints.push(serverId) : failedEndpoints.push(serverId);
+      }
+      bulkSelection.successfulEndpoints = successfulEndpoints;
+      bulkSelection.failedEndpoints = failedEndpoints;
+      // add jsonFiles property to bulkSelection
+      this.getAllJsonFilesForBulkConfiguration(bulkSelection);
+    }
+    return bulkSelections;
+  }
+
+
+
+  reduceBulkConfigurationJsonFilesToFetch(bulkCreateSelections: BulkCreateSelections): string[] {
+    // can reduce all bulkSelectionConfigs to a single list, or just a single bulkSelection
+
+    function loopOverJsonFiles(jsonFiles: string[], result) {
+      for (const jsonFile of jsonFiles) {
+        if (!result.includes(jsonFile)) {
+          result.push(jsonFile);
+        }
+      }
+      return result;
+    }
+
+    const loopOverJsonGroups = (jsonGroups: string[], result) => {
+      for (const jsonGroup of jsonGroups) {
+        // lookup the group
+        const jsonConfigs = this.jsonGroupConfigurations[jsonGroup].jsonConfigs;
+        for (const jsonFile of jsonConfigs) {
+          if (!result.includes(jsonFile)) {
+            result.push(jsonFile);
+          } 
+        }
+      }
+      return result;
+    }
+
+    return Object.keys(bulkCreateSelections).reduce( (result, incidentConfigName) => {
+      const bulkCreateSelection: BulkCreateSelection = bulkCreateSelections[incidentConfigName];
+
+      const [jsonGroups, jsonFiles] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection);
+
+      if (jsonGroups && jsonGroups.length !== 0) {
+        result = loopOverJsonGroups(jsonGroups, result);
+      }
+
+      if (jsonFiles && jsonFiles.length !== 0) {
+        result = loopOverJsonFiles(jsonFiles, result);
+      }
+
+      return result;
+    }, []);
+  }
+
+
+
+  reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection: BulkCreateSelection): [string[], string[]] {
+    const jsonGroups = bulkCreateSelection.jsonGroups.reduce( (result, value: string) => {
+      const type = value.slice(0,1); // 'g' for json group or 'j' for json file
+      if (type === 'g') {
+        result.push(value.slice(1));
+      }
+      return result;
+    }, []);
+    // console.log('AppComponent: reduceBulkConfigurationJSONConfigsOrGroups(): jsonGroups:', jsonGroups);
+
+    const jsonFiles = bulkCreateSelection.jsonGroups.reduce( (result, value: string) => {
+      const type = value.slice(0,1); // 'g' for json group or 'j' for json file
+      if (type === 'j') {
+        result.push(value.slice(1));
+      }
+      return result;
+    }, []);
+    // console.log('AppComponent: reduceBulkConfigurationJSONConfigsOrGroups(): jsonFiles:', jsonFiles);
+
+    return [jsonGroups, jsonFiles];
+  }
+
+
+
   buildBulkConfigurationsToPushItems() {
     // console.log('AppComponent: buildBulkConfigurationsToPushItems()');
     const bulkConfigurationsToPush: BulkCreateConfigurationToPush[] = [];
@@ -685,22 +872,30 @@ export class AppComponent implements OnInit {
     for (const incidentConfigName of Object.keys(this.bulkCreateSelections).sort(utils.sortArrayNaturally)) {
       const bulkCreateSelection = this.bulkCreateSelections[incidentConfigName];
 
-      const jsonGroupsGood = bulkCreateSelection.jsonGroups.length !== 0;
+      const [jsonGroups, jsonFiles] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection);
+      
+      const jsonGroupsGood = jsonGroups && jsonGroups.length !== 0;
+      const jsonFilesGood = jsonFiles && jsonFiles.length !== 0;
       const endpointsGood = bulkCreateSelection.endpoints.length !== 0;
       const jsonRequired = this.savedIncidentConfigurations[incidentConfigName].requiresJson;
 
-      if (jsonGroupsGood && endpointsGood && jsonRequired) {
-        bulkConfigurationsToPush.push({
-          incidentConfigName,
-          jsonGroups: bulkCreateSelection.jsonGroups.join(', '),
-          endpoints: bulkCreateSelection.endpoints.join(', ')
-        });
+      const bulkConfigToPush: BulkCreateConfigurationToPush = {
+        incidentConfigName,
+        endpoints: bulkCreateSelection.endpoints.join(', ')
+      };
+
+
+      if ((jsonGroupsGood || jsonFilesGood) && endpointsGood && jsonRequired) {
+        if (jsonGroupsGood) {
+          bulkConfigToPush.jsonGroups = jsonGroups.join(', ');
+        }
+        if (jsonFilesGood) {
+          bulkConfigToPush.jsonConfigs = jsonFiles.join(', ');
+        }
+        bulkConfigurationsToPush.push(bulkConfigToPush);
       }
       else if (endpointsGood && !jsonRequired) {
-        bulkConfigurationsToPush.push({
-          incidentConfigName,
-          endpoints: bulkCreateSelection.endpoints.join(', ')
-        });
+        bulkConfigurationsToPush.push(bulkConfigToPush);
       }
 
     }
@@ -754,15 +949,15 @@ export class AppComponent implements OnInit {
 
   async onCreateBulkIncidents() {
     console.log('AppComponent: onCreateBulkIncidents()');
-    /*
+    
     this.showBulkCreateDialog = false;
     this.showBulkResultsDialog = true;
     this.changeDetector.detectChanges(); // trigger change detection
 
     this.bulkCreateResults = [];
 
-    console.log('AppComponent: selectedBulkCreateConfigs:', this.selectedBulkCreateConfigs);
-    */
+    console.log('AppComponent: onCreateBulkIncidents(): bulkCreateSelections:', this.bulkCreateSelections);
+    
 
     /*
     Steps to complete:
@@ -770,110 +965,229 @@ export class AppComponent implements OnInit {
     1.  Load incident config
     2.  Test server
     3.  Load server fields
-    4.  Check whether incident requires JSON file
-    5.  Load JSON file, if needed
-    6.  Check for keys that can't be pushed
-    7.  Display them in a column
-    8.  Push case with all other fields
-    9.  Display results in a column
+    4.  Load server incident types
+    5.  Check whether incident requires JSON file
+    6.  Load JSON file, if needed
+    7.  Check for keys that can't be pushed
+    8.  Display them in a column
+    9.  Push case with all other fields
+    10.  Display results in a column
     */
 
-    /*
-    let createIncidentPromises: Promise<any>[] = [];
-    let testResults = [];
-    let serverFieldDefinitions = {};
+    
+    const createIncidentPromises: Promise<any>[] = [];
+    const testResults: DemistoEndpointTestResults = {};
+    const successfulServers = [];
+    const serverFieldDefinitions = {};
+    const serverIncidentTypes: EndpointIncidentTypes = {};
+    const serverIncidentTypeNames: EndpointIncidentTypeNames = {};
+    const jsonFiles = {};
 
-    let serverTestPromises: Promise<any>[] = this.selectedBulkCreateEndpoints.map( async serverId => {
-      console.log(`onCreateBulkIncidents(): Testing Demisto server ${serverId}`);
-      const testResult  = await this.fetcherService.testDemistoEndpointById(serverId);
+    let validBulkConfigurations: BulkCreateSelections = this.getValidBulkConfigurations();
+    console.log('AppComponent: onCreateBulkIncidents(): validBulkConfigurations:', validBulkConfigurations);
 
-      testResults.push({serverId, testResult});
+    // get a list of servers to test
+    const serversToTest = this.reduceBulkConfigurationServersToTest(validBulkConfigurations);
+    console.log('AppComponent: onCreateBulkIncidents(): serversToTest:', serversToTest);
+
+    // run endpoint test connections, incident fields
+    const serverTestPromises: Promise<any>[] = serversToTest.map( async serverId => {
+      console.log(`AppComponent: onCreateBulkIncidents(): Testing Demisto server ${serverId}`);
+      const testResult: DemistoEndpointTestResult = await this.fetcherService.testDemistoEndpointById(serverId);
+
+      testResults[serverId] = testResult;
 
       if (testResult.success) {
-        console.log(`Fetching field definitions from Demisto server ${serverId}`);
-        const fetchedIncidentFieldDefinitions: FetchedIncidentField[] = await this.fetcherService.getIncidentFieldDefinitions(serverId);
+        successfulServers.push(serverId);
 
-        serverFieldDefinitions[serverId] = this.parseFetchedIncidentFieldDefinitions(fetchedIncidentFieldDefinitions);
+        // Fetch incident types
+        console.log(`AppComponent: onCreateBulkIncidents(): Fetching incident types from XSOAR server ${serverId}`);
+        const incidentTypesPromise = this.fetchIncidentTypes(serverId).then( incidentTypes => {
+          console.log(`AppComponent: onCreateBulkIncidents(): got incident types`);
+          serverIncidentTypes[serverId] = incidentTypes;
+          serverIncidentTypeNames[serverId] = incidentTypes.map( incidentType => incidentType.name );
+        });
+        
+        // Fetch field definitions
+        console.log(`AppComponent: onCreateBulkIncidents(): Fetching field definitions from XSOAR server ${serverId}`);
+        const fieldsPromise = this.fetcherService.getIncidentFieldDefinitions(serverId).then( fetchedIncidentFieldDefinitions => {
+          console.log(`AppComponent: onCreateBulkIncidents(): got incident field definitions`);
+          serverFieldDefinitions[serverId] = this.parseFetchedIncidentFieldDefinitions(fetchedIncidentFieldDefinitions);
+        });
+
+        const endpointPromises: Promise<any>[] = [incidentTypesPromise, fieldsPromise];
+
+        // Wait for incident types and field definitions to return
+        await Promise.all(endpointPromises);
       }
     } );
 
+    // wait for server tests to finish
     await Promise.all(serverTestPromises);
-    console.log('AppComponent: selectedBulkCreateConfigs: Server tests and field fetching complete');
-    console.log('AppComponent: selectedBulkCreateConfigs: serverFieldDefinitions:', serverFieldDefinitions);
+    console.log('AppComponent: onCreateBulkIncidents(): Server tests and field fetching complete');
+    console.log('AppComponent: onCreateBulkIncidents(): testResults:', testResults);
+    console.log('AppComponent: onCreateBulkIncidents(): serverFieldDefinitions:', serverFieldDefinitions);
+    console.log('AppComponent: onCreateBulkIncidents(): serverIncidentTypes:', serverIncidentTypes);
+    console.log('AppComponent: onCreateBulkIncidents(): serverIncidentTypeNames:', serverIncidentTypeNames);
 
-    for (const configName of this.selectedBulkCreateConfigs) {
+    // add 'successfulEndpoints' and 'failedEndpoints' to validBulkConfigurations
+    validBulkConfigurations = this.reduceBulkConfigurationServersToGood(validBulkConfigurations, successfulServers);
+    console.log('AppComponent: onCreateBulkIncidents(): validBulkConfigurations:', validBulkConfigurations);
 
-      for (const result of testResults) {
-        const testResult = result.testResult;
-        const serverId = result.serverId;
+    // get list of JSON files to fetch
+    const jsonFilesToFetch = this.reduceBulkConfigurationJsonFilesToFetch(validBulkConfigurations);
+    console.log('AppComponent: onCreateBulkIncidents(): jsonFilesToFetch:', jsonFilesToFetch);
 
-        if (!testResult.success) {
-          let error;
-          if ('statusCode' in testResult) {
-            error = `Server test failed with status code ${testResult.statusCode}: ${testResult.error}`;
-          }
-          else {
-            error = `Server test failed with error: ${testResult.error}`;
-          }
-          this.bulkCreateResults.push({configName, serverId, success: false, error});
-          this.changeDetector.detectChanges(); // update UI
-          return;
+    // retrieve JSON files
+    const jsonFetchPromises = jsonFilesToFetch.map( async jsonFile => {
+      jsonFiles[jsonFile] = await this.fetcherService.getSavedJSONConfiguration(jsonFile);
+    });
+    const jsonFilesFetchSuccessful = jsonFetchPromises.length !== 0;
+    // wait for JSON retrieve tests to finish
+    await Promise.all(jsonFetchPromises);
+    console.log('AppComponent: onCreateBulkIncidents(): jsonFilesFetchSuccessful:', jsonFilesFetchSuccessful);
+ 
+    if (jsonFilesFetchSuccessful) {
+      // it's possible that no JSON files were needed
+      console.log('AppComponent: onCreateBulkIncidents(): retrieved all JSON files');
+      console.log('AppComponent: onCreateBulkIncidents(): jsonFiles:', jsonFiles);
+    }
+
+
+    // return;
+
+    
+    // Loop through the bulk configs to create incidents from
+    for (const configName of Object.keys(validBulkConfigurations)) {
+      console.log('got to 1');
+      const validBulkCreateConfig = validBulkConfigurations[configName];
+
+      // Loop through the bad endpoints of the bulk config
+      for (const serverId of validBulkCreateConfig.failedEndpoints) {
+        console.log('got to 2');
+        // Push the error to results, and continue to the next loop iteration / server
+        const testResult = testResults[serverId];
+        let error;
+        if ('statusCode' in testResult) {
+          error = `Server test failed with status code ${testResult.statusCode}: ${testResult.error}`;
         }
+        else {
+          error = `Server test failed with error: ${testResult.error}`;
+        }
+        this.bulkCreateResults.push({configName, serverId, success: false, error});
+        this.changeDetector.detectChanges(); // update UI
+      }
+
+      // Take no further action for this bulk config if there were no successful endpoints
+      if (validBulkCreateConfig.successfulEndpoints.length === 0) {
+        console.log('got to 3');
+        continue;
+      }
+
+
+      for (const serverId of validBulkCreateConfig.successfulEndpoints) {
+        // Work loop to build and push incidents to XSOAR
+        console.log('got to 4: serverId:', serverId);
 
         console.log('AppComponent: onCreateBulkIncidents(): configName:', configName);
-        let selectedConfig = this.savedIncidentConfigurations[configName];
-        let skippedFields: string[] = [];
+        const incidentConfig = this.savedIncidentConfigurations[configName];
+        const skippedFields: string[] = [];
 
-        let newIncident = {
-          createInvestigation: selectedConfig.createInvestigation,
-          serverId
-        };
+        // Skip this server if the incident type isn't defined
+        console.log('AppComponent: onCreateBulkIncidents(): serverIncidentTypeNames:', serverIncidentTypeNames);
+        console.log('AppComponent: onCreateBulkIncidents(): serverIncidentTypeNames[serverId]:', serverIncidentTypeNames[serverId]);
+        let incidentTypeFieldDefined = serverIncidentTypeNames[serverId].includes(incidentConfig.incidentType) ? true : false;
+        if (!incidentTypeFieldDefined) {
+          const error = `Incident type '${incidentConfig.incidentType}' is not defined on XSOAR server`;
+          this.bulkCreateResults.push({configName, serverId, success: false, error});
+          continue;
+        }
 
-        Object.values(selectedConfig.incidentFieldsConfig).forEach( incidentFieldConfig => {
-          const fieldName = incidentFieldConfig.shortName;
-          if (!incidentFieldConfig.enabled) {
-            // silently skip non-enabled fields
-            return;
-          }
-          if (!(fieldName in serverFieldDefinitions[serverId])) {
-            // skip fields which don't exist in Demisto config
-            skippedFields.push(fieldName);
-            return;
-          }
-          newIncident[fieldName] = incidentFieldConfig.value;
-        });
 
-        Object.values(selectedConfig.customFieldsConfig).forEach( incidentFieldConfig => {
-          const fieldName = incidentFieldConfig.shortName;
-          if (!('CustomFields' in newIncident)) {
-            newIncident['CustomFields'] = {};
-          }
-          if (!incidentFieldConfig.enabled) {
-            // silently skip non-enabled fields
-            return;
-          }
-          if (!(fieldName in serverFieldDefinitions[serverId])) {
-            // skip fields which don't exist in Demisto config
-            skippedFields.push(fieldName);
-            return;
-          }
-          newIncident['CustomFields'][fieldName] = incidentFieldConfig.value;
-        });
+        // Now build the incident config to push
+        const buildIncidentConfig = (jsonFile=undefined) => {
+          console.log('got to 8');
 
-        console.log('AppComponent: onCreateBulkIncidents(): newIncident:', newIncident);
+          const newIncident: IncidentCreationConfig = {
+            createInvestigation: incidentConfig.createInvestigation,
+            serverId
+          };
 
-        // now submit the incident
-        createIncidentPromises.push((async () => {
-          let res = await this.fetcherService.createDemistoIncident(newIncident);
-          if (!res.success) {
-            const error = res.statusMessage;
-            this.bulkCreateResults.push({configName, serverId, success: false, error});
+          const json = jsonFile ? jsonFiles[jsonFile] : undefined;
+
+          Object.values(incidentConfig.chosenFields).forEach( field => {
+            const fieldName = field.shortName;
+            if (!field.enabled) {
+              // silently skip non-enabled fields
+              return;
+            }
+  
+            if (!(fieldName in serverFieldDefinitions[serverId])) {
+              // skip fields which don't exist in XSOAR config
+              skippedFields.push(fieldName);
+              return;
+            }
+  
+            let value;
+  
+            if (field.mappingMethod === 'static') {
+              // static field
+              value = field.value;
+            }
+  
+            else if (field.mappingMethod === 'jmespath') {
+              value = this.jmesPathResolve(field.jmesPath, json);
+              value = utils.massageData(value, field.fieldType);
+  
+              const unpermittedValue = value === null && !field.permitNullValue;
+              const nullDate = field.fieldType === 'date' && value === null;
+  
+              if (unpermittedValue || nullDate) {
+                return;
+              }
+  
+              if (field.fieldType === 'date') {
+                value = this.transformDate(value, field.dateConfig);
+                if (value === null) {
+                  return;
+                }
+              }
+            }
+            
+            !('CustomFields' in newIncident) ? newIncident.CustomFields = {} : undefined;
+            field.custom ? newIncident.CustomFields[fieldName] = value : newIncident[fieldName] = value; // write value to config
+          });
+          // Finished building incident
+
+          console.log('AppComponent: onCreateBulkIncidents(): newIncident:', newIncident);
+
+          // Submit the incident to XSOAR
+          createIncidentPromises.push((async () => {
+            let res = await this.fetcherService.createDemistoIncident(newIncident);
+            if (!res.success) {
+              const error = res.statusMessage;
+              this.bulkCreateResults.push({configName, serverId, success: false, error});
+            }
+            else {
+              this.bulkCreateResults.push({configName, serverId, success: true, skippedFields, incidentId: res.id});
+            }
+            this.changeDetector.detectChanges(); // update UI
+          })());
+        }
+
+        if (incidentConfig.requiresJson) {
+          console.log('got to 5');
+          for (const jsonFile of validBulkCreateConfig.jsonFiles) {
+            console.log('got to 6');
+            buildIncidentConfig(jsonFile);
           }
-          else {
-            this.bulkCreateResults.push({configName, serverId, success: true, skippedFields, incidentId: res.id});
-          }
-          this.changeDetector.detectChanges(); // update UI
-        })());
+        }
+
+        else {
+          console.log('got to 7');
+          buildIncidentConfig();
+        }
+
       }
     }
 
@@ -882,9 +1196,10 @@ export class AppComponent implements OnInit {
 
     console.log('AppComponent: onCreateBulkIncidents(): bulkCreateResults:', this.bulkCreateResults);
 
-    this.selectedBulkCreateConfigs = []; // reset selection
-    this.selectedBulkCreateEndpoints = [];
-    */
+    // this.selectedBulkCreateConfigs = []; // reset selection
+    // this.selectedBulkCreateEndpoints = [];
+    
+    
   }
 
 
@@ -939,7 +1254,7 @@ export class AppComponent implements OnInit {
       
       // Refresh Demisto Incident Types
       try {
-        await this.fetchIncidentTypes(this.currentDemistoEndpointName);
+        this.fetchedIncidentTypes = await this.fetchIncidentTypes(this.currentDemistoEndpointName);
       }
       catch (error) {
         console.error('AppComponent: switchCurrentDemistoEndpoint(): Caught error fetching Demisto incident types:', error);
@@ -1180,7 +1495,7 @@ export class AppComponent implements OnInit {
 
       // Refresh Demisto Incident Types
       try {
-        await this.fetchIncidentTypes(this.currentDemistoEndpointName);
+        this.fetchedIncidentTypes = await this.fetchIncidentTypes(this.currentDemistoEndpointName);
       }
       catch (error) {
         console.error('AppComponent: onDemistoEndpointUpdated(): Caught error fetching Demisto incident types:', error);
@@ -1465,6 +1780,24 @@ export class AppComponent implements OnInit {
     console.log(`AppComponent: onUnselectAllJsonConfigurations()`);
     this.jsonGroupDialogSelections[this.jsonGroupSelection_JsonGroupDialog] = [];
   }
+
+
+
+  buildJsonFileAndGroupConfigurationsItems() {
+    let items: SelectItem[] = [];
+    if (this.jsonGroupConfigurations) {
+      items = items.concat( Object.values(this._jsonGroupConfigurations).map( jsonConfig => ({
+        value: `g${jsonConfig.name}`,
+        label: `${jsonConfig.name} (Group)` } as SelectItem) ));
+    }
+    if (this.savedJsonConfigurations) {
+      items = items.concat(this.savedJsonConfigurations.map( val => ({
+        value: `j${val}`,
+        label: `${val} (JSON)` } as SelectItem)));
+    }
+    this.jsonFileAndGroupConfigurationsItems = items.sort(utils.sortArrayNaturally);
+  }
+  
 
 
 

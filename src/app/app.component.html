@@ -504,20 +504,20 @@
 
         <vertical-center
           *ngIf="selectedBulkCreateIncidentConfig && !savedIncidentConfigurations[selectedBulkCreateIncidentConfig].requiresJson; else jsonRequired">
-              No JSON is required for the selected incident config
+            No JSON is required for the selected incident config
         </vertical-center>
         
 
         <ng-template #jsonRequired>
 
           <div
-            *ngIf="selectedBulkCreateIncidentConfig && jsonGroupConfigurationsItems"
+            *ngIf="selectedBulkCreateIncidentConfig && jsonFileAndGroupConfigurationsItems"
             class="bulkCreateContainerColumn">
 
               <div class="formLabel">Select JSON configs or groups</div>
 
               <p-listbox
-                [options]="jsonGroupConfigurationsItems"
+                [options]="jsonFileAndGroupConfigurationsItems"
                 [(ngModel)]="bulkCreateSelections[selectedBulkCreateIncidentConfig].jsonGroups"
                 [style]="{'width':'100%'}"
                 [multiple]="true"
@@ -533,7 +533,7 @@
 
       </div>
 
-      <div *ngIf="bulkConfigurationsToPush">
+      <div *ngIf="bulkConfigurationsToPush" style="margin-top: 2em;">
         
         <span
           style="color: black;"
@@ -551,11 +551,22 @@
               {{item.incidentConfigName}}
             </span> :
 
+            <div *ngIf="item.jsonConfigs" style="margin-left: 3em;">
+              
+              <span
+                class="dialogLabel">
+                  JSON Configs: 
+              </span>
+              
+              <span>{{item.jsonConfigs}}</span>
+            
+            </div>
+
             <div *ngIf="item.jsonGroups" style="margin-left: 3em;">
               
               <span
                 class="dialogLabel">
-                  Incidents: 
+                  JSON Groups: 
               </span>
               
               <span>{{item.jsonGroups}}</span>

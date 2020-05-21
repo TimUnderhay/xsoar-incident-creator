@@ -41,3 +41,11 @@ export interface IncidentJsonFileConfig {
   configName: string; // the incident config name
   jsonName: string | null; // the json config name -- set to null to clear
 }
+
+export interface IncidentCreationConfig {
+  createInvestigation: boolean;
+  serverId: string;
+  CustomFields?: {[fieldName: string]: string | number | Object | null};
+  [fieldName: string]: string | number | Object | null;
+
+}
