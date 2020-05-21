@@ -1,6 +1,6 @@
 {
-  "name": "demisto-incident-importer",
-  "version": "0.0.2",
+  "name": "xsoar-incident-creator",
+  "version": "1.0.0",
   "scripts": {
     "start": "cd src && node server.js",
     "start-dev": "cd src && node server.js --dev"

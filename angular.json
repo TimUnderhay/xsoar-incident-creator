@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "demisto-importer": {
+    "xsoar-incident-creator": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -74,18 +74,18 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "demisto-importer:build"
+            "browserTarget": "xsoar-incident-creator:build"
           },
           "configurations": {
             "production": {
-              "browserTarget": "demisto-importer:build:production"
+              "browserTarget": "xsoar-incident-creator:build:production"
             }
           }
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "demisto-importer:build"
+            "browserTarget": "xsoar-incident-creator:build"
           }
         },
         "test": {
@@ -122,15 +122,15 @@
           "builder": "@angular-devkit/build-angular:protractor",
           "options": {
             "protractorConfig": "e2e/protractor.conf.js",
-            "devServerTarget": "demisto-importer:serve"
+            "devServerTarget": "xsoar-incident-creator:serve"
           },
           "configurations": {
             "production": {
-              "devServerTarget": "demisto-importer:serve:production"
+              "devServerTarget": "xsoar-incident-creator:serve:production"
             }
           }
         }
       }
     }},
-  "defaultProject": "demisto-importer"
+  "defaultProject": "xsoar-incident-creator"
 }

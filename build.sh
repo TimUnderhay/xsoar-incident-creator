@@ -2,7 +2,7 @@
 
 set -ex
 
-IMAGE_NAME=demisto-incident-importer
+IMAGE_NAME=xsoar-incident-creator
 DOCKER_USER=tundisto
 REGISTRY=docker.io
 
