@@ -1,7 +1,14 @@
 <div *ngIf="stringValue" class="editJsonWindow">
 
-  <div style="margin-bottom: .5em; flex-shrink: 1;">
-    <p-button type="button" label="Reset Values" (onClick)="resetValues()" [disabled]="readOnly"></p-button>
+  <div *ngIf="showResetValues" style="margin-bottom: .5em; flex-shrink: 1;">
+
+    <p-button
+      type="button"
+      label="Reset Values"
+      (onClick)="resetValues()"
+      [disabled]="readOnly">
+    </p-button>
+
   </div>
 
   <ace-editor

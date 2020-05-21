@@ -487,7 +487,9 @@
           *ngIf="selectedBulkCreateIncidentConfig && demistoEndpointsItems"
           class="bulkCreateContainerColumn">
 
-          <div class="formLabel">Select XSOAR servers to push to</div>
+          <div class="formLabel">
+            Select XSOAR servers to push to
+          </div>
 
           <p-listbox
             [options]="demistoEndpointsItems"
@@ -609,33 +611,72 @@
 
 
   <!-- Bulk Create Incidents Results Dialog -->
-  <p-dialog header="Bulk Create Incident Results" [(visible)]="showBulkResultsDialog" [modal]="true" [style]="{width: '75%'}">
+  <p-dialog header="Bulk Create Incident Results" [(visible)]="showBulkResultsDialog" [modal]="true" [style]="{width: '95%'}">
 
     <div class="bulkCreateResults">
+      
+      <!-- Header -->
       <div class="bulkCreateResultsGridHeader">Config Name</div>
       <div class="bulkCreateResultsGridHeader">XSOAR Server</div>
+      <div class="bulkCreateResultsGridHeader">JSON File</div>
       <div class="bulkCreateResultsGridHeader">Result</div>
       <div class="bulkCreateResultsGridHeader">Incident ID</div>
+      <div class="bulkCreateResultsGridHeader">Incident JSON</div>
       <div class="bulkCreateResultsGridHeader">Comments</div>
+      
+      <!-- Rows -->
       <ng-container *ngFor="let result of bulkCreateResults">
 
+        <!-- Incident Configuration Name -->
         <div>{{result.configName}}</div>
 
+        <!-- Server ID -->
         <div>{{result.serverId}}</div>
 
+        <!-- JSON File -->
+        <div>
+          {{result.hasOwnProperty('jsonFile') ? result.jsonFile : undefined}}
+        </div>
+
+        <!-- Success / Failure -->
         <div>{{result.success ? 'Success' : 'Failure'}}</div>
 
-        <div *ngIf="result.hasOwnProperty('incidentId')">
+        <!-- Incident ID and Link -->
+        <div>
         
-          <a href="javascript:void(0)" (click)="onClickDemistoInvestigateUrl(result.incidentId, result.serverId)">{{result.incidentId}}</a>
+          <a
+            *ngIf="result.hasOwnProperty('incidentId')"
+            href="javascript:void(0)"
+            (click)="onClickDemistoInvestigateUrl(result.incidentId, result.serverId)">
+              {{result.incidentId}}
+          </a>
 
         </div>
 
-        <div *ngIf="!result.hasOwnProperty('incidentId')"></div>
+        <!-- Incident JSON Link -->
+        <div>
+          
+          <span
+            *ngIf="result.hasOwnProperty('incidentId')"
+            (click)="onViewBulkIncidentJSONClicked(result.incidentId, result.serverId)"
+            class="editJsonLink">
+              View JSON
+          </span>
 
+        </div>
+
+        <!-- Comments -->
         <div>
 
-          <span *ngIf="result.hasOwnProperty('skippedFields') && result.skippedFields.length !== 0" class="pi pi-info-circle bulkCreateResultsInfoIcon" [pTooltip]="'Fields were skipped: ' + result.skippedFields.join(', ')">
+          <span
+            *ngIf="result.hasOwnProperty('error')">
+              {{result.error}}
+          </span>
+
+          <span
+            *ngIf="result.hasOwnProperty('skippedFields') && result.skippedFields.length !== 0"
+            class="pi pi-info-circle bulkCreateResultsInfoIcon"
+            [pTooltip]="'Fields were skipped: ' + result.skippedFields.join(', ')">
           </span>
 
         </div>
@@ -785,7 +826,7 @@
                 (click)="onSelectAllJsonConfigurations()"
                 class="selectAllControl">
                   Select All
-                </span>
+              </span>
   
               | 
               

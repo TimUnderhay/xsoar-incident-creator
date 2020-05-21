@@ -7,6 +7,7 @@ export interface BulkCreateResult extends Object {
   error?: string;
   incidentId?: number;
   serverId: string;
+  jsonFile?: string;
 }
 
 export interface BulkCreateConfigurationToPush {
@@ -34,4 +35,8 @@ export interface EndpointIncidentTypes {
 
 export interface EndpointIncidentTypeNames {
   [serverId: string]: string[];
+}
+
+export interface BulkCreateIncidentJSON {
+  [serverId: string]: { [incidentId: number]: Object }; // Object is incident JSON
 }

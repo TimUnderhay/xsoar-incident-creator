@@ -16,6 +16,7 @@ export class JsonEditorComponent implements OnInit {
   parsedValue: any;
   canSubmit = true;
   readOnly = false;
+  showResetValues = true;
 
   aceEditorOptions = {
     useSoftTabs: false,
@@ -25,6 +26,7 @@ export class JsonEditorComponent implements OnInit {
   };
 
   ngOnInit() {
+    console.log('JsonEditorComponent: ngOnInit()');
     this.originalValue = this.dialogConfig.data.value;
     try {
       this.stringValue = JSON.stringify(this.originalValue, null, 4);
@@ -33,6 +35,7 @@ export class JsonEditorComponent implements OnInit {
     catch (error) {
       this.stringValue = 'Error parsing JSON data: ' + error;
     }
+    this.showResetValues = 'showResetValues' in this.dialogConfig.data ? this.dialogConfig.data.showResetValues : true;
     this.readOnly = this.dialogConfig.data.readOnly;
   }
 

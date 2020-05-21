@@ -10,11 +10,13 @@ import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
 import { IncidentConfig, IncidentConfigs, IncidentCreationConfig } from './types/incident-config';
 import { PMessageOption } from './types/message-options';
-import { BulkCreateConfigurationToPush, BulkCreateSelection, BulkCreateSelections, BulkCreateResult, EndpointIncidentTypes, EndpointIncidentTypeNames } from './types/bulk-create';
+import { BulkCreateConfigurationToPush, BulkCreateSelection, BulkCreateSelections, BulkCreateResult, EndpointIncidentTypes, EndpointIncidentTypeNames, BulkCreateIncidentJSON } from './types/bulk-create';
 import { FreeformJsonUIComponent } from './freeform-json-ui.component';
 import { Subscription } from 'rxjs';
 import * as utils from './utils';
 import { JsonGroup, JsonGroups } from './types/json-group';
+import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
+import { JsonEditorComponent } from './json-editor/json-editor.component';
 import * as Moment from 'node_modules/moment/min/moment.min.js';
 declare var jmespath: any;
 
@@ -22,7 +24,8 @@ type DemistoServerEditMode = 'edit' | 'new';
 
 @Component({
   selector: 'app-root',
-  templateUrl: './app.component.html'
+  templateUrl: './app.component.html',
+  providers: [ DialogService ]
 })
 
 
@@ -32,7 +35,8 @@ export class AppComponent implements OnInit {
   constructor(
     private fetcherService: FetcherService, // import our URL fetcher
     private confirmationService: ConfirmationService,
-    private changeDetector: ChangeDetectorRef
+    private changeDetector: ChangeDetectorRef,
+    public dialogService: DialogService
   ) {}
 
   @ViewChild(FreeformJsonUIComponent) freeformJsonUIComponent: FreeformJsonUIComponent;
@@ -87,6 +91,7 @@ export class AppComponent implements OnInit {
   // Bulk results dialog
   showBulkResultsDialog = false;
   bulkCreateResults: BulkCreateResult[] = [];
+  bulkCreateIncidentJson: BulkCreateIncidentJSON;
 
   // Select Demisto endpoint dialog
   showDemistoEndpointOpenDialog = false;
@@ -982,6 +987,7 @@ export class AppComponent implements OnInit {
     const serverIncidentTypes: EndpointIncidentTypes = {};
     const serverIncidentTypeNames: EndpointIncidentTypeNames = {};
     const jsonFiles = {};
+    const bulkCreateIncidentJson: BulkCreateIncidentJSON = {};
 
     let validBulkConfigurations: BulkCreateSelections = this.getValidBulkConfigurations();
     console.log('AppComponent: onCreateBulkIncidents(): validBulkConfigurations:', validBulkConfigurations);
@@ -1052,19 +1058,15 @@ export class AppComponent implements OnInit {
       console.log('AppComponent: onCreateBulkIncidents(): retrieved all JSON files');
       console.log('AppComponent: onCreateBulkIncidents(): jsonFiles:', jsonFiles);
     }
-
-
-    // return;
-
     
     // Loop through the bulk configs to create incidents from
     for (const configName of Object.keys(validBulkConfigurations)) {
-      console.log('got to 1');
+      // console.log('got to 1');
       const validBulkCreateConfig = validBulkConfigurations[configName];
 
       // Loop through the bad endpoints of the bulk config
       for (const serverId of validBulkCreateConfig.failedEndpoints) {
-        console.log('got to 2');
+        // console.log('got to 2');
         // Push the error to results, and continue to the next loop iteration / server
         const testResult = testResults[serverId];
         let error;
@@ -1080,14 +1082,14 @@ export class AppComponent implements OnInit {
 
       // Take no further action for this bulk config if there were no successful endpoints
       if (validBulkCreateConfig.successfulEndpoints.length === 0) {
-        console.log('got to 3');
+        // console.log('got to 3');
         continue;
       }
 
 
       for (const serverId of validBulkCreateConfig.successfulEndpoints) {
         // Work loop to build and push incidents to XSOAR
-        console.log('got to 4: serverId:', serverId);
+        // console.log('got to 4: serverId:', serverId);
 
         console.log('AppComponent: onCreateBulkIncidents(): configName:', configName);
         const incidentConfig = this.savedIncidentConfigurations[configName];
@@ -1100,13 +1102,14 @@ export class AppComponent implements OnInit {
         if (!incidentTypeFieldDefined) {
           const error = `Incident type '${incidentConfig.incidentType}' is not defined on XSOAR server`;
           this.bulkCreateResults.push({configName, serverId, success: false, error});
+          this.changeDetector.detectChanges(); // update UI
           continue;
         }
 
 
-        // Now build the incident config to push
+        // Function to build the incident json and push to XSOAR
         const buildIncidentConfig = (jsonFile=undefined) => {
-          console.log('got to 8');
+          // console.log('got to 8');
 
           const newIncident: IncidentCreationConfig = {
             createInvestigation: incidentConfig.createInvestigation,
@@ -1169,37 +1172,40 @@ export class AppComponent implements OnInit {
               this.bulkCreateResults.push({configName, serverId, success: false, error});
             }
             else {
-              this.bulkCreateResults.push({configName, serverId, success: true, skippedFields, incidentId: res.id});
+              jsonFile = jsonFile ? jsonFile : 'N/A';
+              const incidentId = res.id;
+              serverId in bulkCreateIncidentJson ? undefined : bulkCreateIncidentJson[serverId] = {};
+              bulkCreateIncidentJson[serverId][incidentId] = newIncident;
+              this.bulkCreateResults.push({configName, serverId, success: true, skippedFields, incidentId, jsonFile});
             }
             this.changeDetector.detectChanges(); // update UI
           })());
         }
 
+        // Now build the incident(s)
         if (incidentConfig.requiresJson) {
-          console.log('got to 5');
+          // console.log('got to 5');
           for (const jsonFile of validBulkCreateConfig.jsonFiles) {
-            console.log('got to 6');
+            // console.log('got to 6');
             buildIncidentConfig(jsonFile);
           }
         }
 
         else {
-          console.log('got to 7');
+          // console.log('got to 7');
           buildIncidentConfig();
         }
 
       }
     }
 
+    // Wait for all incidents to be created
     await Promise.all(createIncidentPromises);
     console.log('AppComponent: onCreateBulkIncidents(): Incident creation complete');
 
-    console.log('AppComponent: onCreateBulkIncidents(): bulkCreateResults:', this.bulkCreateResults);
+    this.bulkCreateIncidentJson = bulkCreateIncidentJson;
 
-    // this.selectedBulkCreateConfigs = []; // reset selection
-    // this.selectedBulkCreateEndpoints = [];
-    
-    
+    console.log('AppComponent: onCreateBulkIncidents(): bulkCreateResults:', this.bulkCreateResults);
   }
 
 
@@ -1797,9 +1803,27 @@ export class AppComponent implements OnInit {
     }
     this.jsonFileAndGroupConfigurationsItems = items.sort(utils.sortArrayNaturally);
   }
-  
 
 
 
+  onViewBulkIncidentJSONClicked(incidentId: number, serverId: string) {
+    console.log('AppComponent: onViewBulkIncidentJSONClicked()');
+        
+    const incidentJson = this.bulkCreateIncidentJson[serverId][incidentId];
+    
+    let config: DynamicDialogConfig = {
+      header: `JSON of XSOAR Incident ${incidentId} for '${serverId}'`,
+      closable: true,
+      closeOnEscape: true,
+      data: {
+        value: incidentJson,
+        readOnly: true,
+        showResetValues: false
+      },
+      width: '95%',
+      height: '90%'
+    };
+    const dialogRef = this.dialogService.open(JsonEditorComponent, config);
+  }
 
 }
