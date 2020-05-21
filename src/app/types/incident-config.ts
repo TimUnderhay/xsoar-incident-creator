@@ -45,7 +45,6 @@ export interface IncidentJsonFileConfig {
 export interface IncidentCreationConfig {
   createInvestigation: boolean;
   serverId: string;
-  CustomFields?: {[fieldName: string]: string | number | Object | null};
-  [fieldName: string]: string | number | Object | null;
-
+  CustomFields?: {[fieldName: string]: string | number | object | null | boolean};
+  [fieldName: string]: string | number | object | null | boolean;
 }

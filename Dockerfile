@@ -19,10 +19,11 @@ RUN \
 apk add bash \
 && ln -sf /bin/bash /bin/sh \
 && cd ${DSTDIR} \
-&& mv -f server/package-prod.json . \
+&& mv -f server/package-prod.json ./package.json \
 && rm -f server/package.json \
+&& rm -rf server/etc/* \
 && npm install
 
 WORKDIR ${DSTDIR}/server/src
-# a dummy command is needed prior to main command due to bash optimisation which runs exec and replaces the shell, if there is only a single command.  This fixes ctrl-c termination in alpine
-CMD ["/bin/sh", "-c", "dummy=0; node server.js"]
+# a dummy command is needed prior to main command due to bash optimisation which runs exec and replaces the shell, if there is only a single command.  This fixes ctrl-c termination in the Alpine Linux image
+CMD ["/bin/sh", "-c", "NOOP=0; node server.js"]

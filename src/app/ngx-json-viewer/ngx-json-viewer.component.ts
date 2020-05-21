@@ -5,13 +5,13 @@ import { FieldType } from '../types/incident-fields';
 import * as utils from '../utils';
 import { FetcherService } from '../fetcher-service';
 
-type valueType = 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
+type ValueType = 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
 
 
 export interface Segment {
   key: string;
   value: any;
-  type: valueType;
+  type: ValueType;
   description: string;
   expanded: boolean;
   length?: number;
@@ -23,22 +23,22 @@ export interface Segment {
 
 export const acceptableDataTypesPerFieldType = {
   // key is field type
-  'number': ['number', 'string'], // string will only work if it contains a number
-  'shortText': ['number', 'string', 'boolean', 'null'],
-  'longText': ['number', 'string', 'boolean', 'null'],
-  'boolean': ['boolean', 'string', 'number'], // string will only work if it's 'true'|'false'.  For number, <=0 is false, and >0 is true.
-  'grid': ['array', 'object'], // grid accepts an array of objects
-  'url': ['string', 'null'],
-  'html': ['string', 'number', 'boolean', 'null'],
-  'markdown': ['string', 'null'],
-  'role': ['array', 'string', 'null'],
-  'user': ['string', 'null'],
-  'singleSelect': ['number', 'string', 'boolean', 'null'],
-  'multiSelect': ['array', 'number', 'string', 'boolean', 'null'],
-  'internal': [],
-  'date': ['string', 'number'],
-  'attachments': [],
-  'tagsSelect': ['string', 'null']
+  number: ['number', 'string'], // string will only work if it contains a number
+  shortText: ['number', 'string', 'boolean', 'null'],
+  longText: ['number', 'string', 'boolean', 'null'],
+  boolean: ['boolean', 'string', 'number'], // string will only work if it's 'true'|'false'.  For number, <=0 is false, and >0 is true.
+  grid: ['array', 'object'], // grid accepts an array of objects
+  url: ['string', 'null'],
+  html: ['string', 'number', 'boolean', 'null'],
+  markdown: ['string', 'null'],
+  role: ['array', 'string', 'null'],
+  user: ['string', 'null'],
+  singleSelect: ['number', 'string', 'boolean', 'null'],
+  multiSelect: ['array', 'number', 'string', 'boolean', 'null'],
+  internal: [],
+  date: ['string', 'number'],
+  attachments: [],
+  tagsSelect: ['string', 'null']
 };
 
 
@@ -57,7 +57,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
     private changeDetector: ChangeDetectorRef
   ) {}
 
-  @Input() json: Object | Array<any>;
+  @Input() json: object | Array<any>;
   @Input() expanded = false;
   @Input() path = '';
   @Input() selectionMode = false;
@@ -66,7 +66,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
   segments: Segment[] = [];
   index = 0;
-  typeOfJson: valueType;
+  typeOfJson: ValueType;
   get jsonLen(): number {
     return Object.keys(this.json).length;
   }
@@ -102,7 +102,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
       this.hasExpandableChildren = this.valueHasAnExpandableChild(this.json);
       Object.keys(this.json).forEach( key => {
         // if an array, key will be the array index
-        const segment = this.buildSegment(key, this.json[key])
+        const segment = this.buildSegment(key, this.json[key]);
         segments.push(segment);
       });
     }
@@ -111,7 +111,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
       // we really shouldn't enter this block, as this.json should only ever be an array or an object
       console.error('NgxJsonViewerComponent: JSON object is not an object!  json:', this.json);
       this.hasExpandableChildren = this.valueHasAnExpandableChild(this.json);
-      const segment = this.buildSegment(`(${typeof this.json})`, this.json)
+      const segment = this.buildSegment(`(${typeof this.json})`, this.json);
       segments.push(segment);
     }
 
@@ -138,7 +138,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
 
 
-  getType(value): valueType {
+  getType(value): ValueType {
     switch (typeof value) {
 
       case 'number': {
@@ -186,8 +186,8 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
   private buildSegment(key: any, value: any): Segment {
     const segment: Segment = {
-      key: key,
-      value: value,
+      key,
+      value,
       type: undefined,
       description: '' + value,
       expanded: this.expanded,
@@ -336,7 +336,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
 
 
-  objectOrArrayHasChildren(value: Object | Array<any>) {
+  objectOrArrayHasChildren(value: object | Array<any>) {
     // if value is an object or an array, return whether it has children (i.e. a non-zero length or non-zero key length)
     const valueType = this.getType(value);
     if (valueType === 'array' && (value as Array<any>).length !== 0) {
@@ -350,7 +350,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
 
 
 
-  valueHasAnExpandableChild(value: Object | Array<any>): boolean {
+  valueHasAnExpandableChild(value: object | Array<any>): boolean {
     const valueType = this.getType(value);
     if (! ['object', 'array'].includes(valueType)) {
       // only arrays and objects can have children
@@ -363,7 +363,7 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
         return true;
       }
     }
-    
+
     return false;
   }
 

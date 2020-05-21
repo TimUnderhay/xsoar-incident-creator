@@ -17,7 +17,7 @@ export interface IncidentField extends Object {
   originalValue?: any;
   fieldType?: FieldType;
   custom: boolean; // used by FieldDisplayComponent
-  selectValues?: any; // possible values that the field can hold.  For singleSelect and multiSelect fields 
+  selectValues?: any; // possible values that the field can hold.  For singleSelect and multiSelect fields
   mappingMethod: MappingMethod;
   permitNullValue?: boolean;
   dateConfig?: DateConfig; // used by date fields

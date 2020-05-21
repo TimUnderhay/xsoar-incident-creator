@@ -318,10 +318,10 @@ export class FetcherService {
 
 
 
-  getSavedJSONConfiguration(name): Promise<Object | Array<any>> {
+  getSavedJSONConfiguration(name): Promise<object | Array<any>> {
     let headers = this.buildHeaders();
     return this.http.get(`${this.apiPath}/json/${name}`, { headers } )
-                    .toPromise<Object | Array<any>>();
+                    .toPromise<object | Array<any>>();
   }
 
 
@@ -347,7 +347,7 @@ export class FetcherService {
     const config: IncidentJsonFileConfig = {
       configName: incidentConfigName,
       jsonName: jsonConfigName
-    }
+    };
     return this.http.post(this.apiPath + '/incidentConfig/defaultJson', config, { headers } )
                     .toPromise();
   }
@@ -359,7 +359,7 @@ export class FetcherService {
     const config: IncidentJsonFileConfig = {
       configName: incidentConfigName,
       jsonName: null
-    }
+    };
     return this.http.post(this.apiPath + '/incidentConfig/defaultJson', config, { headers } )
                     .toPromise();
   }

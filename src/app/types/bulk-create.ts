@@ -38,5 +38,5 @@ export interface EndpointIncidentTypeNames {
 }
 
 export interface BulkCreateIncidentJSON {
-  [serverId: string]: { [incidentId: number]: Object }; // Object is incident JSON
+  [serverId: string]: { [incidentId: number]: object }; // Object is incident JSON
 }

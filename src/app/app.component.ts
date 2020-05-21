@@ -17,7 +17,9 @@ import * as utils from './utils';
 import { JsonGroup, JsonGroups } from './types/json-group';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
-import * as Moment from 'node_modules/moment/min/moment.min.js';
+import dayjs from 'dayjs';
+import utc from 'node_modules/dayjs/plugin/utc';
+dayjs.extend(utc);
 declare var jmespath: any;
 
 type DemistoServerEditMode = 'edit' | 'new';
@@ -151,22 +153,23 @@ export class AppComponent implements OnInit {
     this.buildJsonFileAndGroupConfigurationsItems();
   }
   savedJsonConfigurationItems: SelectItem[];
-  
+
   // JSON Groups Config & UI
-  _jsonGroupConfigurations: JsonGroups = {}
+  _jsonGroupConfigurations: JsonGroups = {};
   get jsonGroupConfigurations(): JsonGroups {
-    return this._jsonGroupConfigurations
-  };
+    return this._jsonGroupConfigurations;
+  }
   set jsonGroupConfigurations(value: JsonGroups) {
     this._jsonGroupConfigurations = value;
     this.jsonGroupConfigurationsItems = Object.values(this._jsonGroupConfigurations).map( jsonConfig => ({
       value: jsonConfig.name,
       label: jsonConfig.name} as SelectItem) );
-      this.buildJsonFileAndGroupConfigurationsItems();
+    this.buildJsonFileAndGroupConfigurationsItems();
   }
   showJsonGroupsDialog = false;
   jsonGroupConfigurationsItems: SelectItem[] = [];
   jsonFileAndGroupConfigurationsItems: SelectItem[] = [];
+  // tslint:disable-next-line:variable-name
   jsonGroupSelection_JsonGroupDialog: string;
   showNewJsonConfigDialog = false;
   newJsonGroupConfigName: string;
@@ -176,10 +179,8 @@ export class AppComponent implements OnInit {
   get newJsonGroupAcceptButtonDisabled(): boolean {
     return this.newJsonGroupConfigName in this._jsonGroupConfigurations;
   }
-  
+
   private subscriptions = new Subscription();
-  
-  
 
 
 
@@ -207,7 +208,7 @@ export class AppComponent implements OnInit {
     await this.demistoEndpointInit(); // sets currentDemistoEndpointInit
 
     if (this.currentDemistoEndpointInit) {
-      
+
       // Demisto Incident Fields
       try {
         await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName);
@@ -565,7 +566,7 @@ export class AppComponent implements OnInit {
     this.showJsonMappingUI = true;
     this.loadDefaultChosenFields = false;
     this.changeDetector.detectChanges();
-    
+
     const selectedConfig = this.savedIncidentConfigurations[this.selectedOpenConfig];
     this.loadedIncidentConfigName = selectedConfig.name;
     this.loadedIncidentConfigId = selectedConfig.id;
@@ -583,7 +584,7 @@ export class AppComponent implements OnInit {
 
   async onSaveClicked() {
     console.log('AppComponent: onSaveClicked()');
-   
+
     await this.freeformJsonUIComponent.onIncidentSaveClicked();
     this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration '${this.selectedOpenConfig}' has been saved`});
 
@@ -656,7 +657,7 @@ export class AppComponent implements OnInit {
     // fetch fields config
     await this.getSavedIncidentConfigurations();
     this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration${utils.sPlural(this.selectedDeleteConfigs)} ${this.selectedDeleteConfigs.join(', ')} was successfully deleted`});
-    
+
     this.selectedDeleteConfigs = []; // reset selection
   }
 
@@ -681,7 +682,7 @@ export class AppComponent implements OnInit {
 
 
 
-  jmesPathResolve(path, json: Object) {
+  jmesPathResolve(path, json: object) {
     console.log('AppComponent: jmesPathResolve()');
     if (path === '' || path.match(/^\s+$/)) {
       return null;
@@ -691,7 +692,7 @@ export class AppComponent implements OnInit {
       // console.log('res:', res);
       return res;
     }
-    catch(error) {
+    catch (error) {
       console.log('JMESPath.search error:', 'message' in error ? error.message : error);
     }
   }
@@ -700,27 +701,27 @@ export class AppComponent implements OnInit {
 
   transformDate(value: number | string, dateConfig: DateConfig): string {
     // console.log('AppComponent: transformDate(): resolvedValue:', this.resolvedValue);
-    
+
     if (!value || value === '') {
       return;
     }
 
     let valueType = typeof value;
 
-    let moment: Moment.Moment;
+    let moment: dayjs.Dayjs;
 
     if (valueType === 'number') {
-      moment = dateConfig.precision === 1 ? Moment.unix(value as number).utc() : Moment(value as number / dateConfig.precision * 1000).utc();
+      moment = dateConfig.precision === 1 ? dayjs.unix(value as number).utc() : dayjs(value as number / dateConfig.precision * 1000).utc();
     }
 
     else if (valueType === 'string') {
-      moment = dateConfig.autoParse ? Moment(value) : Moment(value, dateConfig.formatter);
+      moment = dateConfig.autoParse ? dayjs(value) : dayjs(value, dateConfig.formatter);
     }
 
     const valid = moment.isValid();
 
     if (valid && dateConfig.utcOffsetEnabled) {
-      moment.add(dateConfig.utcOffset, 'hours');
+      moment = moment.add(dateConfig.utcOffset, 'hour');
     }
 
     return moment.toISOString();
@@ -760,7 +761,7 @@ export class AppComponent implements OnInit {
           result.push(serverId);
         }
       }
-    
+
       return result;
     }, [] );
 
@@ -774,7 +775,9 @@ export class AppComponent implements OnInit {
     for (const jsonGroupName of jsonGroups) {
       const jsonConfigs = this.jsonGroupConfigurations[jsonGroupName].jsonConfigs;
       for (const jsonFile of jsonConfigs) {
-        !jsonFiles.includes(jsonFile) ? jsonFiles.push(jsonFile) : undefined;
+        if (!jsonFiles.includes(jsonFile)) {
+          jsonFiles.push(jsonFile);
+        }
       }
     }
     bulkSelection.jsonFiles = jsonFiles;
@@ -821,11 +824,11 @@ export class AppComponent implements OnInit {
         for (const jsonFile of jsonConfigs) {
           if (!result.includes(jsonFile)) {
             result.push(jsonFile);
-          } 
+          }
         }
       }
       return result;
-    }
+    };
 
     return Object.keys(bulkCreateSelections).reduce( (result, incidentConfigName) => {
       const bulkCreateSelection: BulkCreateSelection = bulkCreateSelections[incidentConfigName];
@@ -848,7 +851,7 @@ export class AppComponent implements OnInit {
 
   reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection: BulkCreateSelection): [string[], string[]] {
     const jsonGroups = bulkCreateSelection.jsonGroups.reduce( (result, value: string) => {
-      const type = value.slice(0,1); // 'g' for json group or 'j' for json file
+      const type = value.slice(0, 1); // 'g' for json group or 'j' for json file
       if (type === 'g') {
         result.push(value.slice(1));
       }
@@ -857,7 +860,7 @@ export class AppComponent implements OnInit {
     // console.log('AppComponent: reduceBulkConfigurationJSONConfigsOrGroups(): jsonGroups:', jsonGroups);
 
     const jsonFiles = bulkCreateSelection.jsonGroups.reduce( (result, value: string) => {
-      const type = value.slice(0,1); // 'g' for json group or 'j' for json file
+      const type = value.slice(0, 1); // 'g' for json group or 'j' for json file
       if (type === 'j') {
         result.push(value.slice(1));
       }
@@ -878,7 +881,7 @@ export class AppComponent implements OnInit {
       const bulkCreateSelection = this.bulkCreateSelections[incidentConfigName];
 
       const [jsonGroups, jsonFiles] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection);
-      
+
       const jsonGroupsGood = jsonGroups && jsonGroups.length !== 0;
       const jsonFilesGood = jsonFiles && jsonFiles.length !== 0;
       const endpointsGood = bulkCreateSelection.endpoints.length !== 0;
@@ -954,7 +957,7 @@ export class AppComponent implements OnInit {
 
   async onCreateBulkIncidents() {
     console.log('AppComponent: onCreateBulkIncidents()');
-    
+
     this.showBulkCreateDialog = false;
     this.showBulkResultsDialog = true;
     this.changeDetector.detectChanges(); // trigger change detection
@@ -962,7 +965,7 @@ export class AppComponent implements OnInit {
     this.bulkCreateResults = [];
 
     console.log('AppComponent: onCreateBulkIncidents(): bulkCreateSelections:', this.bulkCreateSelections);
-    
+
 
     /*
     Steps to complete:
@@ -979,7 +982,7 @@ export class AppComponent implements OnInit {
     10.  Display results in a column
     */
 
-    
+
     const createIncidentPromises: Promise<any>[] = [];
     const testResults: DemistoEndpointTestResults = {};
     const successfulServers = [];
@@ -1013,7 +1016,7 @@ export class AppComponent implements OnInit {
           serverIncidentTypes[serverId] = incidentTypes;
           serverIncidentTypeNames[serverId] = incidentTypes.map( incidentType => incidentType.name );
         });
-        
+
         // Fetch field definitions
         console.log(`AppComponent: onCreateBulkIncidents(): Fetching field definitions from XSOAR server ${serverId}`);
         const fieldsPromise = this.fetcherService.getIncidentFieldDefinitions(serverId).then( fetchedIncidentFieldDefinitions => {
@@ -1052,13 +1055,13 @@ export class AppComponent implements OnInit {
     // wait for JSON retrieve tests to finish
     await Promise.all(jsonFetchPromises);
     console.log('AppComponent: onCreateBulkIncidents(): jsonFilesFetchSuccessful:', jsonFilesFetchSuccessful);
- 
+
     if (jsonFilesFetchSuccessful) {
       // it's possible that no JSON files were needed
       console.log('AppComponent: onCreateBulkIncidents(): retrieved all JSON files');
       console.log('AppComponent: onCreateBulkIncidents(): jsonFiles:', jsonFiles);
     }
-    
+
     // Loop through the bulk configs to create incidents from
     for (const configName of Object.keys(validBulkConfigurations)) {
       // console.log('got to 1');
@@ -1108,7 +1111,7 @@ export class AppComponent implements OnInit {
 
 
         // Function to build the incident json and push to XSOAR
-        const buildIncidentConfig = (jsonFile=undefined) => {
+        const buildIncidentConfig = (jsonFile = undefined) => {
           // console.log('got to 8');
 
           const newIncident: IncidentCreationConfig = {
@@ -1124,31 +1127,31 @@ export class AppComponent implements OnInit {
               // silently skip non-enabled fields
               return;
             }
-  
+
             if (!(fieldName in serverFieldDefinitions[serverId])) {
               // skip fields which don't exist in XSOAR config
               skippedFields.push(fieldName);
               return;
             }
-  
+
             let value;
-  
+
             if (field.mappingMethod === 'static') {
               // static field
               value = field.value;
             }
-  
+
             else if (field.mappingMethod === 'jmespath') {
               value = this.jmesPathResolve(field.jmesPath, json);
               value = utils.massageData(value, field.fieldType);
-  
+
               const unpermittedValue = value === null && !field.permitNullValue;
               const nullDate = field.fieldType === 'date' && value === null;
-  
+
               if (unpermittedValue || nullDate) {
                 return;
               }
-  
+
               if (field.fieldType === 'date') {
                 value = this.transformDate(value, field.dateConfig);
                 if (value === null) {
@@ -1156,8 +1159,10 @@ export class AppComponent implements OnInit {
                 }
               }
             }
-            
-            !('CustomFields' in newIncident) ? newIncident.CustomFields = {} : undefined;
+
+            if (!('CustomFields' in newIncident)) {
+              newIncident.CustomFields = {};
+            }
             field.custom ? newIncident.CustomFields[fieldName] = value : newIncident[fieldName] = value; // write value to config
           });
           // Finished building incident
@@ -1174,13 +1179,15 @@ export class AppComponent implements OnInit {
             else {
               jsonFile = jsonFile ? jsonFile : 'N/A';
               const incidentId = res.id;
-              serverId in bulkCreateIncidentJson ? undefined : bulkCreateIncidentJson[serverId] = {};
+              if (!(serverId in bulkCreateIncidentJson)) {
+                bulkCreateIncidentJson[serverId] = {};
+              }
               bulkCreateIncidentJson[serverId][incidentId] = newIncident;
               this.bulkCreateResults.push({configName, serverId, success: true, skippedFields, incidentId, jsonFile});
             }
             this.changeDetector.detectChanges(); // update UI
           })());
-        }
+        };
 
         // Now build the incident(s)
         if (incidentConfig.requiresJson) {
@@ -1257,7 +1264,7 @@ export class AppComponent implements OnInit {
     }
 
     if (this.currentDemistoEndpointInit) {
-      
+
       // Refresh Demisto Incident Types
       try {
         this.fetchedIncidentTypes = await this.fetchIncidentTypes(this.currentDemistoEndpointName);
@@ -1275,16 +1282,16 @@ export class AppComponent implements OnInit {
           this.confirmationService.confirm( {
             message,
             icon: '',
-            
+
             acceptLabel: 'Keep Current Values & Selections',
             // accept: () => this.freeformJsonUIComponent.updateChosenFieldLocks(),
             // accept: () => this.freeformJsonUIComponent.fieldLockCheck(),
             accept: () => {},
-            
+
             rejectLabel: 'Revert to Saved State',
             // blow away the current config
             reject: () => this.freeformJsonUIComponent.onIncidentConfigOpened(this.savedIncidentConfigurations[this.loadedIncidentConfigName])
-            
+
           });
         }
 
@@ -1296,7 +1303,7 @@ export class AppComponent implements OnInit {
           // this.freeformJsonUIComponent.updateChosenFieldLocks();
           // this.freeformJsonUIComponent.mergeLoadedFieldConfig(selectedConfig);
         }
-        
+
       }
       catch (error) {
         console.error('AppComponent: switchCurrentDemistoEndpoint(): Caught error fetching Demisto incident fields:', error);
@@ -1618,7 +1625,7 @@ export class AppComponent implements OnInit {
     this.loadedIncidentConfigName = undefined;
     this.loadedIncidentConfigId = undefined;
     this.changeDetector.detectChanges();
-    
+
     const res = await this.freeformJsonUIComponent.loadFromDemisto(this.demistoIncidentToLoad, this.demistoEndpointToLoadFrom);
     if (res) {
       this.demistoEndpointToLoadFrom = '';
@@ -1710,14 +1717,14 @@ export class AppComponent implements OnInit {
       jsonConfigs: []
     };
     this.showNewJsonConfigDialog = false;
-    
+
     try {
       await this.fetcherService.saveNewJsonGroupConfiguration(newJsonGroupConfig);
       await this.getSavedJsonGroupConfigurations();
       this.jsonGroupSelection_JsonGroupDialog = this.newJsonGroupConfigName;
       this.jsonGroupDialogSelections[this.newJsonGroupConfigName] = [];
     }
-    catch(error) {
+    catch (error) {
       console.error('AppComponent: onNewJsonGroupAccepted(): Caught error saving JSON Groups configurations:', error);
       return;
     }
@@ -1735,7 +1742,7 @@ export class AppComponent implements OnInit {
       }
       delete this.jsonGroupDialogSelections[jsonGroupToDelete];
     }
-    catch(error) {
+    catch (error) {
       console.error(`AppComponent: onDeleteJsonGroupConfirmed(): Caught error deleting JSON Group configuration '${jsonGroupToDelete}':`, error);
       return;
     }
@@ -1808,9 +1815,9 @@ export class AppComponent implements OnInit {
 
   onViewBulkIncidentJSONClicked(incidentId: number, serverId: string) {
     console.log('AppComponent: onViewBulkIncidentJSONClicked()');
-        
+
     const incidentJson = this.bulkCreateIncidentJson[serverId][incidentId];
-    
+
     let config: DynamicDialogConfig = {
       header: `JSON of XSOAR Incident ${incidentId} for '${serverId}'`,
       closable: true,
