@@ -939,6 +939,7 @@ export class AppComponent implements OnInit {
     console.log('AppComponent: onBulkCreateClicked()');
     this.showBulkCreateDialog = true;
     this.buildBulkCreateGroups();
+    this.bulkConfigurationsToPush = undefined;
     setTimeout( () => {
       // focus input element
       // cannot use ViewChild due to way modal is inserted into the DOM

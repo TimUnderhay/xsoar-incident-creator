@@ -224,3 +224,12 @@ export function massageData(value, fieldType) {
       return value;
   }
 }
+
+export function mergeParticularObjectProperties(propertyNameList: string[], sourceObject: object, destObject: object): object {
+  for (const propertyName of propertyNameList) {
+    if (propertyName in sourceObject) {
+      destObject[propertyName] = sourceObject[propertyName];
+    }
+  }
+  return destObject;
+}

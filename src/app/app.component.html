@@ -596,7 +596,7 @@
         <p-button
           label="Create Incidents"
           (onClick)="onCreateBulkIncidents()"
-          [disabled]="false">
+          [disabled]="!bulkConfigurationsToPush || (bulkConfigurationsToPush && bulkConfigurationsToPush.length === 0)">
         </p-button>
 
         <p-button

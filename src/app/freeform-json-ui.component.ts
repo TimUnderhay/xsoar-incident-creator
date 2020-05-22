@@ -1092,12 +1092,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       locked: false
     };
     if ('dateConfig' in config) {
-      newConfig.dateConfig = {};
-      'autoParse' in config.dateConfig ? newConfig.dateConfig.autoParse = config.dateConfig.autoParse : {};
-      'formatter' in config.dateConfig ? newConfig.dateConfig.formatter = config.dateConfig.formatter : {};
-      'precision' in config.dateConfig ? newConfig.dateConfig.precision = config.dateConfig.precision : {};
-      'utcOffsetEnabled' in config.dateConfig ? newConfig.dateConfig.utcOffsetEnabled = config.dateConfig.utcOffsetEnabled : {};
-      'utcOffset' in config.dateConfig ? newConfig.dateConfig.utcOffset = config.dateConfig.utcOffset : {};
+      const propertiesToMerge = ['autoParse', 'formatter', 'precision', 'utcOffsetEnabled', 'utcOffset'];
+      newConfig.dateConfig = utils.mergeParticularObjectProperties(propertiesToMerge, config.dateConfig, {});
     }
     return newConfig;
   }
