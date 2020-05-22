@@ -18,7 +18,7 @@ export interface BulkCreateConfigurationToPush {
 }
 
 export interface BulkCreateSelection {
-  jsonGroups: string[]; // sadly, contains both groups and files.  groups are prefixed with a 'g' and files with a 'j'
+  jsonSelections: string[]; // sadly, contains both groups and files.  groups are prefixed with a 'g' and files with a 'j'
   jsonFiles?: string[]; // all resolved json files (individual and those taken from groups)
   endpoints: string[];
   successfulEndpoints?: string[];

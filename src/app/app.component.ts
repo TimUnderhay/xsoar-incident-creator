@@ -850,7 +850,7 @@ export class AppComponent implements OnInit {
 
 
   reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection: BulkCreateSelection): [string[], string[]] {
-    const jsonGroups = bulkCreateSelection.jsonGroups.reduce( (result, value: string) => {
+    const jsonGroups = bulkCreateSelection.jsonSelections.reduce( (result, value: string) => {
       const type = value.slice(0, 1); // 'g' for json group or 'j' for json file
       if (type === 'g') {
         result.push(value.slice(1));
@@ -859,7 +859,7 @@ export class AppComponent implements OnInit {
     }, []);
     // console.log('AppComponent: reduceBulkConfigurationJSONConfigsOrGroups(): jsonGroups:', jsonGroups);
 
-    const jsonFiles = bulkCreateSelection.jsonGroups.reduce( (result, value: string) => {
+    const jsonFiles = bulkCreateSelection.jsonSelections.reduce( (result, value: string) => {
       const type = value.slice(0, 1); // 'g' for json group or 'j' for json file
       if (type === 'j') {
         result.push(value.slice(1));
@@ -921,7 +921,7 @@ export class AppComponent implements OnInit {
     for (const incidentConfig of Object.values(this.savedIncidentConfigItems)) {
       const incidentConfigName = incidentConfig.value;
       selections[incidentConfigName] = {
-        jsonGroups: [],
+        jsonSelections: [],
         endpoints: []
       };
       // selections[incidentConfigName]['jsonGroups'] = [];
