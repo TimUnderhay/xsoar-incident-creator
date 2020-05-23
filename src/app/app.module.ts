@@ -8,7 +8,6 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AppComponent } from './app.component';
 import { IncidentFieldRowComponent } from './incident-field-row.component';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
-import { JsonViewerComponent } from './json-viewer/json-viewer.component';
 import { FreeformJsonUIComponent } from './freeform-json-ui.component';
 import { FreeformJsonRowComponent } from './freeform-json-row.component';
 import { NgxJsonViewerComponent } from './ngx-json-viewer/ngx-json-viewer.component';
@@ -46,7 +45,6 @@ import { ClickOutsideModule } from 'ng-click-outside';
     IncidentFieldRowComponent,
     FreeformJsonRowComponent,
     JsonEditorComponent,
-    JsonViewerComponent,
     FreeformJsonUIComponent,
     NgxJsonViewerComponent,
     VerticalCenterComponent

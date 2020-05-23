@@ -16,7 +16,8 @@ COPY server/ ${DSTDIR}/server/
 ENTRYPOINT []
 
 RUN \
-apk add bash \
+set -o xtrace \
+&& apk add bash \
 && ln -sf /bin/bash /bin/sh \
 && cd ${DSTDIR} \
 && mv -f server/package-prod.json ./package.json \

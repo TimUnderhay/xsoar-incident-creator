@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewChild } from '@angular/core';
 import { DynamicDialogRef, DynamicDialogConfig } from 'primeng/dynamicdialog';
 
 @Component({
@@ -7,9 +7,13 @@ import { DynamicDialogRef, DynamicDialogConfig } from 'primeng/dynamicdialog';
   templateUrl: './json-editor.component.html'
 })
 
-export class JsonEditorComponent implements OnInit {
+export class JsonEditorComponent implements OnInit, AfterViewInit {
 
-  constructor(public dialogRef: DynamicDialogRef, public dialogConfig: DynamicDialogConfig) {}
+  constructor(
+    public dialogRef: DynamicDialogRef,
+    public dialogConfig: DynamicDialogConfig) {}
+
+  @ViewChild('aceEditor') aceEditorComponentRef;
 
   originalValue: any;
   stringValue: string;
@@ -37,6 +41,12 @@ export class JsonEditorComponent implements OnInit {
     }
     this.showResetValues = 'showResetValues' in this.dialogConfig.data ? this.dialogConfig.data.showResetValues : true;
     this.readOnly = this.dialogConfig.data.readOnly;
+  }
+
+
+
+  ngAfterViewInit() {
+    this.aceEditorComponentRef.getEditor().commands.removeCommand('find'); // disables ctrl-f hooking
   }
 
 

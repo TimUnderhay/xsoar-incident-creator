@@ -210,13 +210,6 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  onEnabledSelectionChanged(value) {
-    console.log('FreeformJsonRowComponent: onEnabledSelectionChanged(): value:', value);
-    this.enabled = value;
-  }
-
-
-
   onDateChanged() {
     this.value = this.dateFieldValue.toISOString();
   }

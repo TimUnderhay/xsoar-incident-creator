@@ -17,6 +17,8 @@ import { IncidentConfig, IncidentConfigs, IncidentFieldConfig, IncidentFieldsCon
 import { IncidentCreationConfig } from './types/incident-config';
 import { InvestigationFields as investigationFields } from './investigation-fields';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
+import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
+import { JsonEditorComponent } from './json-editor/json-editor.component';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -25,7 +27,8 @@ declare var jmespath: any;
 @Component({
   // tslint:disable-next-line: component-selector
   selector: 'freeform-json-ui',
-  templateUrl: './freeform-json-ui.component.html'
+  templateUrl: './freeform-json-ui.component.html',
+  providers: [ DialogService ]
 })
 
 export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
@@ -33,7 +36,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   constructor(
     private fetcherService: FetcherService, // import our URL fetcher
     private confirmationService: ConfirmationService,
-    private changeDetector: ChangeDetectorRef
+    private changeDetector: ChangeDetectorRef,
+    public dialogService: DialogService
   ) {}
 
   @ViewChildren('incidentFieldRow') freeformRowComponents: FreeformJsonRowComponent[];
@@ -1558,6 +1562,26 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
         console.error(`FreeformJsonUIComponent: onSetDefaultIncidentJsonFile(): Caught error clearing default JSON file for incident config ${this.loadedIncidentConfigName}:`, error);
       }
     }
+  }
+
+
+
+  onViewJsonClicked() {
+    console.log('AppComponent: onViewBulkIncidentJSONClicked()');
+
+    let config: DynamicDialogConfig = {
+      header: `JSON Config ${this.loadedJsonConfigName ? '\'' + this.loadedJsonConfigName + '\'' : undefined }'`,
+      closable: true,
+      closeOnEscape: true,
+      data: {
+        value: this.json,
+        readOnly: true,
+        showResetValues: false
+      },
+      width: '95%',
+      height: '90%'
+    };
+    const dialogRef = this.dialogService.open(JsonEditorComponent, config);
   }
 
 }

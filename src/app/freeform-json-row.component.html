@@ -5,7 +5,6 @@
 
     <p-checkbox
       [(ngModel)]="enabled"
-      (onChange)="onEnabledSelectionChanged($event)"
       [binary]="true"
       [disabled]="field.shortName === 'type' || field.locked"
       standalone>

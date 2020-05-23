@@ -72,19 +72,19 @@ This project is distributed as a Docker image.
 
 It's recommended that when creating or running a container, the configuration data be stored on your host filesystem rather than on the container's filesystem.  Without doing this, your configuration will be lost any time the container is removed or upgraded.  This is accomplished by creating a directory in your host profile to store the config, and then mapping it into the container with the docker command line option `-v`.  For example: 
 
-1. Create a directory called `xicconf` under your home directory: `mkdir ~/xicconf`
+1. Create a directory called `xsoar-incident-creator` under your home directory: `mkdir ~/xsoar-incident-creator`
 
-2. The docker command line parameter to map that directory would be: `-v ~/xicconf:/opt/xsoar/xsoar-incident-creator/server/etc`
+2. The docker command line parameter to map that directory would be: `-v ~/xsoar-incident-creator:/opt/xsoar/xsoar-incident-creator/server/etc`
  
 This will be reflected in the below command line examples.
 
 ### Running a temporary container:
 
-`docker run -p 4002:4002 -ti --rm -v ~/xicconf:/opt/xsoar/xsoar-incident-creator/server/etc tundisto/xsoar-incident-creator:latest`
+`docker run -p 4002:4002 -ti --rm -v ~/xsoar-incident-creator:/opt/xsoar/xsoar-incident-creator/server/etc tundisto/xsoar-incident-creator:latest`
 
 ### Creating a container
 
-`docker create -p 4002:4002 --name xsoar-incident-creator -v ~/xicconf:/opt/xsoar/xsoar-incident-creator/server/etc tundisto/xsoar-incident-creator:latest`
+`docker create -p 4002:4002 --name xsoar-incident-creator -v ~/xsoar-incident-creator:/opt/xsoar/xsoar-incident-creator/server/etc tundisto/xsoar-incident-creator:latest`
 
 ### Starting the conatiner:
 

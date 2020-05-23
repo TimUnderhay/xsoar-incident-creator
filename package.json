@@ -12,6 +12,7 @@
     "server": "cd server/src && node server.js",
     "server-dev": "cd server/src && node server.js --dev",
     "build-docker-dev": "npm run build-dev && docker build --no-cache=true -t xsoar-incident-creator:dev .",
+    "save-docker-dev": "docker save xsoar-incident-creator:dev | gzip > xic-dev-docker-image.tgz",
     "fixdeps": "cp -r node_modules/ace-builds/src-min/*-json.js src/assets"
   },
   "private": true,

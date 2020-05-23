@@ -18,8 +18,8 @@ var defaultDemistoApiName; // the key/url of the default demistoApiConfig
 // Directories and files
 const fs = require('fs');
 const configDir = '../etc';
-const defsDir = `./definitions`;
-const incidentsDir = `${configDir}/incidents`;
+const defsDir = `./definitions`; // contains static user definitions
+const sampleIncidentsDir = `${configDir}/incidents`; // not used in prod
 const staticDir = '../../dist/xsoar-incident-creator';
 const foundDist = fs.existsSync(staticDir); // check for presence of pre-built angular client directory
 const apiCfgFile = `${configDir}/servers.json`;
@@ -415,7 +415,7 @@ app.get(apiPath + '/publicKey', (req, res) => {
 app.get(apiPath + '/sampleIncident', async (req, res) => {
   let data;
   const fileName = 'testIncidentFields.json';
-  const filePath = `${incidentsDir}/${fileName}`;
+  const filePath = `${sampleIncidentsDir}/${fileName}`;
   try {
     // read file
     data = await fs.promises.readFile(filePath, { encoding: 'utf8' });
@@ -1660,9 +1660,19 @@ function initSSL() {
 
 
 
+function checkAndCreateDirs() {
+  if (!fs.existsSync(sslDir)){
+    fs.mkdirSync(sslDir);
+  }
+}
+
+
+
 ///// FINISH STARTUP //////
 
 (async function() {
+
+  checkAndCreateDirs();
 
   if ( !initSSL() ) {
     const exitCode = 1;

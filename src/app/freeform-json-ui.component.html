@@ -212,38 +212,51 @@
             showDelay="750">
           </p-button>
 
-          <!-- Add Field Button -->
+          <!-- Json Uploader Button -->
           <ng-container *ngTemplateOutlet="jsonUploader"></ng-container>
 
+          <!-- Save As Button -->
           <p-button
             label="Save As"
             (onClick)="onJsonSaveAsClicked()"
             [disabled]="!json">
           </p-button>
 
+          <!-- Delete JSON Button -->
           <p-button
             label="Delete"
             (onClick)="onJsonDeleteConfigClicked()"
             [disabled]="savedJsonConfigurations.length === 0">
           </p-button>
 
+          <!-- Set/Unset Default Button -->
           <p-button
             [label]="defaultJsonConfigName && defaultJsonConfigName === loadedJsonConfigName ? 'Unset Default' : 'Set as Default'"
             (onClick)="onSetDefaultIncidentJsonFile(defaultJsonConfigName && defaultJsonConfigName === loadedJsonConfigName)"
-            [disabled]="savedJsonConfigurations.length === 0 || !loadedIncidentConfigName || loadedIncidentConfigName === ''"
+            [disabled]="!json || savedJsonConfigurations.length === 0 || !loadedIncidentConfigName || loadedIncidentConfigName === ''"
             [pTooltip]="loadedIncidentConfigName ? 'Sets this as the default JSON to load when opening the incident config \'' + loadedIncidentConfigName + '\'' : 'Sets this as the default JSON to load when opening a given incident config'">
           </p-button>
 
-          <p-button
+          <!-- View JSON Button -->
+          <button pButton
+            type="button"
+            label="View JSON"
+            (click)="onViewJsonClicked()"
+            [disabled]="!json">
+          </button>
+
+          <!-- Create Incident Button -->
+          <button pButton
             label="Create Incident"
-            (onClick)="onCreateIncidentFromRawJsonClicked()"
-            [disabled]="!json || !demistoEndpointsItems || (demistoEndpointsItems && demistoEndpointsItems.length === 0)">
-          </p-button>
+            (click)="onCreateIncidentFromRawJsonClicked()"
+            [disabled]="!json || !demistoEndpointsItems || (demistoEndpointsItems && demistoEndpointsItems.length === 0)"
+            class="ui-button-warning">
+          </button>
 
         </div>
 
         
-        
+        <!-- JSON Viewer -->
         <div *ngIf="json" style="overflow-x: auto;">
 
           <ngx-json-viewer
