@@ -173,6 +173,10 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     if (this.loadDefaultChosenFields) {
       this.buildIncidentFieldOptions(null, true);
     }
+
+    setTimeout( () =>
+      this.saveAsButtonEnabled = false // reset the value in AppComponent, as it may be stale
+    , 0);
   }
 
 
@@ -196,6 +200,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
   ngOnDestroy() {
+    console.log('FreeformJsonUIComponent: ngOnDestroy()');
     this.subscriptions.unsubscribe();
   }
 
@@ -245,6 +250,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     this.buildIncidentFieldOptions(incidentType, addDefaultChosenFields);
     this.updateChosenFieldLocks();
     this.updateIncidentTypeField(incidentType);
+    this.saveAsButtonEnabled = true;
   }
 
 
@@ -1305,16 +1311,19 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   async onIncidentSaveClicked() {
     console.log('FreeformJsonUIComponent(): onSaveClicked()');
-    let incidentConfig: IncidentConfig = {
+    const incidentConfig: IncidentConfig = {
       name: this.loadedIncidentConfigName,
       id: this.loadedIncidentConfigId,
       chosenFields: this.buildSavedFieldConfig(this.chosenIncidentFields),
       createInvestigation: this.createInvestigation,
       incidentType: this.selectedIncidentType
     };
-    // console.log('FreeformJsonUIComponent: onSaveClicked(): config:', config);
+    if (this.defaultJsonConfigName) {
+      incidentConfig.defaultJsonName = this.defaultJsonConfigName;
+    }
+    console.log('FreeformJsonUIComponent: onSaveClicked(): incidentConfig:', incidentConfig);
     try {
-      let res = await this.fetcherService.saveIncidentConfiguration(incidentConfig);
+      const res = await this.fetcherService.saveIncidentConfiguration(incidentConfig);
     }
     catch (error) {
       console.error('FreeformJsonUIComponent: onSaveClicked(): caught error saving field config:', error);
@@ -1352,6 +1361,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       this.loadedIncidentConfigId = undefined;
       this.createInvestigation = true;
       this.saveAsButtonEnabled = true;
+      this.loadedJsonConfigName = undefined;
       this.defaultJsonConfigName = undefined;
 
       this.selectedIncidentType = incidentType;

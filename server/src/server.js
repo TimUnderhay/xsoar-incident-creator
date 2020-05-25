@@ -1118,6 +1118,10 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
     createInvestigation
   };
 
+  if ('defaultJsonName' in body) {
+    updatedField.defaultJsonName = body.defaultJsonName;
+  }
+
   incidentsConfig[name] = entry;
   await saveIncidentsConfig();
 
@@ -1155,6 +1159,10 @@ app.post(apiPath + '/incidentConfig/update', async (req, res) => {
     chosenFields: body.chosenFields,
     createInvestigation: body.createInvestigation
   };
+
+  if ('defaultJsonName' in body) {
+    updatedField.defaultJsonName = body.defaultJsonName;
+  }
 
   incidentsConfig[body.name] = updatedField;
   await saveIncidentsConfig();

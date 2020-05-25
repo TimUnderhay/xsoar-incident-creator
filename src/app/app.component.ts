@@ -649,6 +649,9 @@ export class AppComponent implements OnInit {
       }
     });
 
+    // console.log('AppComponent: onDeleteConfigConfirmed(): selectedDeleteConfigs:', this.selectedDeleteConfigs);
+    // console.log('AppComponent: onDeleteConfigConfirmed(): loadedIncidentConfigName:', this.loadedIncidentConfigName);
+
     if (this.selectedDeleteConfigs.includes(this.loadedIncidentConfigName)) {
       this.loadedIncidentConfigName = undefined;
       this.loadedIncidentConfigId = undefined;

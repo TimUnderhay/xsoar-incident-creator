@@ -52,7 +52,10 @@
 
 
     <!-- File -->
-    <p-card header="File" subheader="Load an incident from Cortex XSOAR, upload an incident JSON file, or perform other file and bulk create operations.">
+    <p-card
+      *ngIf="currentDemistoEndpointName && currentDemistoEndpointInit"
+      header="File"
+      subheader="Load an incident from Cortex XSOAR, upload an incident JSON file, or perform other file and bulk create operations.">
 
       <div style="margin-top: 1em;">
         
@@ -78,7 +81,7 @@
         <p-button
           label="XSOAR Import"
           (onClick)="onLoadFromDemistoClicked()"
-          [disabled]="currentDemistoEndpointInit === false"
+          [disabled]="!currentDemistoEndpointInit"
           pTooltip="Import an incident directly from XSOAR"
           showDelay="750">
         </p-button>
