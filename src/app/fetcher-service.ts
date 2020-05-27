@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpHeaders, HttpClient } from '@angular/common/http';
+import { HttpHeaders, HttpClient, HttpEvent, HttpEventType, HttpResponse } from '@angular/common/http';
 import { User } from './types/user';
 import { DemistoEndpointTestResult } from './types/demisto-endpoint-status';
 import { FetchedIncidentField } from './types/fetched-incident-field';
@@ -15,6 +15,7 @@ import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
 import { IncidentFieldRowComponent } from './incident-field-row.component';
 import { FreeformJSONConfig } from './types/freeform-json-config';
 import { JsonGroup, JsonGroups } from './types/json-group';
+import { FileAttachmentConfig, FileAttachmentConfigs } from './types/file-attachment';
 
 export interface FieldMappingSelection {
   field: IncidentField;
@@ -396,6 +397,62 @@ export class FetcherService {
   deleteJsonGroupConfiguration(name: string): Promise<any> {
     let headers = this.buildHeaders();
     return this.http.delete(this.apiPath + `/jsonGroup/${name}`, { headers } )
+                    .toPromise();
+  }
+
+
+
+  ///////// FILE ATTACHMENTS /////////
+
+  getFileAttachmentConfigs(): Promise<FileAttachmentConfigs> {
+    let headers = this.buildHeaders();
+    return this.http.get(this.apiPath + '/attachment/all', { headers } )
+                    .toPromise()
+                    .then(value => value as FileAttachmentConfigs);
+  }
+
+
+
+  deleteFileAttachment(id: string): Promise<any> {
+    let headers = this.buildHeaders();
+    return this.http.delete(this.apiPath + `/attachment/${id}`, { headers } )
+                    .toPromise();
+  }
+
+
+
+  updateFileAttachment(config: FileAttachmentConfig): Promise<any> {
+    let headers = this.buildHeaders();
+    return this.http.post(this.apiPath + '/attachment/update', config, { headers } )
+                    .toPromise();
+  }
+
+
+
+  downloadFileAttachment(id) {
+    this.http.get(this.apiPath + `/attachment/${id}`, { observe: 'response', responseType: 'blob' })
+             .subscribe( response => {
+               const headers = response.headers;
+               let filename = headers.get('Content-Disposition').split('filename="')[1];
+               filename = filename.substr(0, filename.length - 1); // remove trailing double quote from filename
+               const blob = response.body;
+               const dataType = blob.type;
+               const binaryData = [blob];
+               const downloadLink = document.createElement('a');
+               const newBlob = new Blob(binaryData, {type: dataType});
+               downloadLink.href = window.URL.createObjectURL(newBlob);
+               downloadLink.setAttribute('download', filename);
+               document.body.appendChild(downloadLink);
+               downloadLink.click();
+               window.URL.revokeObjectURL(downloadLink.href);
+               downloadLink.parentNode.removeChild(downloadLink);
+             });
+  }
+
+
+
+  uploadFileAttachment(formData): Promise<any> {
+    return this.http.post(`${this.apiPath}/attachment`, formData)
                     .toPromise();
   }
 

@@ -5,6 +5,8 @@ console.log('XSOAR Incident Creator server is starting');
 ////////////////////// Config and Imports //////////////////////
 
 const os = require('os');
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
 
 // Config parameters
 const listenPort = 4002;
@@ -20,16 +22,26 @@ const fs = require('fs');
 const configDir = '../etc';
 const defsDir = `./definitions`; // contains static user definitions
 const sampleIncidentsDir = `${configDir}/incidents`; // not used in prod
+
 const staticDir = '../../dist/xsoar-incident-creator';
 const foundDist = fs.existsSync(staticDir); // check for presence of pre-built angular client directory
+
 const apiCfgFile = `${configDir}/servers.json`;
 const foundDemistoApiConfig = fs.existsSync(apiCfgFile); // check for presence of API configuration file
+
 const incidentsFile = `${configDir}/incidents.json`;
 const foundIncidentsFile = fs.existsSync(incidentsFile);
+
 const freeJsonFile = `${configDir}/json.json`;
 const foundFreeJsonFile = fs.existsSync(freeJsonFile);
+
 const jsonGroupsFile = `${configDir}/json-groups.json`;
 const foundJsonGroupsFile = fs.existsSync(jsonGroupsFile);
+
+const attachmentsFile = `${configDir}/attachments.json`;
+const foundAttachmentsFile = fs.existsSync(attachmentsFile);
+const attachmentsDir = `${configDir}/attachments`; // contains arbitrary file attachments of any file type
+const uploadsDir = `../uploads`; // we don't want this in /etc
 
 // Certificates
 const sslDir = `${configDir}/certs`;
@@ -57,6 +69,9 @@ var freeJsonConfig;
 // JSON Groups Config
 var jsonGroupsConfig;
 
+// Attachments Config
+var attachmentsConfig;
+
 
 
 // Load Sample Users
@@ -80,6 +95,11 @@ var server;
 const bodyParser = require('body-parser');
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+
+// Multipart form data handler
+const multer  = require('multer');
+const multipartUploadHandler = multer({ dest: `${uploadsDir}/` })
+
 
 // Logging
 function logConnection(req, res, next) {
@@ -200,13 +220,44 @@ function removeEmptyValues(obj) {
 
 
 function saveApiConfig() {
-  let config = {
+  const config = {
     servers: demistoApiConfigs
   };
   if (defaultDemistoApiName) {
     config['default'] = defaultDemistoApiName;
   }
   return fs.promises.writeFile(apiCfgFile, JSON.stringify(config, null, 2), { encoding: 'utf8', mode: 0o660} );
+}
+
+
+
+function saveAttachmentsConfig() {
+  return fs.promises.writeFile(attachmentsFile, JSON.stringify(attachmentsConfig, null, 2), { encoding: 'utf8', mode: 0o660} );
+}
+
+
+
+function deleteFileAttachment(filename) {
+  return fs.promises.unlink(`${attachmentsDir}/${filename}`);
+}
+
+
+
+function uploadAttachmentToDemisto(attachmentId, attachmentConfig, incidentId) {
+  // incomplete
+  const options = {
+    url: `${url}/incident/upload/${incidentId}`,
+    method: 'POST',
+    headers: {
+      Authorization: apiKey,
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    },
+    rejectUnauthorized: !trustAny,
+    resolveWithFullResponse: true,
+    // json: true,
+    timeout: 2000
+  }
 }
 
 
@@ -392,6 +443,18 @@ function calculateRequiresJson() {
     }
     incidentConfig.requiresJson = requiresJson;
   }
+}
+
+
+
+function sanitiseObjectFromValidKeyList(validKeys, obj) {
+  const newObj = {};
+  for (const key of validKeys) {
+    if (key in obj) {
+      newObj[key] = obj[key];
+    }
+  }
+  return newObj;
 }
 
 
@@ -967,6 +1030,8 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
   }
 } );
 
+/// END XSOAR Endpoint Calls ///
+
 
 
 /// Freeform JSON ///
@@ -1077,11 +1142,11 @@ app.get(apiPath + '/json/:name', async (req, res) => {
   }
 } );
 
+/// END Freeform JSON ///
+
 
 
 /// Incident Configs ///
-
-
 
 app.post(apiPath + '/incidentConfig', async (req, res) => {
   // save a new incident config
@@ -1251,8 +1316,11 @@ app.delete(apiPath + '/incidentConfig/:name', async (req, res) => {
     }
 } );
 
+/// END Incident Configs ///
 
-// JSON GROUPS //
+
+
+/// JSON Groups ///
 
 app.post(apiPath + '/jsonGroup', async (req, res) => {
   // save a new JSON group config
@@ -1348,17 +1416,184 @@ app.delete(apiPath + '/jsonGroup/:name', async (req, res) => {
   // delete a JSON Group config
   const name = req.params.name;
   if (name in jsonGroupsConfig) {
-      delete jsonGroupsConfig[name];
-      await saveJsonGroupsConfig();
-      res.status(200).json({name, success: true});
-      return;
-    }
-    else {
-      const error = `JSON Group '${name}' not found`;
-      res.status(400).json({error, name, success: false});
-      return;
-    }
+    delete jsonGroupsConfig[name];
+    await saveJsonGroupsConfig();
+    res.status(200).json({name, success: true});
+    return;
+  }
+  else {
+    const error = `JSON Group '${name}' not found`;
+    res.status(400).json({error, name, success: false});
+    return;
+  }
 } );
+
+/// END JSON Groups ///
+
+
+
+/// File Attachments ///
+
+app.get(apiPath + '/attachment/all', async (req, res) => {
+  // retrieve all file attachment configs
+  res.status(200).json(attachmentsConfig);
+} );
+
+
+
+app.get(apiPath + '/attachment/:id', async (req, res) => {
+  // send a file attachment
+  const id = req.params.id;
+  if (!attachmentsConfig.hasOwnProperty(id)) {
+    return res.status(404).send('File attachment not found');
+  }
+  const attachmentConfig = attachmentsConfig[id];
+  const filename = attachmentConfig.filename;
+  const diskfilename = `${attachmentsDir}/${id}_${filename}`;
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+  res.type('application/octet-stream'); // just make it a generic download
+  res.download(diskfilename, filename);
+} );
+
+
+
+app.post(apiPath + '/attachment', multipartUploadHandler.single('attachment'), async (req, res) => {
+  // Upload a new file attachment
+  const id = uuidv4();
+
+  let body = req.body;
+  /*const requiredFields = ['name'];
+
+  try {
+    checkForRequiredFields(requiredFields, body);
+  }
+  catch(fieldName) {
+    res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+    return;
+  }*/
+
+  const fileObject = req.file;
+  console.log('fileObject:', fileObject);
+
+  const multerPath = fileObject.path;
+  const filename = fileObject.originalname;
+  const comment = 'comment' in body ? body.comment : undefined;
+  const diskfilename = `${id}_${filename}`;
+  const size = fileObject.size;
+  const mediaFile = body.mediaFile === 'true' ? true : false;
+
+  const { stdout, stderr } = await exec(`file -bi ${multerPath}`);
+  let detectedType;
+  if (stdout) {
+    detectedType = stdout.trim();
+  }
+
+  // console.log('detectedType:', detectedType);
+
+  // check for existing id (should never collide, but just in case)
+  if (id in attachmentsConfig) {
+    const error = `Invalid request: Attachment ID '${id}' is already defined`;
+    fs.promises.unlink(multerPath); // delete file
+    return res.status(409).json({error});
+  }
+
+  try {
+    await fs.promises.rename(multerPath, `${attachmentsDir}/${diskfilename}`);
+
+    const attachmentConfig = {
+      id,
+      filename,
+      size,
+      detectedType,
+      mediaFile
+    }
+
+    if (comment) {
+      attachmentConfig.comment = comment;
+    }
+
+    console.log('attachmentConfig:', attachmentConfig);
+
+    attachmentsConfig[id] = attachmentConfig;
+
+    saveAttachmentsConfig();
+
+    return res.status(201).json({success: true, id}); // send 'created';
+  }
+
+  catch (error) {
+    console.error('Caught error saving file attachment:', error);
+    return res.status(500).json({error});
+  }
+
+} );
+
+
+
+app.delete(apiPath + '/attachment/:id', async (req, res) => {
+  // delete an attachment config
+  const id = req.params.id;
+  if (id in attachmentsConfig) {
+    const attachmentConfig = attachmentsConfig[id];
+    const filename = `${id}_${attachmentConfig.filename}`;
+    await deleteFileAttachment(filename);
+    delete attachmentsConfig[id];
+    await saveAttachmentsConfig();
+    return res.status(200).json({id, success: true});
+  }
+  else {
+    const error = `Attachment ID '${id}' not found`;
+    return res.status(400).json({error, id, success: false});
+  }
+} );
+
+
+
+app.post(apiPath + '/attachment/update', async (req, res) => {
+  // update an existing attachment config
+
+  const body = req.body;
+
+  const requiredFields = ['id', 'filename'];
+  try {
+    checkForRequiredFields(requiredFields, body);
+  }
+  catch(fieldName) {
+    res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+    return;
+  }
+
+  const id = body.id;
+
+  if (!(id in attachmentsConfig)) {
+    const error = `Attachment ID '${id}' not found`;
+    return res.status(400).json({error, id, success: false});
+  }
+
+  const oldConfig = attachmentsConfig[id];
+
+  const newConfig = body;
+
+  const validFields = requiredFields.concat(['comment', 'mediaFile']);
+
+  const sanitisedConfig = sanitiseObjectFromValidKeyList(validFields, newConfig);
+
+  sanitisedConfig.size = oldConfig.size;
+  sanitisedConfig.detectedType = oldConfig.detectedType;
+
+  if (oldConfig.filename !== sanitisedConfig.filename) {
+    // filename has changed.  Rename it.
+    await fs.promises.rename(`${attachmentsDir}/${id}_${oldConfig.filename}`, `${attachmentsDir}/${id}_${sanitisedConfig.filename}`);
+  }
+
+  // console.log('sanitisedConfig:', sanitisedConfig);
+
+  attachmentsConfig[id] = sanitisedConfig;
+  await saveAttachmentsConfig();
+  return res.status(200).json({id, success: true});
+} );
+
+/// END File Attachments ///
 
 
 
@@ -1489,6 +1724,24 @@ function loadJsonGroupsConfig() {
     }
     catch (error) {
       console.error(`Error parsing ${jsonGroupsFile}:`, error);
+    }
+  }
+}
+
+
+
+function loadAttachmentsConfig() {
+  // Read Attachments Config
+  attachmentsConfig = {};
+  if (!foundAttachmentsFile) {
+    console.log(`File attachments configuration file ${attachmentsFile} was not found`);
+  }
+  else {
+    try {
+      attachmentsConfig = JSON.parse(fs.readFileSync(attachmentsFile, 'utf8'));
+    }
+    catch (error) {
+      console.error(`Error parsing ${attachmentsFile}:`, error);
     }
   }
 }
@@ -1672,6 +1925,12 @@ function checkAndCreateDirs() {
   if (!fs.existsSync(sslDir)){
     fs.mkdirSync(sslDir);
   }
+  if (!fs.existsSync(attachmentsDir)){
+    fs.mkdirSync(attachmentsDir);
+  }
+  if (!fs.existsSync(uploadsDir)){
+    fs.mkdirSync(uploadsDir);
+  }  
 }
 
 
@@ -1693,6 +1952,7 @@ function checkAndCreateDirs() {
   loadIncidentsConfig();
   loadFreeJsonConfig();
   loadJsonGroupsConfig();
+  loadAttachmentsConfig();
 
   if (foundDist && !devMode) {
     // Serve compiled Angular files statically

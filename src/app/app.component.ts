@@ -17,6 +17,9 @@ import * as utils from './utils';
 import { JsonGroup, JsonGroups } from './types/json-group';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
+import { FileAttachmentConfig, FileAttachmentConfigs } from './types/file-attachment';
+import { FileUpload } from 'primeng/fileupload';
+import { HttpResponse } from '@angular/common/http';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -35,13 +38,14 @@ type DemistoServerEditMode = 'edit' | 'new';
 export class AppComponent implements OnInit {
 
   constructor(
-    private fetcherService: FetcherService, // import our URL fetcher
+    public fetcherService: FetcherService, // import our URL fetcher
     private confirmationService: ConfirmationService,
     private changeDetector: ChangeDetectorRef,
     public dialogService: DialogService
   ) {}
 
   @ViewChild(FreeformJsonUIComponent) freeformJsonUIComponent: FreeformJsonUIComponent;
+  @ViewChild('attachmentUploader') attachmentUploaderComponent: FileUpload;
 
   loggedInUser: User;
 
@@ -180,6 +184,44 @@ export class AppComponent implements OnInit {
     return this.newJsonGroupConfigName in this._jsonGroupConfigurations;
   }
 
+  // File Attachments Config & UI
+  _fileAttachmentConfigs: FileAttachmentConfigs;
+  fileAttachmentConfigItems: SelectItem[];
+  fileAttachmentConfigsList: FileAttachmentConfig[];
+  set fileAttachmentConfigs(configs: FileAttachmentConfigs) {
+    this._fileAttachmentConfigs = configs;
+    this.fileAttachmentConfigsList = Object.values(configs).map(value => value);
+    this.fileAttachmentConfigItems = this.fileAttachmentConfigsList.map( value => ({
+      label: value.filename, value: value.id
+    }));
+  }
+  get fileAttachmentConfigs(): FileAttachmentConfigs {
+    return this._fileAttachmentConfigs;
+  }
+  showFileAttachmentsDialog = false;
+  selectedFileAttachment: string;
+  fileAttachmentDisplayAsMediaItems: SelectItem[] = [
+    {label: 'As file (recommended)', value: false},
+    {label: 'As media (not secure)', value: true}
+  ];
+
+  // New Attachment Dialog
+  showNewFileAttachmentDialog = false;
+  uploadFileAttachmentAdded = false;
+  newFileAttachmentName: string;
+  newFileAttachmentComment: string;
+  newFileAttachmentSize: number;
+  newFileAttachmentType: string;
+  newFileAttachmentDisplayAsMediaSelection = false;
+
+  // Edit Attachment Dialog
+  showEditFileAttachmentDialog = false;
+  editFileAttachmentName: string;
+  editFileAttachmentComment: string;
+  editFileAttachmentSize: number;
+  editFileAttachmentType: string;
+  editFileAttachmentDisplayAsMediaSelection = false;
+
   private subscriptions = new Subscription();
 
 
@@ -236,6 +278,8 @@ export class AppComponent implements OnInit {
 
     await this.getSavedJsonGroupConfigurations();
 
+    await this.getSavedFileAttachmentConfigurations();
+
   }
 
 
@@ -259,6 +303,18 @@ export class AppComponent implements OnInit {
     }
     catch (error) {
       console.error('AppComponent: getSavedJsonGroupConfigurations(): Caught error fetching JSON Groups configurations:', error);
+    }
+  }
+
+
+
+  async getSavedFileAttachmentConfigurations() {
+    try {
+      this.fileAttachmentConfigs = await this.fetcherService.getFileAttachmentConfigs();
+      console.log('AppComponent: getSavedFileAttachmentConfigurations(): fileAttachmentConfigs:', this.fileAttachmentConfigs);
+    }
+    catch (error) {
+      console.error('AppComponent: getSavedFileAttachmentConfigurations(): Caught error fetching file attachment configurations:', error);
     }
   }
 
@@ -1286,12 +1342,8 @@ export class AppComponent implements OnInit {
           this.confirmationService.confirm( {
             message,
             icon: '',
-
             acceptLabel: 'Keep Current Values & Selections',
-            // accept: () => this.freeformJsonUIComponent.updateChosenFieldLocks(),
-            // accept: () => this.freeformJsonUIComponent.fieldLockCheck(),
             accept: () => {},
-
             rejectLabel: 'Revert to Saved State',
             // blow away the current config
             reject: () => this.freeformJsonUIComponent.onIncidentConfigOpened(this.savedIncidentConfigurations[this.loadedIncidentConfigName])
@@ -1836,5 +1888,214 @@ export class AppComponent implements OnInit {
     };
     const dialogRef = this.dialogService.open(JsonEditorComponent, config);
   }
+
+
+
+  async onFileAttachmentConfigsChanged() {
+    await this.getSavedFileAttachmentConfigurations();
+  }
+
+
+
+  /// File Attachments ///
+
+
+
+  onFileAttachmentsButtonClicked() {
+    console.log('AppComponent: onFileAttachmentsButtonClicked()');
+    this.showFileAttachmentsDialog = true;
+  }
+
+
+
+  onDeleteFileAttachmentConfigClicked() {
+    console.log('AppComponent: onDeleteFileAttachmentConfigClicked(): selectedFileAttachment:', this.selectedFileAttachment);
+  }
+
+
+
+  onDeleteFileAttachmentClicked(selectedFileAttachment) {
+    this.showFileAttachmentsDialog = false;
+    const selectedFileAttachmentName = this.fileAttachmentConfigs[selectedFileAttachment].filename;
+    console.log('AppComponent: onDeleteFileAttachmentClicked(): selectedFileAttachment:', selectedFileAttachment);
+    this.showNewFileAttachmentDialog = false;
+    this.confirmationService.confirm({
+      header: `Delete attachment '${selectedFileAttachmentName}'?`,
+      message: `Proceed with deleting attachment '${selectedFileAttachmentName}'?  It will also be removed from any referenced incident configs.`,
+      accept: async () => {
+        this.showFileAttachmentsDialog = true;
+        await this.fetcherService.deleteFileAttachment(selectedFileAttachment);
+        this.selectedFileAttachment = undefined;
+        await this.onFileAttachmentConfigsChanged();
+      },
+      reject: () => {
+        this.showFileAttachmentsDialog = true;
+      },
+      acceptLabel: `Delete`,
+      rejectLabel: `Cancel`,
+      icon: '',
+      defaultFocus: 'reject'
+    });
+  }
+
+
+
+  onNewFileAttachmentClicked() {
+    console.log('AppComponent: onNewFileAttachmentClicked()');
+    this.showFileAttachmentsDialog = false;
+    this.showNewFileAttachmentDialog = true;
+    this.uploadFileAttachmentAdded = false;
+    this.newFileAttachmentName = undefined;
+    this.newFileAttachmentComment = undefined;
+    this.newFileAttachmentSize = undefined;
+    this.newFileAttachmentType = undefined;
+    this.newFileAttachmentDisplayAsMediaSelection = false;
+  }
+
+
+
+  onNewFileAttachmentCancelled() {
+    this.showFileAttachmentsDialog = true;
+    this.showNewFileAttachmentDialog = false;
+    this.uploadFileAttachmentAdded = false;
+    this.attachmentUploaderComponent.clear();
+  }
+
+
+
+
+
+
+  /*beforeFileAttachmentUpload(event) {
+    console.log('AppComponent: beforeFileAttachmentUpload(): event:', event);
+    const formData: FormData = event.formData;
+    console.log('AppComponent: beforeFileAttachmentUpload(): formData:', formData);
+    console.log('AppComponent: beforeFileAttachmentUpload(): formData getAll(\'attachment\'):', formData.getAll('attachment'));
+    console.log('AppComponent: beforeFileAttachmentUpload(): formData keys:', Array.from(formData.keys()));
+    console.log('AppComponent: beforeFileAttachmentUpload(): formData values:', Array.from(formData.values()));
+  }*/
+
+
+
+  /*async onFileAttachmentUploadComplete(event) {
+    const response: HttpResponse<any> = event.originalEvent;
+    const body = response.body;
+    const id = body.id;
+
+    console.log('AppComponent: onFileAttachmentUploadComplete(): response:', response);
+    console.log('AppComponent: onFileAttachmentUploadComplete(): body:', body);
+    console.log('AppComponent: onFileAttachmentUploadComplete(): id:', id);
+    await this.onFileAttachmentConfigsChanged();
+  }*/
+
+
+
+  /*onFileAttachmentUploadError(event) {
+    const {error, files} = event;
+    console.error('AppComponent: onFileAttachmentUploadError(): error:', error);
+  }*/
+
+
+
+  async onSubmitFileAttachmentUpload() {
+    console.log('AppComponent: onSubmitFileAttachmentUpload()');
+    this.showFileAttachmentsDialog = true;
+    this.showNewFileAttachmentDialog = false;
+    this.attachmentUploaderComponent.upload();
+    this.attachmentUploaderComponent.clear();
+  }
+
+
+
+  onDownloadFileAttachmentClicked(selectedFileAttachment) {
+    console.log('AppComponent: onDownloadFileAttachmentClicked()');
+    this.fetcherService.downloadFileAttachment(selectedFileAttachment);
+  }
+
+
+
+  onNewAttachmentFileSelected(event) {
+    console.log('AppComponent: onNewAttachmentFileSelected(): event:', event);
+    this.uploadFileAttachmentAdded = true;
+    const {originalEvent, files, currentFiles} = event;
+    this.newFileAttachmentName = currentFiles[0].name;
+    this.newFileAttachmentSize = currentFiles[0].size;
+    this.newFileAttachmentType = currentFiles[0].type;
+    this.newFileAttachmentComment = '';
+  }
+
+
+
+  async onUploadFileAttachment(event) {
+    console.log('AppComponent: onUploadFileAttachment(): event:', event);
+    const files = event.files;
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append(this.attachmentUploaderComponent.name, file, this.newFileAttachmentName);
+      if (this.newFileAttachmentComment !== '') {
+        formData.append('comment', this.newFileAttachmentComment);
+      }
+      formData.append('mediaFile', `${this.newFileAttachmentDisplayAsMediaSelection}`);
+    }
+    try {
+      const response = await this.fetcherService.uploadFileAttachment(formData);
+      console.log('AppComponent: onUploadFileAttachment(): response:', response);
+      const id = response.id;
+      await this.onFileAttachmentConfigsChanged();
+    }
+    catch (error) {
+      console.error('Caught error submitting file attachment:', error);
+    }
+  }
+
+
+
+  /// Edit File Attachment ///
+
+  onEditFileAttachmentClicked(selectedFileAttachment) {
+    console.log('AppComponent: onEditFileAttachmentClicked()');
+    this.showEditFileAttachmentDialog = true;
+    this.showFileAttachmentsDialog = false;
+    const fileAttachment = this.fileAttachmentConfigs[selectedFileAttachment];
+    this.editFileAttachmentName = fileAttachment.filename;
+    this.editFileAttachmentComment = 'comment' in fileAttachment ? fileAttachment.comment : '';
+    this.editFileAttachmentSize = fileAttachment.size;
+    this.editFileAttachmentType = fileAttachment.detectedType;
+    this.editFileAttachmentDisplayAsMediaSelection = fileAttachment.mediaFile;
+  }
+
+
+
+  onEditFileAttachmentCancelled() {
+    console.log('AppComponent: onEditFileAttachmentCancelled()');
+    this.showEditFileAttachmentDialog = false;
+    this.showFileAttachmentsDialog = true;
+  }
+
+
+
+  async onEditFileAttachmentSubmit(selectedFileAttachment) {
+    console.log('AppComponent: onEditFileAttachmentSubmit()');
+    this.showEditFileAttachmentDialog = false;
+    this.showFileAttachmentsDialog = true;
+    const updatedConfig: FileAttachmentConfig = {
+      id: selectedFileAttachment,
+      filename: this.editFileAttachmentName,
+      mediaFile: this.editFileAttachmentDisplayAsMediaSelection,
+    };
+    if (this.editFileAttachmentComment !== '') {
+      updatedConfig.comment = this.editFileAttachmentComment;
+    }
+    try {
+      const results = await this.fetcherService.updateFileAttachment(updatedConfig);
+      console.log('AppComponent: onEditFileAttachmentSubmit(): results:', results);
+      await this.onFileAttachmentConfigsChanged();
+    }
+    catch (error) {
+      console.error('Caught error submitting edited file attachment:', error);
+    }
+
+  }
+
 
 }

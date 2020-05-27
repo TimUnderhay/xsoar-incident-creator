@@ -10,7 +10,7 @@ import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FreeformJsonRowComponent } from './freeform-json-row.component';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
 import { SampleIncident } from './sample-json';
-import { Subscription } from 'rxjs';
+import { Subscription, config } from 'rxjs';
 import * as utils from './utils';
 import { FreeformJSONConfig } from './types/freeform-json-config';
 import { IncidentConfig, IncidentConfigs, IncidentFieldConfig, IncidentFieldsConfig } from './types/incident-config';
@@ -19,6 +19,7 @@ import { InvestigationFields as investigationFields } from './investigation-fiel
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
+import { FileAttachmentConfig, FileAttachmentConfigs } from './types/file-attachment';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -93,7 +94,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   // Blacklisted field types
-  blacklistedFieldTypes = ['timer', 'attachments'];
+  blacklistedFieldTypes = ['timer'];
 
   // PrimeNG Selected Values
   _selectedIncidentType: string;
@@ -155,6 +156,12 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     this.saveAsButtonEnabledChange.emit(value);
   }
 
+  // File Attachments Config & UI
+  @Input() fileAttachmentConfigs: FileAttachmentConfigs;
+  @Input() fileAttachmentConfigsList: FileAttachmentConfig[];
+  @Output() fileAttachmentConfigsChanged = new EventEmitter<void>();
+
+  // RxJS Subscriptions
   private subscriptions = new Subscription();
 
 
@@ -256,6 +263,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
   returnDefaultValueByFieldType(fieldType: string, defaultRows: any = null): any {
+    const attachmentsDefaultValue = [];
     switch (fieldType) {
       case 'shortText':
         return '';
@@ -281,6 +289,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
         return '';
       case 'role':
         return '';
+      case 'attachments':
+        return attachmentsDefaultValue;
     }
   }
 
@@ -482,16 +492,17 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   onAddIncidentFieldsAccept() {
     // console.log('FreeformJsonUIComponent: onAddIncidentFieldsAccept()');
-    console.log('FreeformJsonUIComponent: onAddIncidentFieldsAccept(): chosenIncidentFields:', this.chosenIncidentFields);
+    console.log('FreeformJsonUIComponent: onAddIncidentFieldsAccept(): selectedFieldsToAdd:', this.selectedFieldsToAdd);
+    console.log('FreeformJsonUIComponent: onAddIncidentFieldsAccept(): chosenIncidentFields:', JSON.parse(JSON.stringify(this.chosenIncidentFields)));
     for (const fieldName of this.selectedFieldsToAdd) {
       const field: IncidentField = this.availableIncidentFields[fieldName];
-      // this.chosenIncidentFields[field.shortName] = field;
       this.setFieldOfChosenFields(this.availableIncidentFields[fieldName]);
     }
     // console.log('FreeformJsonUIComponent: onAddIncidentFieldsAccept(): chosenIncidentFields:', this.chosenIncidentFields);
     this.selectedFieldsToAdd = [];
     this.incidentFieldListBoxComponent._filterValue = '';
     this.displayAddIncidentFieldDialog = false;
+    console.log('FreeformJsonUIComponent: onAddIncidentFieldsAccept(): chosenIncidentFields:', this.chosenIncidentFields);
   }
 
 

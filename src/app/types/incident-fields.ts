@@ -21,6 +21,7 @@ export interface IncidentField extends Object {
   mappingMethod: MappingMethod;
   permitNullValue?: boolean;
   dateConfig?: DateConfig; // used by date fields
+  attachmentConfigs?: AttachmentFieldConfig[];
 }
 
 export interface IncidentFields {
@@ -36,3 +37,9 @@ export interface DateConfig {
 }
 
 export type DatePrecision = 'seconds' | 'milliseconds' | 'microseconds' | 'nanoseconds';
+
+export interface AttachmentFieldConfig {
+  id: string; // the attachment config id to use
+  friendlyNameOverride?: string;
+  commentOverride?: string;
+}

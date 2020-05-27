@@ -35,9 +35,15 @@
   <div class="fieldLabel">
 
     <p-dropdown
+      *ngIf="field.fieldType !== 'attachments' && field.shortName !== 'attachment'"
       [options]="mappingMethodItems"
       [(ngModel)]="mappingMethod">
     </p-dropdown>
+
+    <span
+      *ngIf="field.fieldType === 'attachments' || field.shortName === 'attachment'">
+        Static
+    </span>
 
   </div>
 

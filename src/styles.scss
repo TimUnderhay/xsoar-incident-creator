@@ -56,7 +56,8 @@ body {
   // width: 100%;
 }
 
-.dateTransformGrid {
+.dateTransformGrid,
+.newAttachmentFileUploadGrid {
   display: grid;
   grid-template-columns: auto 1fr;
   grid-column-gap: 1em;

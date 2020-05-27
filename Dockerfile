@@ -17,7 +17,7 @@ ENTRYPOINT []
 
 RUN \
 set -o xtrace \
-&& apk add bash \
+&& apk add bash file \
 && ln -sf /bin/bash /bin/sh \
 && cd ${DSTDIR} \
 && mv -f server/package-prod.json ./package.json \

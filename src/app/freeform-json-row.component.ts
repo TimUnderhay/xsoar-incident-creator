@@ -146,7 +146,7 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
 
 
   ngOnInit() {
-    // console.log('FreeformJsonRowComponent: ngOnInit(): field:', this.field);
+    console.log('FreeformJsonRowComponent: ngOnInit(): field:', this.field);
     this.subscriptions.add( this.fetcherService.fieldMappingSelectionActive.subscribe( (fieldMappingSelection: FieldMappingSelection) => this.onFieldMappingSelectionActive(fieldMappingSelection) ));
 
     this.subscriptions.add( this.fetcherService.fieldMappingSelectionReceived.subscribe( (segment: Segment) => this.onFieldMappingSelectionReceived(segment) ));

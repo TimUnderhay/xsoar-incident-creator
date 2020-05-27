@@ -124,13 +124,13 @@
 
         <!-- JSON Groups -->
         <p-button
-        type="button"
-        label="JSON Groups"
-        name="jsonGroupButton"
-        (onClick)="onJsonGroupButtonClicked()"
-        [disabled]="!savedJsonConfigurations || savedJsonConfigurations.length === 0"
-        pTooltip="Reload the field definitions from XSOAR">
-      </p-button>
+          type="button"
+          label="JSON Groups"
+          name="jsonGroupButton"
+          (onClick)="onJsonGroupButtonClicked()"
+          [disabled]="!savedJsonConfigurations || savedJsonConfigurations.length === 0"
+          pTooltip="Reload the field definitions from XSOAR">
+        </p-button>
 
         <!-- Bulk Create -->
         <p-button
@@ -146,6 +146,14 @@
           *ngIf="this.bulkCreateResults.length !== 0"
           label="Bulk Create Results"
           (onClick)="showBulkResultsDialog = true">
+        </p-button>
+
+        <!-- File Attachments -->
+        <p-button
+          label="File Attachments"
+          (onClick)="onFileAttachmentsButtonClicked()"
+          pTooltip="Manage file attachments"
+          showDelay="750">
         </p-button>
 
       </div>
@@ -177,7 +185,11 @@
       (messageWithAutoClear)="messageWithAutoClear($event)"
       (freeformJsonConfigurationsChanged)="getSavedJsonConfigurations()"
 
-      (reloadFieldDefinitions)="fetchIncidentFieldDefinitions($event)">
+      (reloadFieldDefinitions)="fetchIncidentFieldDefinitions($event)"
+      
+      [fileAttachmentConfigs]="fileAttachmentConfigs"
+      [fileAttachmentConfigsList]="fileAttachmentConfigsList"
+      (fileAttachmentConfigsChanged)="onFileAttachmentConfigsChanged()">
     </freeform-json-ui>
     
     <div>&nbsp;</div>
@@ -332,61 +344,67 @@
 
 
   <!-- New / Edit Demisto Endpoint Server Dialog -->
-  <p-dialog [header]="newDemistoServerDialogMode === 'new' ? 'New XSOAR Server' : 'Edit XSOAR Server'" [(visible)]="showNewDemistoEndpointDialog" [modal]="true" [style]="{width: '500px'}" styleClass="newDemistoEndpointDialog" (onHide)="onNewEditDemistoEndpointHidden()">
+  <p-dialog
+    [header]="newDemistoServerDialogMode === 'new' ? 'New XSOAR Server' : 'Edit XSOAR Server'"
+    [(visible)]="showNewDemistoEndpointDialog"
+    [modal]="true"
+    [style]="{width: '500px'}"
+    styleClass="newDemistoEndpointDialog"
+    (onHide)="onNewEditDemistoEndpointHidden()">
 
-    <!--<div style="margin-bottom: .5em;" class="formLabel">Configuration Name</div>-->
+      <!--<div style="margin-bottom: .5em;" class="formLabel">Configuration Name</div>-->
 
-    <div style="margin-top: 1.5em;">
-      <span class="ui-float-label">
-        <input pInputText type="url" id="url" required [(ngModel)]="newDemistoServerUrl" name="url" class="inputDisplay">
-        <label for="url">XSOAR Base URL</label>
-      </span>
-    </div>
+      <div style="margin-top: 1.5em;">
+        <span class="ui-float-label">
+          <input pInputText type="url" id="url" required [(ngModel)]="newDemistoServerUrl" name="url" class="inputDisplay">
+          <label for="url">XSOAR Base URL</label>
+        </span>
+      </div>
 
-    <div style="margin-top: 1.5em;">
-      <span class="ui-float-label">
-        <input pInputText type="password" id="apiKey" required [(ngModel)]="newDemistoServerApiKey" name="apiKey" size="50" autocomplete="off" class="inputDisplay" standalone>
-        <label for="apiKey">API Key</label>
-      </span>
-    </div>
+      <div style="margin-top: 1.5em;">
+        <span class="ui-float-label">
+          <input pInputText type="password" id="apiKey" required [(ngModel)]="newDemistoServerApiKey" name="apiKey" size="50" autocomplete="off" class="inputDisplay" standalone>
+          <label for="apiKey">API Key</label>
+        </span>
+      </div>
 
-    <div style="margin-top: 1.5em;">
-      <span class="formLabel">Trust Any Certificate&nbsp;&nbsp;</span>
-      <p-inputSwitch name="trustAny" [(ngModel)]="newDemistoServerTrustAny" [style]="{'vertical-align' : 'middle' }"></p-inputSwitch>
-    </div>
+      <div style="margin-top: 1.5em;">
+        <span class="formLabel">Trust Any Certificate&nbsp;&nbsp;</span>
+        <p-inputSwitch name="trustAny" [(ngModel)]="newDemistoServerTrustAny" [style]="{'vertical-align' : 'middle' }"></p-inputSwitch>
+      </div>
 
-    <div style="margin-top: .5em;">{{newDemistoServerSaveDisabled ? 'This name is already taken' : '&nbsp;'}}</div>
+      <div style="margin-top: .5em;">{{newDemistoServerSaveDisabled ? 'This name is already taken' : '&nbsp;'}}</div>
 
-    <div style="margin-top: .5em; float: right;">
+      <div style="margin-top: .5em; float: right;">
 
-      <!-- Test Button -->
-      <p-button
-        label="Test"
-        (onClick)="testDemistoEndpointAdHoc(newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny)"
-        [disabled]="newEditTestButtonDisabled">
-      </p-button>
+        <!-- Test Button -->
+        <p-button
+          label="Test"
+          (onClick)="testDemistoEndpointAdHoc(newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny)"
+          [disabled]="newEditTestButtonDisabled">
+        </p-button>
 
-      <!-- Save Button -->
-      <p-button label="Save"
-        *ngIf="newDemistoServerDialogMode === 'new'"
-        (onClick)="onNewDemistoEndpointSaved()"
-        [disabled]="!newDemistoServerUrl || !newDemistoServerApiKey || newDemistoServerSaveDisabled">
-      </p-button>
+        <!-- Save Button -->
+        <p-button label="Save"
+          *ngIf="newDemistoServerDialogMode === 'new'"
+          (onClick)="onNewDemistoEndpointSaved()"
+          [disabled]="!newDemistoServerUrl || !newDemistoServerApiKey || newDemistoServerSaveDisabled">
+        </p-button>
 
-      <!-- Update Button -->
-      <p-button
-        label="Update"
-        *ngIf="newDemistoServerDialogMode === 'edit'"
-        (onClick)="onDemistoEndpointUpdated(newDemistoServerUrl)"
-        [disabled]="!newDemistoServerUrl || newDemistoServerSaveDisabled">
-      </p-button>
+        <!-- Update Button -->
+        <p-button
+          label="Update"
+          *ngIf="newDemistoServerDialogMode === 'edit'"
+          (onClick)="onDemistoEndpointUpdated(newDemistoServerUrl)"
+          [disabled]="!newDemistoServerUrl || newDemistoServerSaveDisabled">
+        </p-button>
 
-      <p-button
-        label="Cancel"
-        (onClick)="onNewDemistoEndpointCanceled()">
-      </p-button>
+        <p-button
+          label="Cancel"
+          (onClick)="onNewDemistoEndpointCanceled()">
+        </p-button>
 
-    </div>
+      </div>
 
   </p-dialog>
 
@@ -902,6 +920,354 @@
         <p-button label="Cancel" (onClick)="showNewJsonConfigDialog = false"></p-button>
 
       </div>
+
+  </p-dialog>
+
+
+
+  <!-- File Attachments Dialog -->
+  <p-dialog
+    header="File Attachments"
+    [(visible)]="showFileAttachmentsDialog"
+    [modal]="true"
+    [style]="{width: '50%'}"
+    styleClass="bulkCreateDialog">
+
+    <!-- header bar -->
+    <div>
+
+      <!-- Upload -->
+      <p-button
+        label="Upload"
+        (onClick)="onNewFileAttachmentClicked()"
+        styleClass="alignButton">
+      </p-button>
+
+      <!-- Download -->
+      <p-button
+        label="Download"
+        (onClick)="onDownloadFileAttachmentClicked(selectedFileAttachment)"
+        [disabled]="!selectedFileAttachment"
+        styleClass="alignButton">
+      </p-button>
+
+      <!-- Edit -->
+      <p-button
+        *ngIf="fileAttachmentConfigsList && fileAttachmentConfigsList.length !== 0"
+        label="Edit"
+        (onClick)="onEditFileAttachmentClicked(selectedFileAttachment)"
+        styleClass="alignButton"
+        [disabled]="!selectedFileAttachment">
+      </p-button>
+
+      <!-- Delete -->
+      <p-button
+        *ngIf="fileAttachmentConfigsList && fileAttachmentConfigsList.length !== 0"
+        label="Delete"
+        (onClick)="onDeleteFileAttachmentClicked(selectedFileAttachment)"
+        styleClass="alignButton"
+        [disabled]="!selectedFileAttachment">
+      </p-button>
+
+      <!-- Refresh -->
+      <p-button
+        label="Refresh"
+        (onClick)="onFileAttachmentConfigsChanged()"
+        styleClass="alignButton">
+      </p-button>
+
+    </div>
+
+    <div style="margin-top: 1em;">
+
+      <span
+        *ngIf="fileAttachmentConfigItems && fileAttachmentConfigItems.length === 0; else fileAttachmentConfigsSection"
+        style="font-weight: bold;">
+          No file attachments have been uploaded
+      </span>
+
+    </div>
+
+    <ng-template #fileAttachmentConfigsSection>
+
+      <div class="formLabel">Select an attachment</div>
+
+      <p-listbox
+        [options]="fileAttachmentConfigItems"
+        [(ngModel)]="selectedFileAttachment"
+        [style]="{'width':'100%'}"
+        [filter]="true">
+      </p-listbox>
+
+    </ng-template>
+
+      <div style="margin-top: .5em; float: right;">
+
+        <p-button
+          label="Close"
+          (onClick)="showFileAttachmentsDialog = false">
+        </p-button>
+
+    </div>
+
+  </p-dialog>
+
+
+  <!-- New File Attachment Dialog -->
+  <p-dialog
+    header="New File Attachment"
+    [(visible)]="showNewFileAttachmentDialog"
+    [modal]="true"
+    [style]="{width: '50%'}"
+    styleClass="newDemistoEndpointDialog">
+
+    <div
+      class="newAttachmentFileUploadGrid"
+      style="margin-top: 1.5em;">
+      
+      <div class="dialogLabel">
+        Upload File:
+      </div>
+
+      <div style="font-weight: bold; font-size: 1.1em;">
+        
+        <p-fileUpload
+          #attachmentUploader
+          mode="basic"
+          name="attachment"
+          [multiple]="false"
+          [showUploadButton]="false"
+          [showCancelButton]="false"
+          (onSelect)="onNewAttachmentFileSelected($event)"
+          (onRemove)="uploadFileAttachmentAdded = false"
+          (uploadHandler)="onUploadFileAttachment($event, fileUpload)"
+          [customUpload]="true">
+        </p-fileUpload>
+
+      </div>
+
+      <!-- File Name -->
+      <ng-container *ngIf="newFileAttachmentName">
+
+        <div class="dialogLabel">
+          File Name:
+        </div>
+  
+        <div style="font-weight: bold; font-size: 1.1em;">
+          
+          <input
+            pInputText
+            [(ngModel)]="newFileAttachmentName"
+            class="inputDisplay"
+            type="text"/>
+  
+        </div>
+
+      </ng-container>
+
+      <!-- File Size -->
+      <ng-container *ngIf="newFileAttachmentSize">
+
+        <div class="dialogLabel">
+          File Size:
+        </div>
+  
+        <div style="font-weight: bold; font-size: 1.1em;">
+          
+          {{newFileAttachmentSize}} bytes
+  
+        </div>
+
+      </ng-container>
+
+      <!-- File Type -->
+      <ng-container *ngIf="newFileAttachmentType">
+
+        <div class="dialogLabel">
+          File Type:
+        </div>
+  
+        <div style="font-weight: bold; font-size: 1.1em;">
+          
+          {{newFileAttachmentType}}
+  
+        </div>
+
+      </ng-container>
+
+      <!-- Show as Media File -->
+      <ng-container *ngIf="newFileAttachmentType && newFileAttachmentType.startsWith('image')">
+
+        <div class="dialogLabel">
+          Display Options
+        </div>
+  
+        <div style="font-weight: bold; font-size: 1.1em;">
+          
+          <p-selectButton
+            [options]="fileAttachmentDisplayAsMediaItems"
+            [(ngModel)]="newFileAttachmentDisplayAsMediaSelection">
+          </p-selectButton>
+  
+        </div>
+
+      </ng-container>
+
+      <!-- File Comment -->
+      <ng-container *ngIf="newFileAttachmentComment !== undefined">
+
+        <div class="dialogLabel">
+          Comments:
+        </div>
+  
+        <div style="font-weight: bold; font-size: 1.1em;">
+          
+          <textarea
+            pInputTextarea
+            [(ngModel)]="newFileAttachmentComment"
+            class="inputDisplay">
+          </textarea>
+  
+        </div>
+
+      </ng-container>
+
+    </div>
+
+    <div style="margin-top: .5em; float: right;">
+
+      <p-button
+        type="submit"
+        label="Upload Attachment"
+        (onClick)="onSubmitFileAttachmentUpload()"
+        [disabled]="!uploadFileAttachmentAdded">
+      </p-button>
+
+      <p-button
+        label="Cancel"
+        (onClick)="onNewFileAttachmentCancelled()">
+      </p-button>
+
+    </div>
+
+  </p-dialog>
+
+
+
+  <!-- Edit File Attachment Dialog -->
+  <p-dialog
+    header="Edit File Attachment"
+    [(visible)]="showEditFileAttachmentDialog"
+    [modal]="true"
+    [style]="{width: '50%'}"
+    styleClass="newDemistoEndpointDialog">
+
+    <div
+      class="newAttachmentFileUploadGrid"
+      style="margin-top: 1.5em;">
+      
+      <!-- File Name -->
+      <ng-container *ngIf="editFileAttachmentName">
+
+        <div class="dialogLabel">
+          File Name:
+        </div>
+  
+        <div style="font-weight: bold; font-size: 1.1em;">
+          
+          <input
+            pInputText
+            [(ngModel)]="editFileAttachmentName"
+            class="inputDisplay"
+            type="text"/>
+  
+        </div>
+
+      </ng-container>
+
+      <!-- File Size -->
+      <ng-container *ngIf="editFileAttachmentSize">
+
+        <div class="dialogLabel">
+          File Size:
+        </div>
+  
+        <div style="font-weight: bold; font-size: 1.1em;">
+          
+          {{editFileAttachmentSize}} bytes
+  
+        </div>
+
+      </ng-container>
+
+      <!-- File Type -->
+      <ng-container *ngIf="editFileAttachmentType">
+
+        <div class="dialogLabel">
+          File Type:
+        </div>
+  
+        <div style="font-weight: bold; font-size: 1.1em;">
+          
+          {{editFileAttachmentType}}
+  
+        </div>
+
+      </ng-container>
+
+      <!-- Show as Media File -->
+      <ng-container *ngIf="editFileAttachmentType && editFileAttachmentType.startsWith('image')">
+
+        <div class="dialogLabel">
+          Display Options
+        </div>
+  
+        <div style="font-weight: bold; font-size: 1.1em;">
+          
+          <p-selectButton
+            [options]="fileAttachmentDisplayAsMediaItems"
+            [(ngModel)]="editFileAttachmentDisplayAsMediaSelection">
+          </p-selectButton>
+  
+        </div>
+
+      </ng-container>
+
+      <!-- File Comment -->
+      <ng-container *ngIf="editFileAttachmentComment !== undefined">
+
+        <div class="dialogLabel">
+          Comments:
+        </div>
+  
+        <div style="font-weight: bold; font-size: 1.1em;">
+          
+          <textarea
+            pInputTextarea
+            [(ngModel)]="editFileAttachmentComment"
+            class="inputDisplay">
+          </textarea>
+  
+        </div>
+
+      </ng-container>
+
+    </div>
+
+    <div style="margin-top: .5em; float: right;">
+
+      <p-button
+        type="submit"
+        label="Ok"
+        (onClick)="onEditFileAttachmentSubmit(selectedFileAttachment)">
+      </p-button>
+
+      <p-button
+        label="Cancel"
+        (onClick)="onEditFileAttachmentCancelled()">
+      </p-button>
+
+    </div>
 
   </p-dialog>
 
