@@ -5,12 +5,12 @@ import { SelectItem, ConfirmationService } from 'primeng/api';
 import { PMessageOption } from './types/message-options';
 import { Listbox } from 'primeng/listbox';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
-import { FieldType, IncidentField, IncidentFields, DateConfig } from './types/incident-fields';
+import { FieldType, IncidentFieldUI, IncidentFieldsUI, DateConfig } from './types/incident-fields';
 import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FreeformJsonRowComponent } from './freeform-json-row.component';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
 import { SampleIncident } from './sample-json';
-import { Subscription, config } from 'rxjs';
+import { Subscription } from 'rxjs';
 import * as utils from './utils';
 import { FreeformJSONConfig } from './types/freeform-json-config';
 import { IncidentConfig, IncidentConfigs, IncidentFieldConfig, IncidentFieldsConfig } from './types/incident-config';
@@ -19,11 +19,11 @@ import { InvestigationFields as investigationFields } from './investigation-fiel
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
-import { FileAttachmentConfig, FileAttachmentConfigs } from './types/file-attachment';
+import { FileAttachmentConfig, FileAttachmentConfigs, AttachmentFieldConfig, FileAttachmentUIConfig } from './types/file-attachment';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
-declare var jmespath: any;
+declare const jmespath: any;
 
 @Component({
   // tslint:disable-next-line: component-selector
@@ -70,8 +70,9 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   @Output() saveButtonEnabledChange = new EventEmitter<boolean>();
   @Output() reloadFieldDefinitions = new EventEmitter<string>();
 
-  availableIncidentFields: IncidentFields; // our incident fields
-  chosenIncidentFields: IncidentField[] = []; // incident fields that have been added to the config
+  availableIncidentFields: IncidentFieldsUI; // our incident fields
+  chosenIncidentFields: IncidentFieldUI[] = []; // incident fields that have been added to the config
+  requiresJson = false;
   incidentTypesToAssociatedFieldNames: object = {}; // incidentType: fieldnames
   defaultIncidentFieldsToAdd = [
     'details',
@@ -302,8 +303,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     // will blow away chosenIncidentFields if addDefaultChosenFields === true
     console.log('FreeformJsonUIComponent: buildNewIncidentFieldOptions(): incidentType:', incidentType);
 
-    let incidentFields: IncidentFields = {};
-    let chosenIncidentFields: IncidentField[] = [];
+    let incidentFields: IncidentFieldsUI = {};
+    let chosenIncidentFields: IncidentFieldUI[] = [];
 
     for (let field of Object.values(this.fetchedIncidentFieldDefinitions)  ) {
       // console.log('FreeformJsonUIComponent: buildNewIncidentFieldOptions(): field:', field);
@@ -338,7 +339,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
         continue;
       }
 
-      let incidentField: IncidentField = {
+      let incidentField: IncidentFieldUI = {
         shortName,
         longName: field.name,
         enabled: false,
@@ -375,6 +376,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     this.availableIncidentFields = incidentFields;
     if (addDefaultChosenFields) {
       this.chosenIncidentFields = chosenIncidentFields;
+      this.calculateRequiresJson();
     }
 
     this.countEnabledFields();
@@ -414,7 +416,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  buildFieldsToAddItems(availableFields: IncidentFields, chosenFields: IncidentField[]): SelectItem[] {
+  buildFieldsToAddItems(availableFields: IncidentFieldsUI, chosenFields: IncidentFieldUI[]): SelectItem[] {
     // console.log('FreeformJsonUIComponent: buildFieldsToAddItems()');
     let fieldsAvailableToAddItems: SelectItem[] = [];
 
@@ -444,7 +446,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  getFieldFromChosenFields(shortName: string): IncidentField {
+  getFieldFromChosenFields(shortName: string): IncidentFieldUI {
     for (let field of this.chosenIncidentFields) {
       if (field.shortName === shortName) {
         return field;
@@ -455,13 +457,13 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  chosenFieldsSortCompare(a: IncidentField, b: IncidentField) {
+  chosenFieldsSortCompare(a: IncidentFieldUI, b: IncidentFieldUI) {
     return a.shortName > b.shortName ? 1 : -1;
   }
 
 
 
-  setFieldOfChosenFields(newField: IncidentField, assign = true) {
+  setFieldOfChosenFields(newField: IncidentFieldUI, assign = true) {
     const shortName = newField.shortName;
     for (let i = 0; i < this.chosenIncidentFields.length; i++) {
       let field = this.chosenIncidentFields[i];
@@ -495,7 +497,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     console.log('FreeformJsonUIComponent: onAddIncidentFieldsAccept(): selectedFieldsToAdd:', this.selectedFieldsToAdd);
     console.log('FreeformJsonUIComponent: onAddIncidentFieldsAccept(): chosenIncidentFields:', JSON.parse(JSON.stringify(this.chosenIncidentFields)));
     for (const fieldName of this.selectedFieldsToAdd) {
-      const field: IncidentField = this.availableIncidentFields[fieldName];
+      const field: IncidentFieldUI = this.availableIncidentFields[fieldName];
       this.setFieldOfChosenFields(this.availableIncidentFields[fieldName]);
     }
     // console.log('FreeformJsonUIComponent: onAddIncidentFieldsAccept(): chosenIncidentFields:', this.chosenIncidentFields);
@@ -522,6 +524,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     console.log('FreeformJsonUIComponent: onAllIncidentFieldsRemoved()');
     let typeField = this.getFieldFromChosenFields('type');
     this.chosenIncidentFields = [typeField];
+    this.requiresJson = false;
   }
 
 
@@ -572,7 +575,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  trackByIdentity(index, field: IncidentField)  {
+  trackByIdentity(index, field: IncidentFieldUI)  {
     return field;
   }
 
@@ -742,7 +745,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  onFieldChange(field: IncidentField) {
+  onFieldChange(field: IncidentFieldUI) {
     // console.log('FreeformJsonUIComponent: onFieldChange():', field.shortName);
     this.setFieldOfChosenFields(field, false);
   }
@@ -926,7 +929,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  sortChosenFields(a: IncidentField, b: IncidentField): number {
+  sortChosenFields(a: IncidentFieldUI, b: IncidentFieldUI): number {
     return utils.sortArrayNaturally(a.shortName, b.shortName);
   }
 
@@ -941,8 +944,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     */
     console.log('FreeformJsonUIComponent: buildChosenFieldsFromDemisto(): incidentJson:', json);
     // let incidentFields: IncidentFields = {};
-    let chosenIncidentFields: IncidentField[] = [];
-    let customFields: IncidentField[] = [];
+    let chosenIncidentFields: IncidentFieldUI[] = [];
+    let customFields: IncidentFieldUI[] = [];
     let skippedInvestigationFields = [];
     let skippedIncidentFields = [];
 
@@ -1002,7 +1005,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
         return;
       }
 
-      const newIncidentField: IncidentField  = {
+      const newIncidentField: IncidentFieldUI  = {
         shortName,
         longName: fetchedField.name,
         enabled: shortName === 'type' ? true : false,
@@ -1020,6 +1023,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     } );
 
     this.chosenIncidentFields = chosenIncidentFields.concat(customFields).sort(this.sortChosenFields);
+    this.requiresJson = false;
     console.log(`Non-added investigation fields:`, skippedInvestigationFields);
     console.log(`Non-added incident fields:`, skippedIncidentFields);
     console.log('FreeformJsonUIComponent: buildIncidentFieldsFromDemisto(): chosenIncidentFields:', this.chosenIncidentFields);
@@ -1027,18 +1031,17 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  // buildCustomFields(customFields) {
-  buildCustomFieldsFromDemisto(customFields): IncidentField[] {
+  buildCustomFieldsFromDemisto(customFields): IncidentFieldUI[] {
     /*
     Called from buildIncidentFields()
     */
     // console.log('FreeformJsonUIComponent: buildCustomFieldsFromDemisto(): customFields:', customFields);
-    let chosenIncidentFields: IncidentField[] = [];
+    let chosenIncidentFields: IncidentFieldUI[] = [];
     let skippedIncidentFields = [];
 
     Object.keys(customFields).forEach( shortName => {
       let value = customFields[shortName];
-      let tmpField: IncidentField = {
+      let tmpField: IncidentFieldUI = {
         shortName,
         value,
         originalValue: value,
@@ -1099,8 +1102,9 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  incidentFieldConfigToIncidentField(config: IncidentFieldConfig): IncidentField {
-    const newConfig: IncidentField = {
+  incidentFieldConfigToIncidentFieldUI(config: IncidentFieldConfig): IncidentFieldUI {
+    // Converts an IncidentFieldConfig (loaded from an incident config) to IncidentFieldUI
+    const newConfig: IncidentFieldUI = {
       shortName: config.shortName,
       custom: config.custom,
       fieldType: config.fieldType,
@@ -1112,9 +1116,45 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       permitNullValue: 'permitNullValue' in config ? config.permitNullValue : false,
       locked: false
     };
+
     if ('dateConfig' in config) {
       const propertiesToMerge = ['autoParse', 'formatter', 'precision', 'utcOffsetEnabled', 'utcOffset'];
       newConfig.dateConfig = utils.mergeParticularObjectProperties(propertiesToMerge, config.dateConfig, {});
+    }
+
+    if ('attachmentConfig' in config) { {
+      const attachmentConfigs: AttachmentFieldConfig[] = config.attachmentConfig;
+      const uiAttachmentConfigs: FileAttachmentUIConfig[] = [];
+
+      for (const attachmentConfig of attachmentConfigs) {
+        const id = attachmentConfig.id;
+        const serverAttachmentConfig = this.fileAttachmentConfigs[id];
+
+        const newUIAttachmentConfig: FileAttachmentUIConfig = {
+          id,
+          size: serverAttachmentConfig.size,
+          detectedType: serverAttachmentConfig.detectedType,
+
+          originalFilename: serverAttachmentConfig.filename,
+          overrideFilename: 'filenameOverride' in attachmentConfig ? true : false,
+          filename: 'filenameOverride' in attachmentConfig ? attachmentConfig.filenameOverride : serverAttachmentConfig.filename,
+
+          overrideMediaFile: 'mediaFileOverride' in attachmentConfig ? true : false,
+          originalMediaFile: serverAttachmentConfig.mediaFile,
+          mediaFile: 'mediaFileOverride' in attachmentConfig ? attachmentConfig.mediaFileOverride : serverAttachmentConfig.mediaFile,
+
+          overrideComment: 'commentOverride' in attachmentConfig ? true : false,
+          originalComment: serverAttachmentConfig.comment,
+          comment: 'commentOverride' in attachmentConfig ? attachmentConfig.commentOverride : serverAttachmentConfig.comment,
+
+        };
+
+        uiAttachmentConfigs.push(newUIAttachmentConfig);
+      }
+
+      newConfig.attachmentConfig = uiAttachmentConfigs;
+    }
+
     }
     return newConfig;
   }
@@ -1130,15 +1170,15 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     */
     console.log('FreeformJsonUIComponent: buildChosenFieldsFromConfig(): incidentConfig:', incidentConfig);
     // let incidentFields: IncidentFields = {};
-    let chosenIncidentFields: IncidentField[] = [];
+    let chosenIncidentFields: IncidentFieldUI[] = [];
     let skippedInvestigationFields = [];
     let skippedIncidentFields = [];
 
-    Object.values(incidentConfig.chosenFields).forEach( fieldConfig  => {
+    Object.values(incidentConfig.chosenFields).forEach( chosenField  => {
       // console.log('FreeformJsonUIComponent: buildIncidentFields(): shortName:', shortName);
-      const shortName = fieldConfig.shortName;
+      const shortName = chosenField.shortName;
 
-      let newConfig = this.incidentFieldConfigToIncidentField(fieldConfig);
+      let newConfig = this.incidentFieldConfigToIncidentFieldUI(chosenField);
 
       if (investigationFields.includes(shortName)) {
         skippedInvestigationFields.push(shortName);
@@ -1159,7 +1199,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       const fetchedField = this.fetchedIncidentFieldDefinitions[shortName];
 
       if (!fetchedField) {
-        console.log(`Field '${fieldConfig.shortName}' has been removed from the XSOAR field definitions`);
+        console.log(`Field '${chosenField.shortName}' has been removed from the XSOAR field definitions`);
         newConfig.locked = true;
         newConfig.lockedReason = 'Field is not defined in XSOAR';
         newConfig.fieldType = 'undefined';
@@ -1187,6 +1227,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     } );
 
     this.chosenIncidentFields = chosenIncidentFields;
+    this.calculateRequiresJson();
 
     console.log('FreeformJsonUIComponent: buildChosenFieldsFromConfig(): chosenIncidentFields:', this.chosenIncidentFields);
     console.log(`Non-added investigation fields:`, skippedInvestigationFields);
@@ -1255,7 +1296,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  buildSavedFieldConfig(fields: IncidentField[]): IncidentFieldsConfig {
+  buildSavedFieldConfig(fields: IncidentFieldUI[]): IncidentFieldsConfig {
     let res: IncidentFieldsConfig = {};
     // Object.values(fields).forEach( field => {
     for (const field of fields) {
@@ -1276,9 +1317,35 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       if (field.fieldType === 'date') {
         newField.dateConfig = field.dateConfig;
       }
+      if (field.fieldType === 'attachments' || field.shortName === 'attachment') {
+        newField.attachmentConfig = this.FileAttachmentUIConfigToAttachmentFieldConfig(field.attachmentConfig);
+      }
       res[name] = newField;
     }
     return res;
+  }
+
+
+
+  FileAttachmentUIConfigToAttachmentFieldConfig(fileAttachmentUIConfigs: FileAttachmentUIConfig[]): AttachmentFieldConfig[] {
+    console.log('FreeformJsonUIComponent: FileAttachmentUIConfigToAttachmentFieldConfig(): fileAttachmentUIConfigs:', fileAttachmentUIConfigs);
+    const newAttachmentFieldConfigs: AttachmentFieldConfig[] = [];
+    for (const uiConfig of fileAttachmentUIConfigs) {
+      const newAttachmentFieldConfig: AttachmentFieldConfig = {
+        id: uiConfig.id,
+      };
+      if ('filename' in uiConfig && uiConfig.filename !== '') {
+        newAttachmentFieldConfig.filenameOverride = uiConfig.filename;
+      }
+      if ('mediaFile' in uiConfig && uiConfig.mediaFile !== uiConfig.originalMediaFile) {
+        newAttachmentFieldConfig.mediaFileOverride = uiConfig.mediaFile;
+      }
+      if ('comment' in uiConfig) {
+        newAttachmentFieldConfig.commentOverride = uiConfig.comment;
+      }
+      newAttachmentFieldConfigs.push(newAttachmentFieldConfig);
+    }
+    return newAttachmentFieldConfigs;
   }
 
 
@@ -1545,6 +1612,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
     if (triggerChangeDetection) {
       this.chosenIncidentFields = JSON.parse(JSON.stringify(this.chosenIncidentFields)); // deep copy hack to trigger change detection
+      this.calculateRequiresJson();
     }
   }
 
@@ -1603,6 +1671,43 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       height: '90%'
     };
     const dialogRef = this.dialogService.open(JsonEditorComponent, config);
+  }
+
+
+
+  calculateRequiresJson() {
+    let requiresJson = false;
+    for (const field of Object.values(this.chosenIncidentFields)) {
+      if (field.mappingMethod === 'jmespath' && field.jmesPath !== '' && !field.permitNullValue) {
+        requiresJson = true;
+        break;
+      }
+    }
+    this.requiresJson = requiresJson;
+  }
+
+
+
+  onAttachmentsPossiblyRemovedFromServer() {
+    // When a file attachment gets deleted, the server will remove it from any
+    // incident configs that the attachment was part of.  This method will remove any attachments from the ui that are no longer part of the config (the incident config will have already been updated)
+
+    const fileAttachmentIds = Object.keys(this.fileAttachmentConfigs);
+    for (const field of this.chosenIncidentFields) {
+
+      if ('attachmentConfig' in field) {
+
+        for (let i = field.attachmentConfig.length - 1; i >= 0; i--) {
+          const attachment = field.attachmentConfig[i];
+
+          if (!(attachment.id in fileAttachmentIds)) {
+            field.attachmentConfig.splice(i, 1);
+            break;
+          }
+
+        }
+      }
+    }
   }
 
 }

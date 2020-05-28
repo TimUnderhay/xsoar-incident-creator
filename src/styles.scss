@@ -182,7 +182,9 @@ body .ui-dialog-content {
 
 incident-field-row,
 freeform-json-row,
-.dateTransformDialog {
+.dateTransformDialog,
+.selectAttachmentsDialog,
+.overrideAttachmentOptionsDialog {
   display: contents; // fixes css grid for incident-field-line components by passing-through content
 }
 
@@ -245,6 +247,7 @@ header {
   font-weight: bold;
   text-decoration: underline;
   color: rgb(126, 126, 126);
+  cursor: pointer;
 }
 
 .editJsonButtonGroup {

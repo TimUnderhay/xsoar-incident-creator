@@ -1,3 +1,7 @@
+import { FileAttachmentUIConfig } from './file-attachment';
+
+// This file deals primarily with incidents as they are represented in the UI
+
 export type MappingMethod = 'static' | 'jmespath'; // 'randomised'
 
 export type FieldType = 'shortText' | 'longText' | 'singleSelect' | 'multiSelect' | 'grid' | 'internal' | 'number' | 'date' | 'timer' | 'boolean' | 'url' | 'html' | 'role' | 'attachments' | 'markdown' | 'tagsSelect' | 'user' | 'undefined';
@@ -6,7 +10,7 @@ export type FieldType = 'shortText' | 'longText' | 'singleSelect' | 'multiSelect
 
 // unsupportedTypes: 'undefined', 'timer'
 
-export interface IncidentField extends Object {
+export interface IncidentFieldUI extends Object {
   shortName: string;
   longName?: string;
   enabled?: boolean;
@@ -21,11 +25,11 @@ export interface IncidentField extends Object {
   mappingMethod: MappingMethod;
   permitNullValue?: boolean;
   dateConfig?: DateConfig; // used by date fields
-  attachmentConfigs?: AttachmentFieldConfig[];
+  attachmentConfig?: FileAttachmentUIConfig[];
 }
 
-export interface IncidentFields {
-  [index: string]: IncidentField;
+export interface IncidentFieldsUI {
+  [index: string]: IncidentFieldUI;
 }
 
 export interface DateConfig {
@@ -37,9 +41,3 @@ export interface DateConfig {
 }
 
 export type DatePrecision = 'seconds' | 'milliseconds' | 'microseconds' | 'nanoseconds';
-
-export interface AttachmentFieldConfig {
-  id: string; // the attachment config id to use
-  friendlyNameOverride?: string;
-  commentOverride?: string;
-}

@@ -5,7 +5,7 @@ import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
 import { User } from './types/user';
 import { DemistoEndpointTestResult, DemistoEndpointTestResults } from './types/demisto-endpoint-status';
 import { SelectItem, ConfirmationService } from 'primeng/api';
-import { IncidentField, IncidentFields, DateConfig } from './types/incident-fields';
+import { IncidentFieldUI, IncidentFieldsUI, DateConfig } from './types/incident-fields';
 import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
 import { IncidentConfig, IncidentConfigs, IncidentCreationConfig } from './types/incident-config';
@@ -19,7 +19,6 @@ import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { FileAttachmentConfig, FileAttachmentConfigs } from './types/file-attachment';
 import { FileUpload } from 'primeng/fileupload';
-import { HttpResponse } from '@angular/common/http';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -198,6 +197,8 @@ export class AppComponent implements OnInit {
   get fileAttachmentConfigs(): FileAttachmentConfigs {
     return this._fileAttachmentConfigs;
   }
+
+  // File Attachments Dialog
   showFileAttachmentsDialog = false;
   selectedFileAttachment: string;
   fileAttachmentDisplayAsMediaItems: SelectItem[] = [
@@ -713,7 +714,7 @@ export class AppComponent implements OnInit {
       this.loadedIncidentConfigId = undefined;
     }
 
-    // fetch fields config
+    // fetch incident configs
     await this.getSavedIncidentConfigurations();
     this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration${utils.sPlural(this.selectedDeleteConfigs)} ${this.selectedDeleteConfigs.join(', ')} was successfully deleted`});
 
@@ -1356,8 +1357,6 @@ export class AppComponent implements OnInit {
           // destructive
           const selectedConfig = this.savedIncidentConfigurations[this.loadedIncidentConfigName];
           this.freeformJsonUIComponent.buildChosenFieldsFromConfig(selectedConfig);
-          // this.freeformJsonUIComponent.updateChosenFieldLocks();
-          // this.freeformJsonUIComponent.mergeLoadedFieldConfig(selectedConfig);
         }
 
       }
@@ -1616,7 +1615,7 @@ export class AppComponent implements OnInit {
 
 
   async getSavedIncidentConfigurations() {
-    // Get Fields Configurations
+    // Get Incident Configurations
     try {
       this.savedIncidentConfigurations = await this.fetcherService.getSavedIncidentConfigurations();
       console.log('AppComponent: getSavedIncidentConfigurations(): savedIncidentConfigurations:', this.savedIncidentConfigurations);
@@ -1648,7 +1647,7 @@ export class AppComponent implements OnInit {
 
 
   async onSavedIncidentConfigurationsChanged(newIncidentConfigName) {
-    // Update Fields Configurations
+    // Update Incident Configurations
     this.loadedIncidentConfigName = newIncidentConfigName;
     await this.getSavedIncidentConfigurations();
   }
@@ -1927,6 +1926,8 @@ export class AppComponent implements OnInit {
         await this.fetcherService.deleteFileAttachment(selectedFileAttachment);
         this.selectedFileAttachment = undefined;
         await this.onFileAttachmentConfigsChanged();
+        await this.getSavedIncidentConfigurations();
+        this.freeformJsonUIComponent.onAttachmentsPossiblyRemovedFromServer();
       },
       reject: () => {
         this.showFileAttachmentsDialog = true;
@@ -1963,40 +1964,6 @@ export class AppComponent implements OnInit {
 
 
 
-
-
-
-  /*beforeFileAttachmentUpload(event) {
-    console.log('AppComponent: beforeFileAttachmentUpload(): event:', event);
-    const formData: FormData = event.formData;
-    console.log('AppComponent: beforeFileAttachmentUpload(): formData:', formData);
-    console.log('AppComponent: beforeFileAttachmentUpload(): formData getAll(\'attachment\'):', formData.getAll('attachment'));
-    console.log('AppComponent: beforeFileAttachmentUpload(): formData keys:', Array.from(formData.keys()));
-    console.log('AppComponent: beforeFileAttachmentUpload(): formData values:', Array.from(formData.values()));
-  }*/
-
-
-
-  /*async onFileAttachmentUploadComplete(event) {
-    const response: HttpResponse<any> = event.originalEvent;
-    const body = response.body;
-    const id = body.id;
-
-    console.log('AppComponent: onFileAttachmentUploadComplete(): response:', response);
-    console.log('AppComponent: onFileAttachmentUploadComplete(): body:', body);
-    console.log('AppComponent: onFileAttachmentUploadComplete(): id:', id);
-    await this.onFileAttachmentConfigsChanged();
-  }*/
-
-
-
-  /*onFileAttachmentUploadError(event) {
-    const {error, files} = event;
-    console.error('AppComponent: onFileAttachmentUploadError(): error:', error);
-  }*/
-
-
-
   async onSubmitFileAttachmentUpload() {
     console.log('AppComponent: onSubmitFileAttachmentUpload()');
     this.showFileAttachmentsDialog = true;
@@ -2007,9 +1974,9 @@ export class AppComponent implements OnInit {
 
 
 
-  onDownloadFileAttachmentClicked(selectedFileAttachment) {
+  onDownloadFileAttachmentClicked(selectedFileAttachmentId) {
     console.log('AppComponent: onDownloadFileAttachmentClicked()');
-    this.fetcherService.downloadFileAttachment(selectedFileAttachment);
+    this.fetcherService.downloadFileAttachment(selectedFileAttachmentId);
   }
 
 
@@ -2032,9 +1999,7 @@ export class AppComponent implements OnInit {
     const formData = new FormData();
     for (const file of files) {
       formData.append(this.attachmentUploaderComponent.name, file, this.newFileAttachmentName);
-      if (this.newFileAttachmentComment !== '') {
-        formData.append('comment', this.newFileAttachmentComment);
-      }
+      formData.append('comment', this.newFileAttachmentComment);
       formData.append('mediaFile', `${this.newFileAttachmentDisplayAsMediaSelection}`);
     }
     try {
@@ -2058,7 +2023,7 @@ export class AppComponent implements OnInit {
     this.showFileAttachmentsDialog = false;
     const fileAttachment = this.fileAttachmentConfigs[selectedFileAttachment];
     this.editFileAttachmentName = fileAttachment.filename;
-    this.editFileAttachmentComment = 'comment' in fileAttachment ? fileAttachment.comment : '';
+    this.editFileAttachmentComment = fileAttachment.comment;
     this.editFileAttachmentSize = fileAttachment.size;
     this.editFileAttachmentType = fileAttachment.detectedType;
     this.editFileAttachmentDisplayAsMediaSelection = fileAttachment.mediaFile;
@@ -2082,10 +2047,8 @@ export class AppComponent implements OnInit {
       id: selectedFileAttachment,
       filename: this.editFileAttachmentName,
       mediaFile: this.editFileAttachmentDisplayAsMediaSelection,
+      comment: this.editFileAttachmentComment
     };
-    if (this.editFileAttachmentComment !== '') {
-      updatedConfig.comment = this.editFileAttachmentComment;
-    }
     try {
       const results = await this.fetcherService.updateFileAttachment(updatedConfig);
       console.log('AppComponent: onEditFileAttachmentSubmit(): results:', results);

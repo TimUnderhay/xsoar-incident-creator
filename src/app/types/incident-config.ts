@@ -1,9 +1,10 @@
 import { FieldType, MappingMethod, DateConfig } from './incident-fields';
+import { AttachmentFieldConfig } from './file-attachment';
 
 // These interfaces deal with saved incident configurations
 
 export interface IncidentConfig {
-  // an individual incident configuration
+  // an individual incident configuration as stored on the back end
   id?: string; // UUIDv4 - added by server
   name: string;
   chosenFields: IncidentFieldsConfig;
@@ -13,18 +14,8 @@ export interface IncidentConfig {
   requiresJson?: boolean; // returned by the server
 }
 
-export interface IncidentConfigs {
-  // on object for storing multiple incident configs
-  [index: string]: IncidentConfig;
-}
-
-export interface IncidentFieldsConfig {
-  [index: string]: IncidentFieldConfig;
-}
-
 export interface IncidentFieldConfig {
-  // this is a sort of subset of IncidentField, because the server doesn't
-  // need to store all stateful field info
+  // This represents individual incident fields (in IncidentConfig.chosenFields), as it is saved in an incident config
   shortName: string; // longname is loaded live from XSOAR
   custom: boolean; // is the field a custom field?
   fieldType: FieldType;
@@ -34,6 +25,16 @@ export interface IncidentFieldConfig {
   jmesPath?: any; // A JMESPath expression
   permitNullValue?: boolean; // permit null values to be included in incident fields?
   dateConfig?: DateConfig; // used by date fields for transformers
+  attachmentConfig?: AttachmentFieldConfig[];
+}
+
+export interface IncidentConfigs {
+  // on object for storing multiple incident configs
+  [index: string]: IncidentConfig;
+}
+
+export interface IncidentFieldsConfig {
+  [index: string]: IncidentFieldConfig;
 }
 
 export interface IncidentJsonFileConfig {

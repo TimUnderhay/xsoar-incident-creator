@@ -164,27 +164,22 @@
     <!-- Freeform JSON UI -->
     <freeform-json-ui
       *ngIf="showJsonMappingUI && fetchedIncidentFieldDefinitions && fetchedIncidentTypes"
-
       [loadedIncidentConfigName]="loadedIncidentConfigName"
       [loadedIncidentConfigId]="loadedIncidentConfigId"
       [loadDefaultChosenFields]="loadDefaultChosenFields"
       [demistoEndpointsItems]="demistoEndpointsItems"
-
       [currentDemistoEndpointName]="currentDemistoEndpointName"
       [currentDemistoEndpointInit]="currentDemistoEndpointInit"
       [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
       [fetchedIncidentTypes]="fetchedIncidentTypes"
-      
       (saveAsButtonEnabledChange)="saveAsButtonEnabled = $event"
       [savedIncidentConfigurations]="savedIncidentConfigurations"
       (savedIncidentConfigurationsChanged)="onSavedIncidentConfigurationsChanged($event)"
-
       [savedJsonConfigurations]="savedJsonConfigurations"
       (messageAdd)="messageAdd($event)"
       (messagesReplace)="messagesReplace($event)"
       (messageWithAutoClear)="messageWithAutoClear($event)"
       (freeformJsonConfigurationsChanged)="getSavedJsonConfigurations()"
-
       (reloadFieldDefinitions)="fetchIncidentFieldDefinitions($event)"
       
       [fileAttachmentConfigs]="fileAttachmentConfigs"

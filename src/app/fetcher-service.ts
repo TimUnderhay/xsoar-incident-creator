@@ -10,7 +10,7 @@ import { DefaultDemistoEndpoint } from './types/default-demisto-endpoint';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
 import * as JSEncrypt from 'jsencrypt';
 import { Subject } from 'rxjs';
-import { IncidentField } from './types/incident-fields';
+import { IncidentFieldUI } from './types/incident-fields';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
 import { IncidentFieldRowComponent } from './incident-field-row.component';
 import { FreeformJSONConfig } from './types/freeform-json-config';
@@ -18,7 +18,7 @@ import { JsonGroup, JsonGroups } from './types/json-group';
 import { FileAttachmentConfig, FileAttachmentConfigs } from './types/file-attachment';
 
 export interface FieldMappingSelection {
-  field: IncidentField;
+  field: IncidentFieldUI;
   method: 'static' | 'jmespath';
 }
 

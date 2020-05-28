@@ -1,5 +1,5 @@
 import { Component, OnInit, OnChanges, OnDestroy, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
-import { IncidentField, DatePrecision, DateConfig } from './types/incident-fields';
+import { IncidentFieldUI, DatePrecision, DateConfig } from './types/incident-fields';
 import { SelectItem, ConfirmationService } from 'primeng/api';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import { FetcherService, FieldMappingSelection } from './fetcher-service';
 import * as utils from './utils';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
+import { FileAttachmentConfig, FileAttachmentConfigs, FileAttachmentUIConfig, AttachmentFieldConfig } from './types/file-attachment';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -34,8 +35,8 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     private fetcherService: FetcherService, // import our URL fetcher)
     private confirmationService: ConfirmationService) {}
 
-  @Input() field: IncidentField;
-  @Output() fieldChange = new EventEmitter<IncidentField>();
+  @Input() field: IncidentFieldUI;
+  @Output() fieldChange = new EventEmitter<IncidentFieldUI>();
   @Output() fieldDeleted = new EventEmitter<string>();
 
   @Input() displayShortNames: boolean;
@@ -83,7 +84,7 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
   }
 
 
-
+  // RxJS Subscriptions
   private subscriptions = new Subscription();
 
 
@@ -143,6 +144,40 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
   showDateTransformOptions = false;
   selectionModeActive = false;
 
+  // File Attachments Inputs and Choices
+  @Input() fileAttachmentConfigs: FileAttachmentConfigs;
+  @Input() fileAttachmentConfigsList: FileAttachmentConfig[];
+  // @Output() fileAttachmentConfigsChanged = new EventEmitter<void>();
+
+  get chosenFileAttachments(): FileAttachmentUIConfig[] {
+    return 'attachmentConfig' in this.field ? this.field.attachmentConfig : undefined;
+  }
+  set chosenFileAttachments(value: FileAttachmentUIConfig[]) {
+    this.field.attachmentConfig = value;
+    this.fieldChange.emit(this.field);
+  }
+
+  // Choose File Attachments Dialog
+  displayAddFileAttachmentsDialog = false;
+  fileAttachmentsToAddItems: SelectItem[];
+  selectedFileAttachmentsToAdd: string[] = [];
+
+  // File Attachment Options Dialog
+  showFileAttachmentOptionsDialog = false;
+  fileAttachmentDisplayAsMediaItems: SelectItem[] = [
+    {label: 'As file (recommended)', value: false},
+    {label: 'As media (not secure)', value: true}
+  ];
+  configureFileAttachmentUIConfig: FileAttachmentUIConfig;
+  configureFileAttachmentSize: number;
+  configureFileAttachmentType: string;
+  configureFileAttachmentName: string;
+  configureFileAttachmentComment: string;
+  configureFileAttachmentDisplayAsMediaSelection: boolean;
+
+  configureOverrideFileAttachmentName = false;
+  configureOverrideFileAttachmentComment = false;
+  configureOverrideFileAttachmentDisplayAsMediaSelection = false;
 
 
   ngOnInit() {
@@ -160,6 +195,7 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     // console.log('FreeformJsonRowComponent: ngOnChanges(): values:', values);
     const fieldFirstOrChanged = utils.firstOrChangedSimpleChange('field', values);
     const fieldFirst = utils.firstSimpleChange('field', values);
+    const fieldChanged = utils.changedSimpleChange('field', values);
 
     if (fieldFirst && this.field.mappingMethod === 'jmespath' && this.field.fieldType === 'date' && !('dateConfig' in this.field)) {
       // add dateConfig to date field, if not already present
@@ -490,5 +526,158 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     this.transformDate();
   }
 
+
+
+  /// File Attachment Methods ///
+
+  buildAttachmentsToAddItems() {
+    console.log('FreeformJsonRowComponent: buildAttachmentsToAddItems()');
+    const alreadyAddedAttachmentIds = !this.chosenFileAttachments ? [] : this.chosenFileAttachments.map(value => value.id);
+
+    this.fileAttachmentsToAddItems = this.fileAttachmentConfigsList.reduce( (result, config: FileAttachmentConfig) => {
+
+      if (!alreadyAddedAttachmentIds.includes(config.id)) {
+
+        const label = config.comment !== '' ? `${config.filename}: ${config.comment}` : config.filename;
+
+        result.push({
+          label,
+          value: config.id
+        } as SelectItem);
+      }
+
+      return result;
+    }, []);
+  }
+
+
+
+  onAddAttachmentsToFieldClicked() {
+    console.log('FreeformJsonRowComponent: onAddAttachmentsToFieldClicked()');
+    this.selectedFileAttachmentsToAdd = [];
+    this.buildAttachmentsToAddItems();
+    this.displayAddFileAttachmentsDialog = true;
+  }
+
+
+
+  onAddFileAttachmentsAccept() {
+    // creates a default FileAttachmentUIConfig for file attachments added by the user
+    console.log('FreeformJsonRowComponent: onAddFileAttachmentsAccept()');
+    this.displayAddFileAttachmentsDialog = false;
+
+    const newFileAttachments = this.selectedFileAttachmentsToAdd.map( id => {
+      const originalConfig = this.fileAttachmentConfigs[id];
+      // console.log('originalConfig:', originalConfig);
+
+      const fileAttachmentUIConfig: FileAttachmentUIConfig = {
+        id: originalConfig.id,
+        size: originalConfig.size,
+        detectedType: originalConfig.detectedType,
+        filename: originalConfig.filename,
+        originalFilename: originalConfig.filename,
+        mediaFile: originalConfig.mediaFile,
+        originalMediaFile: originalConfig.mediaFile,
+        comment: originalConfig.comment,
+        originalComment: originalConfig.comment,
+        overrideFilename: false,
+        overrideMediaFile: false,
+        overrideComment: false
+      };
+
+      // console.log('fileAttachmentUIConfig:', fileAttachmentUIConfig);
+      return fileAttachmentUIConfig;
+    });
+
+    this.chosenFileAttachments = this.chosenFileAttachments ? this.chosenFileAttachments.concat(newFileAttachments) : newFileAttachments;
+
+    console.log('FreeformJsonRowComponent: onAddFileAttachmentsAccept(): chosenFileAttachments:', this.chosenFileAttachments);
+  }
+
+
+
+  /*updateAttachmentUIConfigs() {
+    console.log('FreeformJsonRowComponent: updateAttachmentConfigs()');
+    this.chosenFileAttachments = this.chosenFileAttachments.map( config => {
+      const newConfig: FileAttachmentUIConfig = {
+        id: config.id,
+      };
+
+      if (config.filename !== config.originalFilename) {
+        newConfig.filenameOverride = config.filename;
+      }
+
+      if (config.mediaFile !== config.originalMediaFile) {
+        newConfig.mediaFileOverride = config.mediaFile;
+      }
+
+      const originalCommentDefined = 'originalComment' in config;
+      const overrideCommentDefined = 'comment' in config && config.comment !== '';
+      if (originalCommentDefined && overrideCommentDefined && config.comment !== config.originalComment) {
+        newConfig.commentOverride = config.comment;
+      }
+      else if (!originalCommentDefined && overrideCommentDefined) {
+        newConfig.commentOverride = config.comment;
+      }
+
+      return newConfig;
+    });
+  }*/
+
+
+
+  onRemoveAttachmentClicked(id) {
+    console.log('FreeformJsonRowComponent: onRemoveAttachmentClicked()');
+    for (let i = 0; i < this.chosenFileAttachments.length; i++) {
+      const attachment = this.chosenFileAttachments[i];
+      if (attachment.id === id) {
+        this.chosenFileAttachments.splice(i, 1);
+        break;
+      }
+    }
+  }
+
+  /// End File Attachment Methods ///
+
+
+
+  /// Configure File Attachment Methods ///
+
+  onConfigureFileAttachmentClicked(selectedFileAttachment: FileAttachmentUIConfig) {
+    console.log('FreeformJsonRowComponent: onConfigureFileAttachmentClicked(): selectedFileAttachment:', selectedFileAttachment);
+    this.configureFileAttachmentUIConfig = selectedFileAttachment;
+
+    this.showFileAttachmentOptionsDialog = true;
+    this.configureFileAttachmentSize = selectedFileAttachment.size;
+    this.configureFileAttachmentType = selectedFileAttachment.detectedType;
+
+    this.configureFileAttachmentName = selectedFileAttachment.filename;
+    this.configureFileAttachmentDisplayAsMediaSelection = selectedFileAttachment.mediaFile;
+    this.configureFileAttachmentComment = 'comment' in selectedFileAttachment ? selectedFileAttachment.comment : '';
+  }
+
+
+
+  onConfigureFileAttachmentSubmit() {
+    console.log('FreeformJsonRowComponent: onConfigureFileAttachmentSubmit(): configureFileAttachmentUIConfig:', this.configureFileAttachmentUIConfig);
+
+    this.showFileAttachmentOptionsDialog = false;
+  }
+
+
+
+  onConfigureFileAttachmentCancelled() {
+    console.log('FreeformJsonRowComponent: onConfigureFileAttachmentCancelled()');
+    this.showFileAttachmentOptionsDialog = false;
+  }
+
+
+
+  onDownloadFileAttachmentClicked(selectedFileAttachmentId) {
+    console.log('FreeformJsonRowComponent: onDownloadFileAttachmentClicked()');
+    this.fetcherService.downloadFileAttachment(selectedFileAttachmentId);
+  }
+
+  /// End Configure File Attachment Methods ///
 
 }

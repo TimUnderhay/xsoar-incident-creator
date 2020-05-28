@@ -108,19 +108,31 @@
       </p-calendar>
 
       <!-- objects - grid, internal, 'multiSelect', 'role', 'tagsSelect' -->
-      <span *ngIf="['grid', 'internal', 'multiSelect', 'role', 'tagsSelect'].includes(field.fieldType)" (click)="onEditJSONClicked()" class="editJsonLink">Edit JSON</span>
+      <span
+        *ngIf="['grid', 'internal', 'multiSelect', 'role', 'tagsSelect'].includes(field.fieldType) && field.shortName !== 'attachment'"
+        (click)="onEditJSONClicked()"
+        class="editJsonLink">
+          Edit JSON
+      </span>
 
       <!-- attachments -->
-      <span *ngIf="['attachments'].includes(field.fieldType)" (click)="onEditJSONClicked()" class="editJsonLink">View JSON</span>
+      <ng-container *ngIf="['attachments'].includes(field.fieldType) || field.shortName === 'attachment'">
+
+        <ng-container *ngTemplateOutlet="attachmentValueColumn"></ng-container>
+
+      </ng-container>
 
     </div>
     
   </div>
 
+
+
   <div class="valueContainer">
 
-    <!-- Select Value Icon -->
+    <!-- Select Value From JSON Icon -->
     <vertical-center>
+
       <div
         style="margin-left: .1em; font-size: 2em;"
         class="pi pi-arrow-circle-right"
@@ -133,11 +145,13 @@
         pTooltip="Select value from JSON"
         showDelay="750">
       </div>
+
     </vertical-center>
 
   
     <!-- Reset Value Icon -->
     <vertical-center>
+
       <div
         style="margin-left: .1em; font-size: 2em;"
         class="pi pi-refresh"
@@ -150,11 +164,20 @@
         pTooltip="Resets the value"
         showDelay="750">
       </div>
+
     </vertical-center>
   
     <!-- Delete Field -->
     <vertical-center>
-      <div class="pi pi-times enabledIcon" style="margin-left: .1em; font-size: 2em;" (click)="onDeleteFieldClicked()" pTooltip="Delete field" showDelay="750"></div>
+
+      <div
+        class="pi pi-times enabledIcon"
+        style="margin-left: .1em; font-size: 2em;"
+        (click)="onDeleteFieldClicked()"
+        pTooltip="Delete field"
+        showDelay="750">
+      </div>
+      
     </vertical-center>
 
   </div>
@@ -175,7 +198,9 @@
       <span *ngIf="valueType === 'object'; else text" (click)="onEditJSONClicked()" class="editJsonLink">View JSON</span>
 
       <ng-template #text>
+
         <span>{{field.value}}</span>
+
       </ng-template>
 
     </div>
@@ -197,21 +222,21 @@
 
         <!-- Non-Date Field Input Box -->
         <input
-        *ngIf="field.fieldType !== 'date'"
-        pInputText
-        type="text"
-        [(ngModel)]="field.jmesPath"
-        (ngModelChange)="jmesPathResolve(field.jmesPath)"
-        class="inputDisplay"/>
+          *ngIf="field.fieldType !== 'date'"
+          pInputText
+          type="text"
+          [(ngModel)]="field.jmesPath"
+          (ngModelChange)="jmesPathResolve(field.jmesPath)"
+          class="inputDisplay"/>
 
         <!-- Date Field Input Box -->
         <input
-        *ngIf="field.fieldType === 'date'"
-        pInputText
-        type="text"
-        [(ngModel)]="field.jmesPath"
-        (ngModelChange)="jmesPathResolve(field.jmesPath, true)"
-        class="inputDisplay"/>
+          *ngIf="field.fieldType === 'date'"
+          pInputText
+          type="text"
+          [(ngModel)]="field.jmesPath"
+          (ngModelChange)="jmesPathResolve(field.jmesPath, true)"
+          class="inputDisplay"/>
 
         <!-- Transformer Curly-Bracket Icon -->
         <div
@@ -232,19 +257,23 @@
         *ngIf="json && valueType !== 'object' && jmesPath !== ''"
         class="jmesPathResolved"
         [class.jmesPathError]="jmesPathResolveError !== undefined">
+
           <span
             *ngIf="jmesPathResolveError"
             class="pi pi-info-circle"
             style="color: white;"
             [pTooltip]="jmesPathResolveError">
           </span>
+
           <span
             *ngIf="field.fieldType === 'date'"
             style="font-weight: bold;"
             class="fieldColour">
               Resolved: 
           </span>
+
           {{resolvedValue}}
+
       </div>
 
       <!-- Transformed Date Value -->
@@ -252,12 +281,14 @@
         *ngIf="json && field.fieldType === 'date' && jmesPath !== ''"
         class="jmesPathResolved"
         [class.transformerError]="dateTransformError">
+
           <span
             *ngIf="dateTransformError"
             class="pi pi-info-circle"
             style="color: white;"
             pTooltip="moment.js failed to parse the date field.  Check the date transformer config.">
           </span>
+
           <span
             style="font-weight: bold;"
             class="fieldColour">
@@ -285,6 +316,7 @@
     <div
       class="verticalCenter"
       [class.verticalTop]="field.fieldType === 'date'">
+
         <div
           style="margin-left: .1em; font-size: 2em;"
           class="pi pi-arrow-circle-right"
@@ -297,8 +329,11 @@
           pTooltip="Select a JMESPath from JSON"
           showDelay="750">
         </div>
+
         <div></div>
+
         <div></div>
+        
     </div>
 
     <!-- Permit Null Value Checkbox -->
@@ -306,14 +341,18 @@
     <div
       *ngIf="field.fieldType !== 'date'"
       class="verticalCenter">
+
         <p-checkbox
           [binary]="true"
           [(ngModel)]="field.permitNullValue"
           pTooltip="Permit null value in incident field"
           showDelay="750">
         </p-checkbox>
+
         <div></div>
+
         <div></div>
+
     </div>
 
     <!-- Delete Field -->
@@ -321,7 +360,9 @@
     <div
       class="verticalCenter"
       [class.verticalTop]="field.fieldType === 'date'">
+
         <div></div>
+
         <div
           class="pi pi-times enabledIcon"
           style="font-size: 2em; cursor: pointer;"
@@ -329,11 +370,12 @@
           pTooltip="Delete field"
           showDelay="750">
         </div>
+
         <div></div>
+
       </div>
+
     </div>
-      
-  
 
 </ng-template>
 
@@ -490,3 +532,299 @@
     </div>
 
 </p-dialog>
+
+
+
+<!-- Add Attachments Dialog -->
+<p-dialog
+  *ngIf="fileAttachmentsToAddItems"
+  header="Choose Attachments to Add"
+  [(visible)]="displayAddFileAttachmentsDialog"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{width: '25em', 'max-height': '75vh'}"
+  class="selectAttachmentsDialog"
+  styleClass="openDialog">
+
+    <!--<div class="formLabel">Incident Fields to Add</div>-->
+
+    <p-listbox
+      #incidentFieldListBox
+      [options]="fileAttachmentsToAddItems"
+      [(ngModel)]="selectedFileAttachmentsToAdd"
+      [style]="{ 'width': '100%'}"
+      [listStyle]="{'height': '50vh'}"
+      [multiple]="true"
+      [checkbox]="true"
+      [filter]="true"
+      styleClass="addIncidentFieldListbox">
+    </p-listbox>
+
+    <div style="margin-top: .5em; float: right;">
+
+      <p-button
+        label="Add"
+        (onClick)="onAddFileAttachmentsAccept()"
+        [disabled]="!selectedFileAttachmentsToAdd || selectedFileAttachmentsToAdd.length === 0">
+      </p-button>
+
+      <p-button
+        label="Cancel"
+        (onClick)="displayAddFileAttachmentsDialog = false">
+      </p-button>
+
+    </div>
+
+</p-dialog>
+
+
+
+<!-- Configure Attachment Options Dialog -->
+<p-dialog
+  *ngIf="configureFileAttachmentUIConfig"
+  header="Attachment Options"
+  [(visible)]="showFileAttachmentOptionsDialog"
+  [modal]="true"
+  [style]="{width: '50%'}"
+  class="overrideAttachmentOptionsDialog"
+  styleClass="newDemistoEndpointDialog">
+
+
+  <div>
+    <!-- Download -->
+    <p-button
+      label="Download"
+      (onClick)="onDownloadFileAttachmentClicked(configureFileAttachmentUIConfig.id)"
+      styleClass="alignButton">
+    </p-button>
+  </div>
+
+  <div
+    class="newAttachmentFileUploadGrid"
+    style="margin-top: 1.5em;">
+
+    <!-- File Size -->
+    <ng-container *ngIf="configureFileAttachmentSize">
+
+      <div class="dialogLabel">
+        File Size:
+      </div>
+
+      <div style="font-weight: bold; font-size: 1.1em;">
+        
+        {{configureFileAttachmentSize}} bytes
+
+      </div>
+
+    </ng-container>
+
+    <!-- File Type -->
+    <ng-container *ngIf="configureFileAttachmentType">
+
+      <div class="dialogLabel">
+        File Type:
+      </div>
+
+      <div style="font-weight: bold; font-size: 1.1em;">
+        
+        {{configureFileAttachmentType}}
+
+      </div>
+
+    </ng-container>
+
+    <!-- Override Checkboxes -->
+    <div class="dialogLabel">
+      Override:
+    </div>
+
+    <div style="font-weight: bold; font-size: 1.1em;">
+      
+      <p-checkbox
+        [(ngModel)]="configureOverrideFileAttachmentName"
+        [binary]="true"
+        label="Filename">
+      </p-checkbox>
+
+      &nbsp;
+
+      <p-checkbox
+        [(ngModel)]="configureOverrideFileAttachmentComment"
+        [binary]="true"
+        label="Comment">
+      </p-checkbox>
+
+      &nbsp;
+
+      <p-checkbox
+        *ngIf="configureFileAttachmentType && configureFileAttachmentType.startsWith('image')"
+        [(ngModel)]="configureOverrideFileAttachmentDisplayAsMediaSelection"
+        [binary]="true"
+        label="Display as media">
+      </p-checkbox>
+
+    </div>
+
+    
+    
+    <!-- Original File Name -->
+    <div class="dialogLabel">
+      Original Filename:
+    </div>
+
+    <div style="font-weight: bold; font-size: 1.1em;">
+      {{configureFileAttachmentUIConfig.originalFilename}}
+    </div>
+
+    <!-- New File Name -->
+    <ng-container *ngIf="configureOverrideFileAttachmentName">
+
+      <div class="dialogLabel">
+        New Filename:
+      </div>
+  
+      <div style="font-weight: bold; font-size: 1.1em;">
+        
+        <input
+          pInputText
+          [(ngModel)]="configureFileAttachmentName"
+          class="inputDisplay"
+          type="text"/>
+  
+      </div>
+
+    </ng-container>
+
+    <!-- Show as Media File -->
+    <ng-container *ngIf="configureFileAttachmentType && configureFileAttachmentType.startsWith('image')">
+
+      <div class="dialogLabel">
+        Display Options
+      </div>
+
+      <div style="font-weight: bold; font-size: 1.1em;">
+        
+        <p-selectButton
+          [options]="fileAttachmentDisplayAsMediaItems"
+          [(ngModel)]="configureFileAttachmentDisplayAsMediaSelection">
+        </p-selectButton>
+
+      </div>
+
+    </ng-container>
+
+    <!-- Original Comment -->
+    <div class="dialogLabel">
+      Original Comment:
+    </div>
+
+    <div style="font-weight: bold; font-size: 1.1em;">
+      
+      <span *ngIf="configureFileAttachmentUIConfig.originalComment">
+        {{configureFileAttachmentUIConfig.originalComment}}
+      </span>
+
+      <ng-template #noComment>
+        <span style="font-style: italic;">
+          Not defined
+        </span>
+      </ng-template>
+
+      
+    </div>
+
+    <!-- New Comment -->
+    <ng-container *ngIf="configureOverrideFileAttachmentComment">
+
+      <div class="dialogLabel">
+        New Comment:
+      </div>
+  
+      <div style="font-weight: bold; font-size: 1.1em;">
+        
+        <textarea
+          pInputTextarea
+          [(ngModel)]="configureFileAttachmentComment"
+          class="inputDisplay">
+        </textarea>
+  
+      </div>
+
+    </ng-container>
+
+
+  </div>
+
+  <div style="margin-top: .5em; float: right;">
+
+    <p-button
+      type="submit"
+      label="Ok"
+      (onClick)="onConfigureFileAttachmentSubmit()">
+    </p-button>
+
+    <p-button
+      label="Cancel"
+      (onClick)="onConfigureFileAttachmentCancelled()">
+    </p-button>
+
+  </div>
+
+</p-dialog>
+
+
+
+  <!-- Attachments Value Template -->
+  <ng-template #attachmentValueColumn>
+
+    <div>
+
+      <span
+        *ngIf="fileAttachmentConfigsList && fileAttachmentConfigsList.length !== 0"
+        (click)="onAddAttachmentsToFieldClicked()"
+        class="editJsonLink">
+
+          Add Attachments
+
+      </span>
+
+      <span
+        *ngIf="fileAttachmentConfigsList && fileAttachmentConfigsList.length === 0"
+        class="fieldColour">
+
+          No attachments available
+
+      </span>
+      
+    </div>
+
+    <div
+      *ngFor="let item of chosenFileAttachments"
+      style="display: flex; flex-direction: row;">
+
+        <div class="fieldLabel" style="font-weight: bolder;">
+
+          <!-- style="margin-left: .1em; font-size: 2em;" -->
+          <span
+            class="pi pi-times enabledIcon"
+            (click)="onRemoveAttachmentClicked(item.id)"
+            pTooltip="Remove attachment"
+            showDelay="750">
+          </span>
+
+          <span
+            class="pi pi-pencil enabledIcon"
+            (click)="onConfigureFileAttachmentClicked(item)"
+            pTooltip="Remove attachment"
+            showDelay="750">
+          </span>
+          
+          <span style="color: white;">
+            {{item.filename}}
+          </span>
+
+        </div>
+
+    </div>
+
+  </ng-template>

@@ -60,17 +60,17 @@ var encryptor;
 const uuidv4 = require('uuid/v4');
 
 // Incidents Config
-var incidentsConfig;
+var incidentsConfig = {};
 var incident_fields = {};
 
 // Freeform JSON Config
-var freeJsonConfig;
+var freeJsonConfig = {};
 
 // JSON Groups Config
-var jsonGroupsConfig;
+var jsonGroupsConfig = {};
 
 // Attachments Config
-var attachmentsConfig;
+var attachmentsConfig = {};
 
 
 
@@ -239,6 +239,36 @@ function saveAttachmentsConfig() {
 
 function deleteFileAttachment(filename) {
   return fs.promises.unlink(`${attachmentsDir}/${filename}`);
+}
+
+
+
+async function removeAttachmentFromIncidents(attachmentId) {
+  let save = false;
+  for (const incident of Object.values(incidentsConfig)) {
+    // loop through saved incidents
+    const name = incident.name;
+
+    for (const field of Object.values(incident.chosenFields)) {
+      // loop through chosen incident fields
+
+      if ((field.fieldType === 'attachments' || field.shortName === 'attachment') && 'attachmentConfig' in field) {
+
+        for (let i = field.attachmentConfig.length - 1; i >= 0; i--) {
+          // loop backwards through attachmentConfig
+          const attachment = field.attachmentConfig[i];
+          if (attachment.id === attachmentId) {
+            field.attachmentConfig.splice(i, 1);
+            save = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+  if (save) {
+    await saveIncidentsConfig();
+  }
 }
 
 
@@ -1477,7 +1507,7 @@ app.post(apiPath + '/attachment', multipartUploadHandler.single('attachment'), a
 
   const multerPath = fileObject.path;
   const filename = fileObject.originalname;
-  const comment = 'comment' in body ? body.comment : undefined;
+  const comment = 'comment' in body ? body.comment : '';
   const diskfilename = `${id}_${filename}`;
   const size = fileObject.size;
   const mediaFile = body.mediaFile === 'true' ? true : false;
@@ -1505,11 +1535,8 @@ app.post(apiPath + '/attachment', multipartUploadHandler.single('attachment'), a
       filename,
       size,
       detectedType,
-      mediaFile
-    }
-
-    if (comment) {
-      attachmentConfig.comment = comment;
+      mediaFile,
+      comment
     }
 
     console.log('attachmentConfig:', attachmentConfig);
@@ -1539,7 +1566,10 @@ app.delete(apiPath + '/attachment/:id', async (req, res) => {
     await deleteFileAttachment(filename);
     delete attachmentsConfig[id];
     await saveAttachmentsConfig();
+    await removeAttachmentFromIncidents(id); 
     return res.status(200).json({id, success: true});
+
+    
   }
   else {
     const error = `Attachment ID '${id}' not found`;
