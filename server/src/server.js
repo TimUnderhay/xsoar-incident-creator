@@ -987,7 +987,7 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
   };
 
   let result;
-  let options = {
+  const options = {
     url: demistoServerConfig.url + '/incident/investigate',
     method: 'POST',
     headers: {
@@ -998,7 +998,7 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
     rejectUnauthorized: !demistoServerConfig.trustAny,
     resolveWithFullResponse: true,
     json: true,
-    body: body
+    body
   };
   try {
     // send request to XSOAR
@@ -1007,10 +1007,10 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
   }
   catch (error) {
     if ('error' in error && error.error.error.startsWith('Investigation already exists for incident')) {
-      res.json({success: true});
-      return;
+      return res.json({success: true});
     }
-    res.json({success: false});
+    console.error('Error sending request to XSOAR:', 'error' in error ? error.error : error.message);
+    res.json({success: false, error: 'message' in error ? error.message : error.error});
   }
 } );
 

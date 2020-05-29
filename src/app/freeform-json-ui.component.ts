@@ -628,7 +628,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
         // Push attachments into array of attachments to be uploaded to the incident after initial incident creation
         for (const attachment of field.attachmentConfig) {
-          const isMediaFile = utils.isAttachmentMediaFile(attachment);
+          const isMediaFile = utils.isUIAttachmentMediaFile(attachment);
 
           const fileToPush: FileToPush = {
             attachmentId: attachment.id,
@@ -679,8 +679,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
     }
 
-    if (this.createInvestigation && filesToPush.length !== 0)  {
-      // Causes the playbook to run after the last file has been uploaded, if the user wants to create an investigation
+    if (filesToPush.length !== 0)  {
+      // Causes the playbook to run after the last file has been uploaded, if the user wants to create an investigation.  It always needs to happen as Demisto will leave a lock open until it receives an attachment with last:true
       filesToPush[filesToPush.length - 1].last = true;
     }
 
@@ -709,7 +709,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
           }
           catch (error) {
             success = false;
-            console.log('result:', result);
+            console.log('FreeformJsonUIComponent: onCreateIncident(): attachment upload result:', result);
             errors++;
             if (errors === 1) {
               this.messagesReplace.emit([]);

@@ -266,11 +266,11 @@ export class FetcherService {
 
 
 
-  createInvestigation(incidentId, serverId): Promise<boolean> {
+  createInvestigation(incidentId, serverId): Promise<any> {
     const headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/createInvestigation', {incidentId, serverId}, { headers } )
-                    .toPromise()
-                    .then( (value: any) => value.success);
+                    .toPromise();
+                    // .then( (value: any) => value.success);
   }
 
 

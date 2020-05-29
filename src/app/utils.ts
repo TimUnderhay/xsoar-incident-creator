@@ -1,6 +1,6 @@
 import { SimpleChanges } from '@angular/core';
 import { IncidentFieldUI } from './types/incident-fields';
-import { FileAttachmentUIConfig } from './types/file-attachment';
+import { FileAttachmentUIConfig, FileAttachmentConfig } from './types/file-attachment';
 
 export function isJsonValid(value: any) {
   try {
@@ -249,6 +249,6 @@ export function fieldsHaveEnabledAttachmentField(fields: IncidentFieldUI[]): boo
   return false;
 }
 
-export function isAttachmentMediaFile(attachment: FileAttachmentUIConfig): boolean {
+export function isUIAttachmentMediaFile(attachment: FileAttachmentUIConfig | FileAttachmentConfig): boolean {
   return attachment.detectedType.startsWith('image');
 }

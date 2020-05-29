@@ -17,7 +17,7 @@ import * as utils from './utils';
 import { JsonGroup, JsonGroups } from './types/json-group';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
-import { FileAttachmentConfig, FileAttachmentConfigs } from './types/file-attachment';
+import { FileAttachmentConfig, FileAttachmentConfigs, FileToPush, FileAttachmentUIConfig } from './types/file-attachment';
 import { FileUpload } from 'primeng/fileupload';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
@@ -96,7 +96,7 @@ export class AppComponent implements OnInit {
   // Bulk results dialog
   showBulkResultsDialog = false;
   bulkCreateResults: BulkCreateResult[] = [];
-  bulkCreateIncidentJson: BulkCreateIncidentJSON;
+  bulkCreateIncidentJson: BulkCreateIncidentJSON; // stores the JSON structure of bulk-created incidents, for viewing and reference of the user
 
   // Select Demisto endpoint dialog
   showDemistoEndpointOpenDialog = false;
@@ -1125,12 +1125,10 @@ export class AppComponent implements OnInit {
 
     // Loop through the bulk configs to create incidents from
     for (const configName of Object.keys(validBulkConfigurations)) {
-      // console.log('got to 1');
       const validBulkCreateConfig = validBulkConfigurations[configName];
 
       // Loop through the bad endpoints of the bulk config
       for (const serverId of validBulkCreateConfig.failedEndpoints) {
-        // console.log('got to 2');
         // Push the error to results, and continue to the next loop iteration / server
         const testResult = testResults[serverId];
         let error;
@@ -1146,18 +1144,19 @@ export class AppComponent implements OnInit {
 
       // Take no further action for this bulk config if there were no successful endpoints
       if (validBulkCreateConfig.successfulEndpoints.length === 0) {
-        // console.log('got to 3');
         continue;
       }
 
 
+      // Work loop to build and push incidents to XSOAR
       for (const serverId of validBulkCreateConfig.successfulEndpoints) {
-        // Work loop to build and push incidents to XSOAR
-        // console.log('got to 4: serverId:', serverId);
+        // Loop through the successfully-tested endpoints
 
         console.log('AppComponent: onCreateBulkIncidents(): configName:', configName);
         const incidentConfig = this.savedIncidentConfigurations[configName];
+
         const skippedFields: string[] = [];
+        const hasAnEnabledAttachmentField = utils.fieldsHaveEnabledAttachmentField(Object.values(incidentConfig.chosenFields) as IncidentFieldUI[]);
 
         // Skip this server if the incident type isn't defined
         console.log('AppComponent: onCreateBulkIncidents(): serverIncidentTypeNames:', serverIncidentTypeNames);
@@ -1171,18 +1170,24 @@ export class AppComponent implements OnInit {
         }
 
 
-        // Function to build the incident json and push to XSOAR
         const buildIncidentConfig = (jsonFile = undefined) => {
-          // console.log('got to 8');
+          // Function to build the incident json and push to XSOAR
+
+          const filesToPush: FileToPush[] = [];
 
           const newIncident: IncidentCreationConfig = {
-            createInvestigation: incidentConfig.createInvestigation,
-            serverId
+            serverId,
+            createInvestigation: hasAnEnabledAttachmentField ? false : incidentConfig.createInvestigation
           };
 
           const json = jsonFile ? jsonFiles[jsonFile] : undefined;
 
           Object.values(incidentConfig.chosenFields).forEach( field => {
+            // Loop through the chosen fields of the incident
+
+            const isAttachmentField = field.shortName === 'attachment' || field.fieldType === 'attachments';
+            const hasAttachments = isAttachmentField && utils.isArray(field.attachmentConfig) && field.attachmentConfig.length !== 0;
+
             const fieldName = field.shortName;
             if (!field.enabled) {
               // silently skip non-enabled fields
@@ -1197,7 +1202,42 @@ export class AppComponent implements OnInit {
 
             let value;
 
-            if (field.mappingMethod === 'static') {
+            if (isAttachmentField) {
+
+              if (!hasAttachments) {
+                return;
+              }
+
+              // Push attachments into array of attachments to be uploaded to the incident after initial incident creation
+              for (const attachment of field.attachmentConfig) {
+                const originalAttachment: FileAttachmentConfig = this.fileAttachmentConfigs[attachment.id];
+                const isMediaFile = utils.isUIAttachmentMediaFile(originalAttachment);
+
+                const fileToPush: FileToPush = {
+                  attachmentId: attachment.id,
+                  incidentFieldName: field.shortName,
+                  serverId,
+                  filename: 'filenameOverride' in attachment ? attachment.filenameOverride : originalAttachment.filename,
+                  last: false // will set the last value later
+                };
+
+                if (isMediaFile) {
+                  fileToPush.mediaFile = 'mediaFileOverride' in attachment ? attachment.mediaFileOverride : originalAttachment.mediaFile;
+                }
+
+                if ('commentOverride' in attachment) {
+                  fileToPush.comment = attachment.commentOverride;
+                }
+
+                else if (originalAttachment.comment !== '') {
+                  fileToPush.comment = originalAttachment.comment;
+                }
+
+                filesToPush.push(fileToPush);
+              }
+            }
+
+            else if (field.mappingMethod === 'static') {
               // static field
               value = field.value;
             }
@@ -1228,23 +1268,53 @@ export class AppComponent implements OnInit {
           });
           // Finished building incident
 
+
+
+          if (filesToPush.length !== 0)  {
+            // Causes the playbook to run after the last file has been uploaded, if the user wants to create an investigation
+            filesToPush[filesToPush.length - 1].last = true;
+          }
+
           console.log('AppComponent: onCreateBulkIncidents(): newIncident:', newIncident);
+          console.log('AppComponent: onCreateBulkIncidents(): filesToPush:', filesToPush);
+
+
 
           // Submit the incident to XSOAR
           createIncidentPromises.push((async () => {
-            let res = await this.fetcherService.createDemistoIncident(newIncident);
-            if (!res.success) {
-              const error = res.statusMessage;
-              this.bulkCreateResults.push({configName, serverId, success: false, error});
-            }
-            else {
-              jsonFile = jsonFile ? jsonFile : 'N/A';
+            const res = await this.fetcherService.createDemistoIncident(newIncident);
+
+            if (res.success) {
               const incidentId = res.id;
+
+              if (filesToPush.length !== 0) {
+                // now upload files to XSOAR
+                for (const fileToPush of filesToPush) {
+                  fileToPush.incidentId = incidentId;
+                  let result;
+                  try {
+                    result = await this.fetcherService.uploadFileToDemistoIncident(fileToPush);
+                    console.log('AppComponent: onCreateBulkIncidents(): attachment upload result:', result);
+                  }
+                  catch (error) {
+                    console.log('AppComponent: onCreateBulkIncidents(): attachment upload result:', result);
+                    console.error('AppComponent: onCreateBulkIncidents(): Caught error when uploading attachment. error:', error);
+                  }
+                }
+              }
+
+              jsonFile = jsonFile ? jsonFile : 'N/A';
               if (!(serverId in bulkCreateIncidentJson)) {
                 bulkCreateIncidentJson[serverId] = {};
               }
               bulkCreateIncidentJson[serverId][incidentId] = newIncident;
               this.bulkCreateResults.push({configName, serverId, success: true, skippedFields, incidentId, jsonFile});
+            }
+
+            else {
+              // incident creation unsuccessful
+              const error = res.statusMessage;
+              this.bulkCreateResults.push({configName, serverId, success: false, error});
             }
             this.changeDetector.detectChanges(); // update UI
           })());
@@ -1252,15 +1322,12 @@ export class AppComponent implements OnInit {
 
         // Now build the incident(s)
         if (incidentConfig.requiresJson) {
-          // console.log('got to 5');
           for (const jsonFile of validBulkCreateConfig.jsonFiles) {
-            // console.log('got to 6');
             buildIncidentConfig(jsonFile);
           }
         }
 
         else {
-          // console.log('got to 7');
           buildIncidentConfig();
         }
 
@@ -1280,9 +1347,14 @@ export class AppComponent implements OnInit {
 
   async onClickDemistoInvestigateUrl(incidentId: number, serverId: string) {
     console.log('AppComponent: onClickDemistoInvestigateUrl(): id:', incidentId);
-    await this.fetcherService.createInvestigation(incidentId, serverId);
-    const url = `${serverId}/#/incident/${incidentId}`;
-    window.open(url, '_blank');
+    const result = await this.fetcherService.createInvestigation(incidentId, serverId);
+    if (result.success) {
+      const url = `${serverId}/#/incident/${incidentId}`;
+      window.open(url, '_blank');
+    }
+    else if ('error' in result) {
+      console.error(`AppComponent: onClickDemistoInvestigateUrl(): XSOAR threw error when opening investigation ${incidentId} on ${serverId}:`, result.error);
+    }
   }
 
 
