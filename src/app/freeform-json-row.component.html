@@ -136,8 +136,8 @@
       <div
         style="margin-left: .1em; font-size: 2em;"
         class="pi pi-arrow-circle-right"
-        [class.enabledIcon]="jsonLoaded"
-        [class.disabledIcon]="!jsonLoaded"
+        [class.enabledIcon]="jsonLoaded && !(field.shortName === 'attachment' || field.fieldType === 'attachments')"
+        [class.disabledIcon]="!jsonLoaded || (field.shortName === 'attachment' || field.fieldType === 'attachments')"
         (mouseover)="selectValueHovering = true"
         (mouseout)="selectValueHovering = false"
         [style.cursor]="jsonLoaded && selectValueHovering ? 'pointer' : 'default'"

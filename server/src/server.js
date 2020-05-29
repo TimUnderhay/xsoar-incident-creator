@@ -7,6 +7,8 @@ console.log('XSOAR Incident Creator server is starting');
 const os = require('os');
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
+const mv = util.promisify(require('mv'));
+
 
 // Config parameters
 const listenPort = 4002;
@@ -1522,7 +1524,7 @@ app.post(apiPath + '/attachment', multipartUploadHandler.single('attachment'), a
   }*/
 
   const fileObject = req.file;
-  console.log('fileObject:', fileObject);
+  // console.log('fileObject:', fileObject);
 
   const multerPath = fileObject.path;
   const filename = fileObject.originalname;
@@ -1547,7 +1549,7 @@ app.post(apiPath + '/attachment', multipartUploadHandler.single('attachment'), a
   }
 
   try {
-    await fs.promises.rename(multerPath, `${attachmentsDir}/${diskfilename}`);
+    await mv(multerPath, `${attachmentsDir}/${diskfilename}`);
 
     const attachmentConfig = {
       id,
@@ -1558,7 +1560,7 @@ app.post(apiPath + '/attachment', multipartUploadHandler.single('attachment'), a
       comment
     }
 
-    console.log('attachmentConfig:', attachmentConfig);
+    // console.log('attachmentConfig:', attachmentConfig);
 
     attachmentsConfig[id] = attachmentConfig;
 

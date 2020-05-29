@@ -292,6 +292,9 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     if (!this.jsonLoaded) {
       return;
     }
+    if (this.field.shortName === 'attachment' || this.field.fieldType === 'attachments') {
+      return;
+    }
     console.log(`FreeformJsonRowComponent: onStaticSelectValueFromJsonClicked(): field: ${this.field.shortName}`);
     this.fetcherService.fieldMappingSelectionActive.next({field: this.field, method: 'static'});
   }
