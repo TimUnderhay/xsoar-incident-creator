@@ -1329,22 +1329,30 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   FileAttachmentUIConfigToAttachmentFieldConfig(fileAttachmentUIConfigs: FileAttachmentUIConfig[]): AttachmentFieldConfig[] {
     console.log('FreeformJsonUIComponent: FileAttachmentUIConfigToAttachmentFieldConfig(): fileAttachmentUIConfigs:', fileAttachmentUIConfigs);
+
     const newAttachmentFieldConfigs: AttachmentFieldConfig[] = [];
+
     for (const uiConfig of fileAttachmentUIConfigs) {
+
       const newAttachmentFieldConfig: AttachmentFieldConfig = {
         id: uiConfig.id,
       };
-      if ('filename' in uiConfig && uiConfig.filename !== '') {
+
+      if (uiConfig.overrideFilename) {
         newAttachmentFieldConfig.filenameOverride = uiConfig.filename;
       }
-      if ('mediaFile' in uiConfig && uiConfig.mediaFile !== uiConfig.originalMediaFile) {
+
+      if (uiConfig.overrideMediaFile) {
         newAttachmentFieldConfig.mediaFileOverride = uiConfig.mediaFile;
       }
-      if ('comment' in uiConfig) {
+
+      if (uiConfig.overrideComment) {
         newAttachmentFieldConfig.commentOverride = uiConfig.comment;
       }
+
       newAttachmentFieldConfigs.push(newAttachmentFieldConfig);
     }
+
     return newAttachmentFieldConfigs;
   }
 
@@ -1688,9 +1696,11 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  onAttachmentsPossiblyRemovedFromServer() {
+  onAttachmentsRemovedFromServer() {
     // When a file attachment gets deleted, the server will remove it from any
     // incident configs that the attachment was part of.  This method will remove any attachments from the ui that are no longer part of the config (the incident config will have already been updated)
+
+    console.log('AppComponent: onAttachmentsRemovedFromServer()');
 
     const fileAttachmentIds = Object.keys(this.fileAttachmentConfigs);
     for (const field of this.chosenIncidentFields) {
@@ -1705,6 +1715,30 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
             break;
           }
 
+        }
+      }
+    }
+  }
+
+
+
+  onAttachmentsEdited() {
+    // This will update the UI if an attachment is modified on the backend.
+    // let update = false;
+    console.log('AppComponent: onAttachmentsEdited()');
+
+    for (const field of this.chosenIncidentFields) {
+
+      if ('attachmentConfig' in field && field.attachmentConfig) {
+
+        for (const attachment of field.attachmentConfig) {
+          const fileAttachmentConfig = this.fileAttachmentConfigs[attachment.id];
+
+          console.log('fileAttachmentConfig.filename:', fileAttachmentConfig.filename);
+
+          attachment.originalFilename = fileAttachmentConfig.filename;
+          attachment.originalComment = fileAttachmentConfig.comment;
+          attachment.originalMediaFile = fileAttachmentConfig.mediaFile;
         }
       }
     }

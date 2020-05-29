@@ -1927,7 +1927,9 @@ export class AppComponent implements OnInit {
         this.selectedFileAttachment = undefined;
         await this.onFileAttachmentConfigsChanged();
         await this.getSavedIncidentConfigurations();
-        this.freeformJsonUIComponent.onAttachmentsPossiblyRemovedFromServer();
+        if (this.freeformJsonUIComponent) {
+          this.freeformJsonUIComponent.onAttachmentsRemovedFromServer();
+        }
       },
       reject: () => {
         this.showFileAttachmentsDialog = true;
@@ -2053,6 +2055,10 @@ export class AppComponent implements OnInit {
       const results = await this.fetcherService.updateFileAttachment(updatedConfig);
       console.log('AppComponent: onEditFileAttachmentSubmit(): results:', results);
       await this.onFileAttachmentConfigsChanged();
+      this.changeDetector.detectChanges();
+      if (this.freeformJsonUIComponent) {
+        this.freeformJsonUIComponent.onAttachmentsEdited();
+      }
     }
     catch (error) {
       console.error('Caught error submitting edited file attachment:', error);

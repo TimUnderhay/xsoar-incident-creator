@@ -651,6 +651,10 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     this.configureFileAttachmentSize = selectedFileAttachment.size;
     this.configureFileAttachmentType = selectedFileAttachment.detectedType;
 
+    this.configureOverrideFileAttachmentName = selectedFileAttachment.overrideFilename;
+    this.configureOverrideFileAttachmentComment = selectedFileAttachment.overrideComment;
+    this.configureOverrideFileAttachmentDisplayAsMediaSelection = selectedFileAttachment.overrideMediaFile;
+
     this.configureFileAttachmentName = selectedFileAttachment.filename;
     this.configureFileAttachmentDisplayAsMediaSelection = selectedFileAttachment.mediaFile;
     this.configureFileAttachmentComment = 'comment' in selectedFileAttachment ? selectedFileAttachment.comment : '';
@@ -660,8 +664,35 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
 
   onConfigureFileAttachmentSubmit() {
     console.log('FreeformJsonRowComponent: onConfigureFileAttachmentSubmit(): configureFileAttachmentUIConfig:', this.configureFileAttachmentUIConfig);
-
     this.showFileAttachmentOptionsDialog = false;
+
+    console.log('FreeformJsonRowComponent: onConfigureFileAttachmentSubmit(): configureOverrideFileAttachmentDisplayAsMediaSelection:', this.configureOverrideFileAttachmentDisplayAsMediaSelection);
+
+
+    if (this.configureOverrideFileAttachmentName) {
+      this.configureFileAttachmentUIConfig.overrideFilename = true;
+      this.configureFileAttachmentUIConfig.filename = this.configureFileAttachmentName;
+    }
+    else {
+      this.configureFileAttachmentUIConfig.overrideFilename = false;
+    }
+
+    if (this.configureOverrideFileAttachmentComment) {
+      this.configureFileAttachmentUIConfig.overrideComment = true;
+      this.configureFileAttachmentUIConfig.comment = this.configureFileAttachmentComment;
+    }
+    else {
+      this.configureFileAttachmentUIConfig.overrideComment = false;
+    }
+
+    if (this.configureOverrideFileAttachmentDisplayAsMediaSelection) {
+      this.configureFileAttachmentUIConfig.overrideMediaFile = true;
+      this.configureFileAttachmentUIConfig.mediaFile = this.configureFileAttachmentDisplayAsMediaSelection;
+    }
+    else {
+      this.configureFileAttachmentUIConfig.overrideMediaFile = false;
+    }
+
   }
 
 

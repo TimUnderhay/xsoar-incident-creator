@@ -699,17 +699,29 @@
     <ng-container *ngIf="configureFileAttachmentType && configureFileAttachmentType.startsWith('image')">
 
       <div class="dialogLabel">
-        Display Options
+        Original Display Option:
       </div>
 
       <div style="font-weight: bold; font-size: 1.1em;">
-        
-        <p-selectButton
-          [options]="fileAttachmentDisplayAsMediaItems"
-          [(ngModel)]="configureFileAttachmentDisplayAsMediaSelection">
-        </p-selectButton>
-
+        {{configureFileAttachmentUIConfig.originalMediaFile ? 'As media (not secure)' : 'As file (recommended)'}}
       </div>
+
+      <ng-container *ngIf="configureOverrideFileAttachmentDisplayAsMediaSelection">
+
+        <div class="dialogLabel">
+          New Display Option:
+        </div>
+  
+        <div style="font-weight: bold; font-size: 1.1em;">
+          
+          <p-selectButton
+            [options]="fileAttachmentDisplayAsMediaItems"
+            [(ngModel)]="configureFileAttachmentDisplayAsMediaSelection">
+          </p-selectButton>
+  
+        </div>
+
+      </ng-container>
 
     </ng-container>
 
@@ -720,14 +732,16 @@
 
     <div style="font-weight: bold; font-size: 1.1em;">
       
-      <span *ngIf="configureFileAttachmentUIConfig.originalComment">
+      <span *ngIf="configureFileAttachmentUIConfig.originalComment; else noComment">
         {{configureFileAttachmentUIConfig.originalComment}}
       </span>
 
       <ng-template #noComment>
+
         <span style="font-style: italic;">
           Not defined
         </span>
+
       </ng-template>
 
       
@@ -760,7 +774,8 @@
     <p-button
       type="submit"
       label="Ok"
-      (onClick)="onConfigureFileAttachmentSubmit()">
+      (onClick)="onConfigureFileAttachmentSubmit()"
+      [disabled]="configureOverrideFileAttachmentName && configureFileAttachmentName === ''">
     </p-button>
 
     <p-button
@@ -794,6 +809,13 @@
 
           No attachments available
 
+          <span
+            class="pi pi-info-circle"
+            style="font-size: 1.75em; color: white; line-height: 14px; vertical-align: middle;"
+            pTooltip="Upload an attachment using the 'File Attachments' button above"
+            showDelay="750">
+          </span>
+
       </span>
       
     </div>
@@ -804,7 +826,6 @@
 
         <div class="fieldLabel" style="font-weight: bolder;">
 
-          <!-- style="margin-left: .1em; font-size: 2em;" -->
           <span
             class="pi pi-times enabledIcon"
             (click)="onRemoveAttachmentClicked(item.id)"
@@ -820,7 +841,7 @@
           </span>
           
           <span style="color: white;">
-            {{item.filename}}
+            {{item.overrideFilename ? item.filename : item.originalFilename}}
           </span>
 
         </div>
