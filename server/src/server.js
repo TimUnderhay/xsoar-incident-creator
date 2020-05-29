@@ -273,21 +273,40 @@ async function removeAttachmentFromIncidents(attachmentId) {
 
 
 
-function uploadAttachmentToDemisto(attachmentId, attachmentConfig, incidentId) {
-  // incomplete
+function uploadAttachmentToDemisto(serverId, incidentId, incidentFieldName, attachmentId, filename, last, mediaFile = undefined, comment = undefined) {
+
+  const originalAttachment = attachmentsConfig[attachmentId];
+  const diskFilename = `${attachmentsDir}/${attachmentId}_${originalAttachment.filename}`;
+
+  const demistoServerConfig = getDemistoApiConfig(serverId);
+  
+  const formData = {
+    id: incidentId,
+    field: incidentFieldName,
+    file: fs.createReadStream(diskFilename),
+    fileName: filename,
+    last: `${last}`
+  };
+  if (mediaFile) {
+    formData.showMediaFile = `${mediaFile}`;
+  }
+  if (comment) {
+    formData.fileComment = comment;
+  }
+  
   const options = {
-    url: `${url}/incident/upload/${incidentId}`,
+    url: `${serverId}/incident/upload/${incidentId}`,
     method: 'POST',
     headers: {
-      Authorization: apiKey,
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
+      Authorization: decrypt(demistoServerConfig.apiKey),
+      Accept: 'application/json'
     },
-    rejectUnauthorized: !trustAny,
+    rejectUnauthorized: !demistoServerConfig.trustAny,
     resolveWithFullResponse: true,
-    // json: true,
+    formData,
     timeout: 2000
   }
+  return request(options);  // request returns a promise
 }
 
 
@@ -307,12 +326,12 @@ async function testApi(url, apiKey, trustAny) {
     timeout: 2000
   }
   try {
-    let result = await request( options );
+    const result = await request( options );
     return { success: true, result }
   }
   catch(error) {
     // console.error(error);
-    let res = {
+    const res = {
       success: false
     };
     if ('response' in error && error.response !== undefined && 'statusMessage' in error.response) {
@@ -339,12 +358,12 @@ function getDemistoApiConfig(serverId) {
 async function getIncidentFields(demistoUrl) {
   // This method will get incident field definitions from a XSOAR server
 
-  let demistoServerConfig = getDemistoApiConfig(demistoUrl);
+  const demistoServerConfig = getDemistoApiConfig(demistoUrl);
 
   console.log(`Fetching incident fields from '${demistoServerConfig.url}'`);
 
   let result;
-  let options = {
+  const options = {
     url: demistoServerConfig.url + '/incidentfields',
     method: 'GET',
     headers: {
@@ -1472,7 +1491,7 @@ app.get(apiPath + '/attachment/all', async (req, res) => {
 
 
 app.get(apiPath + '/attachment/:id', async (req, res) => {
-  // send a file attachment
+  // Send a file attachment file back to client
   const id = req.params.id;
   if (!attachmentsConfig.hasOwnProperty(id)) {
     return res.status(404).send('File attachment not found');
@@ -1622,6 +1641,46 @@ app.post(apiPath + '/attachment/update', async (req, res) => {
   await saveAttachmentsConfig();
   return res.status(200).json({id, success: true});
 } );
+
+
+
+app.post(apiPath + '/attachment/push', async (req, res) => {
+  // Push a file attachment to XSOAR
+  const body = req.body;
+
+  const requiredFields = ['attachmentId', 'incidentFieldName', 'serverId', 'filename', 'last'];
+  try {
+    checkForRequiredFields(requiredFields, body);
+  }
+  catch(fieldName) {
+    res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+    return;
+  }
+
+  const attachment = body;
+
+  if (!(attachment.attachmentId in attachmentsConfig)) {
+    const error = 'Attachment ID not found';
+    console.error(error);
+    return returnError(error, res);
+  }
+
+  let result;
+
+  try {
+    const mediaFile = 'mediaFile' in attachment ? attachment.mediaFile : undefined;
+    const comment = 'comment' in attachment ? attachment.comment : undefined;
+
+    result = await uploadAttachmentToDemisto(attachment.serverId, attachment.incidentId, attachment.incidentFieldName, attachment.attachmentId, attachment.filename, attachment.last, mediaFile, comment);
+    return res.status(200).json({success: true});
+  }
+  catch (error) {
+    console.error(error);
+    return res.status(200).json({success: false, error});
+  }
+  
+
+});
 
 /// END File Attachments ///
 

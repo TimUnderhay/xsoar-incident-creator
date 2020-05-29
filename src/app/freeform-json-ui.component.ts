@@ -19,7 +19,7 @@ import { InvestigationFields as investigationFields } from './investigation-fiel
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
-import { FileAttachmentConfig, FileAttachmentConfigs, AttachmentFieldConfig, FileAttachmentUIConfig } from './types/file-attachment';
+import { FileAttachmentConfig, FileAttachmentConfigs, AttachmentFieldConfig, FileAttachmentUIConfig, FileToPush } from './types/file-attachment';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -600,20 +600,61 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       return inc;
     }
 
+    const hasAnEnabledAttachmentField = utils.fieldsHaveEnabledAttachmentField(this.chosenIncidentFields);
+
+    const filesToPush: FileToPush[] = [];
+
     let incident: IncidentCreationConfig = {
       serverId: this.currentDemistoEndpointName,
-      createInvestigation: this.createInvestigation
+      createInvestigation: hasAnEnabledAttachmentField ? false : this.createInvestigation // if we are uploading attachments to the incident, we don't want the playbook to run until after the attachments have been uploaded
     };
 
 
     for (const freeformRowComponent of this.freeformRowComponents) {
-      const field = freeformRowComponent.field;
+      const field: IncidentFieldUI = freeformRowComponent.field;
+
+      const isAttachmentField = field.shortName === 'attachment' || field.fieldType === 'attachments';
+      const hasAttachments = isAttachmentField && utils.isArray(field.attachmentConfig) && field.attachmentConfig.length !== 0;
 
       if (field.locked || !field.enabled) {
         continue;
       }
 
-      if (field.mappingMethod === 'static') {
+      if (isAttachmentField) {
+
+        if (!hasAttachments) {
+          continue;
+        }
+
+        // Push attachments into array of attachments to be uploaded to the incident after initial incident creation
+        for (const attachment of field.attachmentConfig) {
+          const isMediaFile = utils.isAttachmentMediaFile(attachment);
+
+          const fileToPush: FileToPush = {
+            attachmentId: attachment.id,
+            incidentFieldName: field.shortName,
+            serverId: this.currentDemistoEndpointName,
+            filename: attachment.overrideFilename ? attachment.filename : attachment.originalFilename,
+            last: false // will set the last value later
+          };
+
+          if (isMediaFile) {
+            fileToPush.mediaFile = attachment.overrideMediaFile ? attachment.mediaFile : attachment.originalMediaFile;
+          }
+
+          if (attachment.overrideComment) {
+            fileToPush.comment = attachment.comment;
+          }
+
+          else if (attachment.originalComment !== '') {
+            fileToPush.comment = attachment.originalComment;
+          }
+
+          filesToPush.push(fileToPush);
+        }
+      }
+
+      else if (field.mappingMethod === 'static') {
         incident = updateIncident(field, field.value, incident);
       }
 
@@ -638,17 +679,59 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
     }
 
-    console.log('FreeformJsonUIComponent: onCreateIncident(): incident:', incident);
+    if (this.createInvestigation && filesToPush.length !== 0)  {
+      // Causes the playbook to run after the last file has been uploaded, if the user wants to create an investigation
+      filesToPush[filesToPush.length - 1].last = true;
+    }
 
-    let res = await this.fetcherService.createDemistoIncident(incident);
+    console.log('FreeformJsonUIComponent: onCreateIncident(): incident:', incident);
+    console.log('FreeformJsonUIComponent: onCreateIncident(): filesToPush:', filesToPush);
+
+    const res = await this.fetcherService.createDemistoIncident(incident);
     // console.log('FreeformJsonUIComponent: onCreateIncident(): res:', res);
-    if (!res.success) {
-      const resultMessage = `Incident creation failed with XSOAR status code ${res.statusCode}: "${res.statusMessage}"`;
-      this.messagesReplace.emit( [{ severity: 'error', summary: 'Failure', detail: resultMessage}] );
+
+    if (res.success) {
+
+      let success = true;
+
+      const incidentId = res.id;
+
+      if (filesToPush.length !== 0) {
+        // now upload files to XSOAR
+        this.messagesReplace.emit( [{ severity: 'info', summary: 'Info', detail: 'Uploading files to incident'}] );
+        let errors = 0;
+        for (const fileToPush of filesToPush) {
+          fileToPush.incidentId = incidentId;
+          let result;
+          try {
+            result = await this.fetcherService.uploadFileToDemistoIncident(fileToPush);
+            this.messageAdd.emit({ severity: 'success', summary: 'Success', detail: `Uploaded ${fileToPush.filename}`});
+          }
+          catch (error) {
+            success = false;
+            console.log('result:', result);
+            errors++;
+            if (errors === 1) {
+              this.messagesReplace.emit([]);
+            }
+            if (error) {
+              this.messageAdd.emit({ severity: 'error', summary: 'Error', detail: `File upload failed with ${error.message}`});
+            }
+            else {
+              this.messageAdd.emit({ severity: 'error', summary: 'Error', detail: `File upload failed with unspecified unknown`});
+            }
+          }
+        }
+      }
+
+      if (success) {
+        this.messagesReplace.emit( [{ severity: 'success', summary: 'Success', detail: `XSOAR incident created with id ${incidentId}`}] );
+      }
+
     }
     else {
-      const resultMessage = `XSOAR incident created with id ${res.id}`;
-      this.messagesReplace.emit( [{ severity: 'success', summary: 'Success', detail: resultMessage}] );
+      const resultMessage = `Incident creation failed with XSOAR status code ${res.statusCode}: "${res.statusMessage}"`;
+      this.messagesReplace.emit( [{ severity: 'error', summary: 'Failure', detail: resultMessage}] );
     }
 
   }
@@ -1724,7 +1807,6 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   onAttachmentsEdited() {
     // This will update the UI if an attachment is modified on the backend.
-    // let update = false;
     console.log('AppComponent: onAttachmentsEdited()');
 
     for (const field of this.chosenIncidentFields) {

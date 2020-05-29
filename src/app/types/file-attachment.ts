@@ -39,3 +39,15 @@ export interface AttachmentFieldConfig {
   mediaFileOverride?: boolean;
   commentOverride?: string;
 }
+
+export interface FileToPush {
+  // used at incident creation time, when we are building a list of files to push into an incident
+  serverId: string; // XSOAR server
+  incidentId?: number; // added after incident creation
+  incidentFieldName: string; // 'attachment' or other field
+  attachmentId: string;
+  filename: string;
+  mediaFile?: boolean;
+  comment?: string;
+  last: boolean; // the last item in the FileToPush array will be true, if createInvestigation is true.  This causes the playbook to run
+}

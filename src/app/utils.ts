@@ -1,4 +1,6 @@
 import { SimpleChanges } from '@angular/core';
+import { IncidentFieldUI } from './types/incident-fields';
+import { FileAttachmentUIConfig } from './types/file-attachment';
 
 export function isJsonValid(value: any) {
   try {
@@ -232,4 +234,21 @@ export function mergeParticularObjectProperties(propertyNameList: string[], sour
     }
   }
   return destObject;
+}
+
+export function fieldsHaveEnabledAttachmentField(fields: IncidentFieldUI[]): boolean {
+  // returns true if an attachment UI incident field is enabled, and has attachments, else it returns false
+  for (const field of fields) {
+    const isAttachmentField = field.shortName === 'attachment' || field.fieldType === 'attachments';
+    const isEnabled = field.enabled === true;
+    const hasAttachments = isAttachmentField && isArray(field.attachmentConfig) && field.attachmentConfig.length !== 0;
+    if (isAttachmentField && isEnabled && hasAttachments) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function isAttachmentMediaFile(attachment: FileAttachmentUIConfig): boolean {
+  return attachment.detectedType.startsWith('image');
 }

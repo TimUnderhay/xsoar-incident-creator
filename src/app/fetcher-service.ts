@@ -15,7 +15,7 @@ import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
 import { IncidentFieldRowComponent } from './incident-field-row.component';
 import { FreeformJSONConfig } from './types/freeform-json-config';
 import { JsonGroup, JsonGroups } from './types/json-group';
-import { FileAttachmentConfig, FileAttachmentConfigs } from './types/file-attachment';
+import { FileAttachmentConfig, FileAttachmentConfigs, FileToPush } from './types/file-attachment';
 
 export interface FieldMappingSelection {
   field: IncidentFieldUI;
@@ -69,7 +69,7 @@ export class FetcherService {
   ///////// AUTHENTICATION /////////
 
   getLoggedInUser(): Promise<User> {
-    let headers = new HttpHeaders( {
+    const headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
     return this.http.get(this.apiPath + '/whoami', { headers } )
@@ -86,7 +86,7 @@ export class FetcherService {
   ///////// XSOAR ENDPOINTS /////////
 
   testDemistoEndpointById(serverId: string): Promise<DemistoEndpointTestResult> {
-    let headers = new HttpHeaders( {
+    const headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
     return this.http.get(`${this.apiPath}/demistoEndpoint/test/${encodeURIComponent(serverId)}`, { headers } )
@@ -100,7 +100,7 @@ export class FetcherService {
     if ('apiKey' in serverParams) {
       serverParams.apiKey = this.encrypt(serverParams.apiKey);
     }
-    let headers = new HttpHeaders( {
+    const headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
     return this.http.post(`${this.apiPath}/demistoEndpoint/test/adhoc`, serverParams, { headers } )
@@ -111,7 +111,7 @@ export class FetcherService {
 
 
   getDemistoEndpoints(): Promise<DemistoEndpoints> {
-    let headers = new HttpHeaders( {
+    const headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
     return this.http.get(this.apiPath + '/demistoEndpoint', { headers } )
@@ -122,7 +122,7 @@ export class FetcherService {
 
 
   setDefaultDemistoEndpoint(serverId): Promise<DemistoEndpointTestResult> {
-    let headers = new HttpHeaders( {
+    const headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
     const body = { serverId };
@@ -134,7 +134,7 @@ export class FetcherService {
 
 
   getDefaultDemistoEndpoint(): Promise<DefaultDemistoEndpoint> {
-    let headers = new HttpHeaders( {
+    const headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
     return this.http.get(this.apiPath + '/demistoEndpoint/default', { headers } )
@@ -145,7 +145,7 @@ export class FetcherService {
 
 
   createDemistoEndpoint(url, apiKey, trustAny): Promise<DemistoEndpointTestResult> {
-    let headers = new HttpHeaders( {
+    const headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
     let body = { url, apiKey: this.encrypt(apiKey), trustAny };
@@ -157,7 +157,7 @@ export class FetcherService {
 
 
   updateDemistoEndpoint(serverId, url, trustAny, apiKey?): Promise<DemistoEndpointTestResult> {
-    let headers = new HttpHeaders( {
+    const headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
     let body = { url, trustAny, serverId };
@@ -172,7 +172,7 @@ export class FetcherService {
 
 
   deleteDemistoEndpoint(serverId): Promise<DemistoEndpointTestResult> {
-    let headers = new HttpHeaders( {
+    const headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
     serverId = encodeURIComponent(serverId);
@@ -187,7 +187,7 @@ export class FetcherService {
   ///////// INCIDENTS /////////
 
   createDemistoIncident( config: IncidentCreationConfig ): Promise<any> {
-    let headers = this.buildHeaders(this.currentUser.username);
+    const headers = this.buildHeaders(this.currentUser.username);
     console.log('FetcherService: createDemistoIncident(): Current User: ', this.currentUser.username);
     return this.http.post(this.apiPath + '/createDemistoIncident', config, { headers } )
                     .toPromise();
@@ -196,7 +196,7 @@ export class FetcherService {
 
 
   createDemistoIncidentFromJson( json: any ): Promise<any> {
-    let headers = this.buildHeaders(this.currentUser.username);
+    const headers = this.buildHeaders(this.currentUser.username);
     console.log('FetcherService: createDemistoIncidentFromJson(): Current User: ', this.currentUser.username);
     return this.http.post(this.apiPath + '/createDemistoIncidentFromJson', json, { headers } )
                     .toPromise();
@@ -206,7 +206,7 @@ export class FetcherService {
 
   getIncidentFieldDefinitions(serverId): Promise<FetchedIncidentField[]> {
     serverId = encodeURIComponent(serverId);
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.get(`${this.apiPath}/incidentFields/${serverId}`, { headers } )
                     .toPromise()
                     .then( (res: any) => res.incident_fields );
@@ -216,7 +216,7 @@ export class FetcherService {
 
   getIncidentTypes(serverId): Promise<FetchedIncidentType[]> {
     serverId = encodeURIComponent(serverId);
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.get(`${this.apiPath}/incidentType/${serverId}`, { headers } )
                     .toPromise()
                     // .then( (res: any) => this.logResult(res) )
@@ -226,7 +226,7 @@ export class FetcherService {
 
 
   getSampleIncident(): Promise<any> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.get(this.apiPath + '/sampleIncident', { headers } )
                     .toPromise();
   }
@@ -234,7 +234,7 @@ export class FetcherService {
 
 
   getSavedIncidentConfigurations(): Promise<IncidentConfigs> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.get(this.apiPath + '/incidentConfig/all', { headers } )
                     .toPromise()
                     .then(value => value as IncidentConfigs);
@@ -243,7 +243,7 @@ export class FetcherService {
 
 
   saveNewIncidentConfiguration(config: IncidentConfig): Promise<any> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/incidentConfig', config, { headers } )
                     .toPromise();
   }
@@ -251,7 +251,7 @@ export class FetcherService {
 
 
   saveIncidentConfiguration(config: IncidentConfig): Promise<any> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/incidentConfig/update', config, { headers } )
                     .toPromise();
   }
@@ -259,7 +259,7 @@ export class FetcherService {
 
 
   deleteIncidentConfiguration(name: string): Promise<any> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.delete(this.apiPath + `/incidentConfig/${name}`, { headers } )
                     .toPromise();
   }
@@ -267,7 +267,7 @@ export class FetcherService {
 
 
   createInvestigation(incidentId, serverId): Promise<boolean> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/createInvestigation', {incidentId, serverId}, { headers } )
                     .toPromise()
                     .then( (value: any) => value.success);
@@ -276,7 +276,7 @@ export class FetcherService {
 
 
   demistoIncidentImport(incidentId, serverId): Promise<DemistoIncidentImportResult> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/demistoIncidentImport', {incidentId, serverId}, { headers } )
                     .toPromise()
                     .then( (res: DemistoIncidentImportResult) => res);
@@ -286,7 +286,7 @@ export class FetcherService {
 
 
   getPublicKey(): Promise<void> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.get(this.apiPath + '/publicKey', { headers } )
                     .toPromise()
                     .then( (value: any) => this.publicKey = value.publicKey );
@@ -311,7 +311,7 @@ export class FetcherService {
   ///////// JSON /////////
 
   getSavedJSONConfigurationNames(): Promise<string[]> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.get(this.apiPath + '/json', { headers } )
                     .toPromise()
                     .then(value => value as string[]);
@@ -320,7 +320,7 @@ export class FetcherService {
 
 
   getSavedJSONConfiguration(name): Promise<object | Array<any>> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.get(`${this.apiPath}/json/${name}`, { headers } )
                     .toPromise<object | Array<any>>();
   }
@@ -328,7 +328,7 @@ export class FetcherService {
 
 
   saveNewFreeformJSONConfiguration(config: FreeformJSONConfig): Promise<any> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/json', config, { headers } )
                     .toPromise();
   }
@@ -336,7 +336,7 @@ export class FetcherService {
 
 
   deleteFreeformJSONConfiguration(name: string): Promise<any> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.delete(this.apiPath + `/json/${name}`, { headers } )
                     .toPromise();
   }
@@ -344,7 +344,7 @@ export class FetcherService {
 
 
   setDefaultIncidentJsonFile(incidentConfigName, jsonConfigName): Promise<any> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     const config: IncidentJsonFileConfig = {
       configName: incidentConfigName,
       jsonName: jsonConfigName
@@ -356,7 +356,7 @@ export class FetcherService {
 
 
   clearDefaultIncidentJsonFile(incidentConfigName): Promise<any> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     const config: IncidentJsonFileConfig = {
       configName: incidentConfigName,
       jsonName: null
@@ -370,7 +370,7 @@ export class FetcherService {
   ///////// JSON GROUPS /////////
 
   getSavedJsonGroupConfigurations(): Promise<JsonGroups> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.get(this.apiPath + '/jsonGroup/all', { headers } )
                     .toPromise()
                     .then(value => value as JsonGroups);
@@ -379,7 +379,7 @@ export class FetcherService {
 
 
   saveNewJsonGroupConfiguration(config: JsonGroup): Promise<any> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/jsonGroup', config, { headers } )
                     .toPromise();
   }
@@ -387,7 +387,7 @@ export class FetcherService {
 
 
   saveJsonGroupConfiguration(config: JsonGroup): Promise<any> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/jsonGroup/update', config, { headers } )
                     .toPromise();
   }
@@ -395,7 +395,7 @@ export class FetcherService {
 
 
   deleteJsonGroupConfiguration(name: string): Promise<any> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.delete(this.apiPath + `/jsonGroup/${name}`, { headers } )
                     .toPromise();
   }
@@ -405,7 +405,7 @@ export class FetcherService {
   ///////// FILE ATTACHMENTS /////////
 
   getFileAttachmentConfigs(): Promise<FileAttachmentConfigs> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.get(this.apiPath + '/attachment/all', { headers } )
                     .toPromise()
                     .then(value => value as FileAttachmentConfigs);
@@ -413,17 +413,24 @@ export class FetcherService {
 
 
 
-  deleteFileAttachment(id: string): Promise<any> {
-    let headers = this.buildHeaders();
-    return this.http.delete(this.apiPath + `/attachment/${id}`, { headers } )
+  uploadFileAttachment(formData): Promise<any> {
+    return this.http.post(`${this.apiPath}/attachment`, formData)
                     .toPromise();
   }
 
 
 
   updateFileAttachment(config: FileAttachmentConfig): Promise<any> {
-    let headers = this.buildHeaders();
+    const headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/attachment/update', config, { headers } )
+                    .toPromise();
+  }
+
+
+
+  deleteFileAttachment(id: string): Promise<any> {
+    const headers = this.buildHeaders();
+    return this.http.delete(this.apiPath + `/attachment/${id}`, { headers } )
                     .toPromise();
   }
 
@@ -451,8 +458,9 @@ export class FetcherService {
 
 
 
-  uploadFileAttachment(formData): Promise<any> {
-    return this.http.post(`${this.apiPath}/attachment`, formData)
+  uploadFileToDemistoIncident(file: FileToPush): Promise<any> {
+    const headers = this.buildHeaders();
+    return this.http.post(this.apiPath + '/attachment/push', file, { headers } )
                     .toPromise();
   }
 
