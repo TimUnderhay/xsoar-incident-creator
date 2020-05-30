@@ -1,5 +1,5 @@
 import { Component, OnInit, OnChanges, OnDestroy, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
-import { IncidentFieldUI, DatePrecision, DateConfig } from './types/incident-fields';
+import { IncidentFieldUI, DateConfig } from './types/incident-fields';
 import { SelectItem, ConfirmationService } from 'primeng/api';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
@@ -7,7 +7,7 @@ import { Subscription } from 'rxjs';
 import { FetcherService, FieldMappingSelection } from './fetcher-service';
 import * as utils from './utils';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
-import { FileAttachmentConfig, FileAttachmentConfigs, FileAttachmentUIConfig, AttachmentFieldConfig } from './types/file-attachment';
+import { FileAttachmentConfig, FileAttachmentConfigs, FileAttachmentUIConfig } from './types/file-attachment';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -22,7 +22,6 @@ const defaultDateConfig = {
 };
 
 @Component({
-  // tslint:disable-next-line:component-selector
   selector: 'freeform-json-row',
   templateUrl: './freeform-json-row.component.html',
   providers: [ DialogService ]

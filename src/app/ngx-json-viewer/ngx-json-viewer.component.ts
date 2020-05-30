@@ -1,6 +1,6 @@
 // based on https://github.com/hivivo/ngx-json-viewer
 
-import { Component, OnInit, OnChanges, Input, Output, EventEmitter, SimpleChanges, ChangeDetectorRef } from '@angular/core';
+import { Component, OnChanges, Input, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 import { FieldType } from '../types/incident-fields';
 import * as utils from '../utils';
 import { FetcherService } from '../fetcher-service';
@@ -48,9 +48,7 @@ export const acceptableDataTypesPerFieldType = {
   templateUrl: './ngx-json-viewer.component.html'
 })
 
-
-
-export class NgxJsonViewerComponent implements OnInit, OnChanges {
+export class NgxJsonViewerComponent implements OnChanges {
 
   constructor(
     private fetcherService: FetcherService, // import our URL fetcher
@@ -76,11 +74,6 @@ export class NgxJsonViewerComponent implements OnInit, OnChanges {
   spacerWidthBaseDepthOne = 2.2; // extra space is needed to allow the selector arrow to fit on root segments
   spacerWidthBase = 1.5; // unit: rem
   hasExpandableChildren = false;
-
-
-  ngOnInit() {
-    // console.log('NgxJsonViewerComponent: ngOnInit(): expanded:', this.expanded);
-  }
 
 
 

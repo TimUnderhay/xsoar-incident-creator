@@ -101,20 +101,6 @@
           showDelay="750">
         </p-fileUpload>
 
-        <!-- Save -->
-        <p-button
-          label="Save"
-          (onClick)="onSaveClicked()"
-          [disabled]="!(loadedIncidentConfigId && loadedIncidentConfigName)">
-        </p-button>
-
-        <!-- Save As -->
-        <p-button
-          label="Save As"
-          (onClick)="onSaveAsClicked()"
-          [disabled]="!saveAsButtonEnabled">
-        </p-button>
-
         <!-- Delete Incident -->
         <p-button
           label="Delete Incidents"
@@ -172,7 +158,6 @@
       [currentDemistoEndpointInit]="currentDemistoEndpointInit"
       [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
       [fetchedIncidentTypes]="fetchedIncidentTypes"
-      (saveAsButtonEnabledChange)="saveAsButtonEnabled = $event"
       [savedIncidentConfigurations]="savedIncidentConfigurations"
       (savedIncidentConfigurationsChanged)="onSavedIncidentConfigurationsChanged($event)"
       [savedJsonConfigurations]="savedJsonConfigurations"

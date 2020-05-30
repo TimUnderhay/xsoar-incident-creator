@@ -57,19 +57,30 @@
       <!-- *ngIf="selectedIncidentType" -->
       <div class="menuContainer">
 
-        <!-- I don't think reset is required for freeform -->
-        <!-- <p-button type="button" label="Reset Values" (onClick)="onResetAllFieldValues()" [disabled]="!currentDemistoEndpointInit"></p-button>--> 
-
-        <!-- Add Field Button -->
+        <!-- Toolbar Buttons -->
         <span>
-
+          
+          <!-- Add Field Button -->
           <p-button type="button" label="Add Field" (onClick)="onAddIncidentFieldClicked()"></p-button>
+
+          <!-- Save -->
+          <p-button
+            label="Save"
+            (onClick)="onIncidentSaveClicked()"
+            [disabled]="!(loadedIncidentConfigId && loadedIncidentConfigName)">
+          </p-button>
+
+          <!-- Save As -->
+          <p-button
+            label="Save As"
+            (onClick)="onIncidentSaveAsClicked()">
+          </p-button>
 
           <!-- Short / Long Field Names -->
           <p-toggleButton
             name="shortFieldNames"
-            [onLabel]="shortNamesLabel"
-            [offLabel]="longNamesLabel"
+            [onLabel]="'Long Names'"
+            offLabel="Short Names"
             [(ngModel)]="displayIncidentFieldShortNames"
             [disabled]="!currentDemistoEndpointInit">
           </p-toggleButton>
@@ -180,7 +191,7 @@
           mode="basic"
           chooseLabel="Upload"
           [customUpload]="true"
-          (uploadHandler)="onFreeformJsonUploaded($event, fileUpload)"
+          (uploadHandler)="onRawJsonUploaded($event, fileUpload)"
           accept=".json,.txt"
           [multiple]="false"
           [auto]="true"
@@ -317,7 +328,7 @@
       <p-button
         label="Add"
         (onClick)="onAddIncidentFieldsAccept()"
-        [disabled]="!selectedFieldsToAdd || selectedFieldsToAddLen === 0">
+        [disabled]="!selectedFieldsToAdd || (selectedFieldsToAdd && selectedFieldsToAdd.length === 0)">
       </p-button>
 
       <p-button
@@ -362,18 +373,18 @@
 
 
 
-<!-- Freeform JSON Save As Dialog -->
+<!-- JSON Save As Dialog -->
 <p-dialog header="Save JSON As" [(visible)]="showJsonSaveAsDialog" [modal]="true" [style]="{width: '300px'}" styleClass="jsonSaveAsDialog">
 
   <div style="margin-bottom: .5em;" class="formLabel">JSON Configuration Name</div>
 
-  <input pInputText #saveAsJsonInput type="text" [(ngModel)]="saveAsConfigName" class="inputDisplay"/>
+  <input pInputText #saveAsJsonInput type="text" [(ngModel)]="jsonSaveAsConfigName" class="inputDisplay"/>
 
-  <div style="margin-top: .5em;">{{saveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+  <div style="margin-top: .5em;">{{jsonSaveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
 
   <div style="margin-top: .5em; float: right;">
 
-    <p-button label="Save" (onClick)="onJsonSaveAsAccepted()" [disabled]="saveAsOkayButtonDisabled"></p-button>
+    <p-button label="Save" (onClick)="onJsonSaveAsAccepted()" [disabled]="jsonSaveAsOkayButtonDisabled"></p-button>
 
     <p-button label="Cancel" (onClick)="onJsonSaveAsCanceled()"></p-button>
 
@@ -384,13 +395,13 @@
 
 
 <!-- Delete JSON Config Dialog -->
-<p-dialog header="Delete JSON Configuration" [(visible)]="showDeleteDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="deleteConfigDialog">
+<p-dialog header="Delete JSON Configuration" [(visible)]="showDeleteJsonConfigDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="deleteConfigDialog">
 
   <div class="formLabel">JSON Configurations to delete</div>
 
   <p-listbox
     [options]="freeformJsonConfigurationItems"
-    [(ngModel)]="selectedDeleteConfigs"
+    [(ngModel)]="selectedDeleteJsonConfigs"
     [multiple]="true"
     [filter]="true"
     [checkbox]="true"
@@ -420,13 +431,13 @@
 
   <div style="margin-bottom: .5em;" class="formLabel">Incident Name</div>
 
-  <input pInputText #saveAsInput type="text" [(ngModel)]="saveAsConfigName" class="inputDisplay"/>
+  <input pInputText #saveAsInput type="text" [(ngModel)]="incidentSaveAsConfigName" class="inputDisplay"/>
 
-  <div style="margin-top: .5em;">{{saveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+  <div style="margin-top: .5em;">{{incidentSaveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
 
   <div style="margin-top: .5em; float: right;">
 
-    <p-button label="Save" (onClick)="onIncidentSaveAsAccepted()" [disabled]="saveAsOkayButtonDisabled"></p-button>
+    <p-button label="Save" (onClick)="onIncidentSaveAsAccepted()" [disabled]="incidentSaveAsOkayButtonDisabled"></p-button>
 
     <p-button label="Cancel" (onClick)="onIncidentSaveAsCanceled()"></p-button>
 
@@ -469,7 +480,7 @@
 
       <p-button
         label="Create Incident"
-        (onClick)="onCreateIncidentFromJson()"
+        (onClick)="onCreateIncidentFromRawJson()"
         [disabled]="selectedRawJsonCreationEndpoints.length === 0">
       </p-button>
 

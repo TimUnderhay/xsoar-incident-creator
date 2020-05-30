@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpHeaders, HttpClient, HttpEvent, HttpEventType, HttpResponse } from '@angular/common/http';
+import { HttpHeaders, HttpClient } from '@angular/common/http';
 import { User } from './types/user';
 import { DemistoEndpointTestResult } from './types/demisto-endpoint-status';
 import { FetchedIncidentField } from './types/fetched-incident-field';
@@ -12,7 +12,6 @@ import * as JSEncrypt from 'jsencrypt';
 import { Subject } from 'rxjs';
 import { IncidentFieldUI } from './types/incident-fields';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
-import { IncidentFieldRowComponent } from './incident-field-row.component';
 import { FreeformJSONConfig } from './types/freeform-json-config';
 import { JsonGroup, JsonGroups } from './types/json-group';
 import { FileAttachmentConfig, FileAttachmentConfigs, FileToPush } from './types/file-attachment';

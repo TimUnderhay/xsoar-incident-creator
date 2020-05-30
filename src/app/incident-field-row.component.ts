@@ -6,8 +6,7 @@ import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { Subscription } from 'rxjs';
 
 @Component({
-  // tslint:disable-next-line:component-selector
-  selector: 'incident-field-row', // field-display
+  selector: 'incident-field-row',
   templateUrl: './incident-field-row.component.html',
   providers: [ DialogService ]
 })

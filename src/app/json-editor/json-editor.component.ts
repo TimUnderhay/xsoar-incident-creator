@@ -2,7 +2,6 @@ import { Component, OnInit, AfterViewInit, ViewChild } from '@angular/core';
 import { DynamicDialogRef, DynamicDialogConfig } from 'primeng/dynamicdialog';
 
 @Component({
-  // tslint:disable-next-line:component-selector
   selector: 'json-editor',
   templateUrl: './json-editor.component.html'
 })

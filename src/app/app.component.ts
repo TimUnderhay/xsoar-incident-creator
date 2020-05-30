@@ -1,11 +1,10 @@
 import { Component, OnInit, ChangeDetectorRef, ViewChild } from '@angular/core';
-import { NgForm } from '@angular/forms';
 import { FetcherService } from './fetcher-service';
-import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
+import { DemistoEndpoints } from './types/demisto-endpoints';
 import { User } from './types/user';
 import { DemistoEndpointTestResult, DemistoEndpointTestResults } from './types/demisto-endpoint-status';
 import { SelectItem, ConfirmationService } from 'primeng/api';
-import { IncidentFieldUI, IncidentFieldsUI, DateConfig } from './types/incident-fields';
+import { IncidentFieldUI, DateConfig } from './types/incident-fields';
 import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
 import { IncidentConfig, IncidentConfigs, IncidentCreationConfig } from './types/incident-config';
@@ -17,7 +16,7 @@ import * as utils from './utils';
 import { JsonGroup, JsonGroups } from './types/json-group';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
-import { FileAttachmentConfig, FileAttachmentConfigs, FileToPush, FileAttachmentUIConfig } from './types/file-attachment';
+import { FileAttachmentConfig, FileAttachmentConfigs, FileToPush } from './types/file-attachment';
 import { FileUpload } from 'primeng/fileupload';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
@@ -127,7 +126,6 @@ export class AppComponent implements OnInit {
   showDeleteDemistoEndpointDialog = false;
   demistoEndpointToDelete: string;
 
-  saveAsButtonEnabled = false;
   loadDefaultChosenFields = false;
 
   // Json Mapping UI
@@ -629,24 +627,6 @@ export class AppComponent implements OnInit {
     this.loadedIncidentConfigId = selectedConfig.id;
     this.freeformJsonUIComponent.onIncidentConfigOpened(selectedConfig);
     this.selectedOpenConfig = ''; // reset selection
-  }
-
-
-  onSaveAsClicked() {
-    console.log('AppComponent: onSaveAsClicked()');
-    this.freeformJsonUIComponent.onIncidentSaveAsClicked();
-  }
-
-
-
-  async onSaveClicked() {
-    console.log('AppComponent: onSaveClicked()');
-
-    await this.freeformJsonUIComponent.onIncidentSaveClicked();
-    this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration '${this.selectedOpenConfig}' has been saved`});
-
-    // Get Fields Configurations
-    await this.getSavedIncidentConfigurations();
   }
 
 
@@ -1718,9 +1698,11 @@ export class AppComponent implements OnInit {
 
 
 
-  async onSavedIncidentConfigurationsChanged(newIncidentConfigName) {
+  async onSavedIncidentConfigurationsChanged(newIncidentConfigName?) {
     // Update Incident Configurations
-    this.loadedIncidentConfigName = newIncidentConfigName;
+    if (newIncidentConfigName) {
+      this.loadedIncidentConfigName = newIncidentConfigName;
+    }
     await this.getSavedIncidentConfigurations();
   }
 
