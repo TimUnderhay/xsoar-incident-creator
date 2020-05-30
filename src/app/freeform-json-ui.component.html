@@ -1,9 +1,13 @@
 <!-- Loaded Configuration Name Container -->
-<p-card *ngIf="loadedIncidentConfigName" header="Loaded Mapping Name">
+<p-card
+  *ngIf="loadedIncidentConfigName"
+  header="Loaded Mapping Name">
   
-  <div style="margin-top: 1em;">
-    <span class="formLabel" style="font-size: 18px;">{{loadedIncidentConfigName}}</span>
-  </div>
+    <div style="margin-top: 1em;">
+
+      <span class="formLabel" style="font-size: 18px;">{{loadedIncidentConfigName}}</span>
+
+    </div>
 
 </p-card>
 
@@ -54,7 +58,6 @@
       </div>
 
       <!-- Menu Bar -->
-      <!-- *ngIf="selectedIncidentType" -->
       <div class="menuContainer">
 
         <!-- Toolbar Buttons -->
@@ -119,7 +122,6 @@
       </div>
 
       <!-- Incident Fields -->
-      <!-- *ngIf="selectedIncidentType" -->
       <div class="freeformFieldContainer">
 
         <div>
@@ -343,105 +345,134 @@
 
 
 <!-- Open Freeform JSON Config Dialog -->
-<p-dialog header="Select a JSON Configuration" [(visible)]="showJsonOpenDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="openJsonDialog">
+<p-dialog
+  header="Select a JSON Configuration"
+  [(visible)]="showJsonOpenDialog"
+  [modal]="true"
+  [style]="{width: '300px'}"
+  [contentStyle]="{'overflow':'visible'}"
+  styleClass="openJsonDialog">
 
-  <div class="formLabel">Configuration to open</div>
+    <div class="formLabel">Configuration to open</div>
 
-  <p-listbox
-    [options]="freeformJsonConfigurationItems"
-    [(ngModel)]="selectedJsonOpenConfig"
-    [style]="{'width':'100%'}"
-    (onDblClick)="onJsonConfigOpened()"
-    [filter]="true">
-  </p-listbox>
+    <p-listbox
+      [options]="freeformJsonConfigurationItems"
+      [(ngModel)]="selectedJsonOpenConfig"
+      [style]="{'width':'100%'}"
+      (onDblClick)="onJsonConfigOpened()"
+      [filter]="true">
+    </p-listbox>
 
-  <div style="margin-top: .5em;">
+    <div style="margin-top: .5em;">
 
-    <p-button
-      label="Open"
-      (onClick)="onJsonConfigOpened()">
-    </p-button>
+      <p-button
+        label="Open"
+        (onClick)="onJsonConfigOpened()">
+      </p-button>
 
-    <p-button
-      label="Cancel"
-      (onClick)="onJsonOpenCanceled()">
-    </p-button>
+      <p-button
+        label="Cancel"
+        (onClick)="onJsonOpenCanceled()">
+      </p-button>
 
-  </div>
+    </div>
 
 </p-dialog>
 
 
 
 <!-- JSON Save As Dialog -->
-<p-dialog header="Save JSON As" [(visible)]="showJsonSaveAsDialog" [modal]="true" [style]="{width: '300px'}" styleClass="jsonSaveAsDialog">
+<p-dialog
+  header="Save JSON As"
+  [(visible)]="showJsonSaveAsDialog"
+  [modal]="true"
+  [style]="{width: '300px'}"
+  styleClass="jsonSaveAsDialog">
 
-  <div style="margin-bottom: .5em;" class="formLabel">JSON Configuration Name</div>
+    <div style="margin-bottom: .5em;" class="formLabel">JSON Configuration Name</div>
 
-  <input pInputText #saveAsJsonInput type="text" [(ngModel)]="jsonSaveAsConfigName" class="inputDisplay"/>
+    <input pInputText #saveAsJsonInput type="text" [(ngModel)]="jsonSaveAsConfigName" class="inputDisplay"/>
 
-  <div style="margin-top: .5em;">{{jsonSaveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+    <div style="margin-top: .5em;">{{jsonSaveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
 
-  <div style="margin-top: .5em; float: right;">
+    <div style="margin-top: .5em; float: right;">
 
-    <p-button label="Save" (onClick)="onJsonSaveAsAccepted()" [disabled]="jsonSaveAsOkayButtonDisabled"></p-button>
+      <p-button
+        label="Save"
+        (onClick)="onJsonSaveAsAccepted()"
+        [disabled]="jsonSaveAsOkayButtonDisabled">
+      </p-button>
 
-    <p-button label="Cancel" (onClick)="onJsonSaveAsCanceled()"></p-button>
+      <p-button
+        label="Cancel"
+        (onClick)="onJsonSaveAsCanceled()">
+      </p-button>
 
-  </div>
+    </div>
 
 </p-dialog>
 
 
 
 <!-- Delete JSON Config Dialog -->
-<p-dialog header="Delete JSON Configuration" [(visible)]="showDeleteJsonConfigDialog" [modal]="true" [style]="{width: '300px'}" [contentStyle]="{'overflow':'visible'}" styleClass="deleteConfigDialog">
+<p-dialog
+  header="Delete JSON Configuration"
+  [(visible)]="showDeleteJsonConfigDialog"
+  [modal]="true"
+  [style]="{width: '300px'}"
+  [contentStyle]="{'overflow':'visible'}"
+  styleClass="deleteConfigDialog">
 
-  <div class="formLabel">JSON Configurations to delete</div>
+    <div class="formLabel">JSON Configurations to delete</div>
 
-  <p-listbox
-    [options]="freeformJsonConfigurationItems"
-    [(ngModel)]="selectedDeleteJsonConfigs"
-    [multiple]="true"
-    [filter]="true"
-    [checkbox]="true"
-    [style]="{'width':'100%'}">
-  </p-listbox>
+    <p-listbox
+      [options]="freeformJsonConfigurationItems"
+      [(ngModel)]="selectedDeleteJsonConfigs"
+      [multiple]="true"
+      [filter]="true"
+      [checkbox]="true"
+      [style]="{'width':'100%'}">
+    </p-listbox>
 
-  <div style="margin-top: .5em;">
+    <div style="margin-top: .5em;">
 
-    <p-button
-      label="Delete"
-      (onClick)="onJsonDeleteConfigAccepted()">
-    </p-button>
+      <p-button
+        label="Delete"
+        (onClick)="onJsonDeleteConfigAccepted()">
+      </p-button>
 
-    <p-button
-      label="Cancel"
-      (onClick)="onJsonDeleteConfigCanceled()">
-    </p-button>
+      <p-button
+        label="Cancel"
+        (onClick)="onJsonDeleteConfigCanceled()">
+      </p-button>
 
-  </div>
+    </div>
 
 </p-dialog>
 
 
 
 <!-- Incident Save As Dialog -->
-<p-dialog header="Save Incident As" [(visible)]="showIncidentSaveAsDialog" [modal]="true" [style]="{width: '300px'}" styleClass="saveAsDialog">
+<p-dialog
+  header="Save Incident As"
+  [(visible)]="showIncidentSaveAsDialog"
+  [modal]="true"
+  [style]="{width: '300px'}"
+  styleClass="saveAsDialog">
 
-  <div style="margin-bottom: .5em;" class="formLabel">Incident Name</div>
+    <div style="margin-bottom: .5em;" class="formLabel">Incident Name</div>
 
-  <input pInputText #saveAsInput type="text" [(ngModel)]="incidentSaveAsConfigName" class="inputDisplay"/>
+    <input pInputText #saveAsInput type="text" [(ngModel)]="incidentSaveAsConfigName" class="inputDisplay"/>
 
-  <div style="margin-top: .5em;">{{incidentSaveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+    <div style="margin-top: .5em;">{{incidentSaveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
 
-  <div style="margin-top: .5em; float: right;">
+    <div style="margin-top: .5em; float: right;">
 
-    <p-button label="Save" (onClick)="onIncidentSaveAsAccepted()" [disabled]="incidentSaveAsOkayButtonDisabled"></p-button>
+      <p-button label="Save" (onClick)="onIncidentSaveAsAccepted()" [disabled]="incidentSaveAsOkayButtonDisabled"></p-button>
 
-    <p-button label="Cancel" (onClick)="onIncidentSaveAsCanceled()"></p-button>
+      <p-button label="Cancel" (onClick)="onIncidentSaveAsCanceled()"></p-button>
 
-  </div>
+    </div>
 
 </p-dialog>
 

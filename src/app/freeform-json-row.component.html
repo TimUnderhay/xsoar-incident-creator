@@ -78,19 +78,49 @@
     <div style="flex-basis: auto; flex-grow: 1;">
 
       <!-- shortText, user, role, singleSelect, multiSelect -->
-      <input *ngIf="['shortText', 'user', 'singleSelect', 'multiSelect'].includes(field.fieldType)" class="inputDisplay" pInputText [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)" type="text"/>
+      <input
+        pInputText
+        type="text"
+        *ngIf="['shortText', 'user', 'singleSelect', 'multiSelect'].includes(field.fieldType)"
+        class="inputDisplay"
+        [(ngModel)]="field.value"
+        (ngModelChange)="onValueChanged($event)"/>
       
       <!-- url -->
-      <input *ngIf="field.fieldType === 'url'" pInputText class="inputDisplay" [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)" type="url"/>
+      <input
+        pInputText  
+        type="url"
+        *ngIf="field.fieldType === 'url'"  
+        class="inputDisplay"
+        [(ngModel)]="field.value"
+        (ngModelChange)="onValueChanged($event)"/>
 
       <!-- longText, html, markdown -->
-      <textarea *ngIf="['longText', 'html', 'markdown'].includes(field.fieldType)" pInputTextarea class="inputDisplay" [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)"></textarea>
+      <textarea
+        pInputTextarea
+        *ngIf="['longText', 'html', 'markdown'].includes(field.fieldType)"
+        class="inputDisplay"
+        [(ngModel)]="field.value"
+        (ngModelChange)="onValueChanged($event)">
+      </textarea>
       
       <!-- number -->
-      <input *ngIf="field.fieldType === 'number'" pInputText class="inputDisplay" [(ngModel)]="field.value" (ngModelChange)="onValueChanged($event)" type="number"/>
+      <input
+        pInputText
+        type="number"
+        *ngIf="field.fieldType === 'number'"
+        class="inputDisplay"
+        [(ngModel)]="field.value"
+        (ngModelChange)="onValueChanged($event)"/>
 
       <!-- boolean -->
-      <p-selectButton *ngIf="field.fieldType === 'boolean'" [options]="boolItems" [(ngModel)]="field.value" (onChange)="onValueChanged($event)" standalone></p-selectButton>
+      <p-selectButton
+        *ngIf="field.fieldType === 'boolean'"
+        [options]="boolItems"
+        [(ngModel)]="field.value"
+        (onChange)="onValueChanged($event)"
+        standalone>
+      </p-selectButton>
 
       <!-- date -->
       <p-calendar
@@ -495,6 +525,7 @@
 
         <!-- Enable UTC Offset? -->
         Enabled:&nbsp;
+
         <p-checkbox
           name="enableUtcOffset"
           [binary]="true"

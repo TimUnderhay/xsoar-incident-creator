@@ -598,36 +598,6 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  /*updateAttachmentUIConfigs() {
-    console.log('FreeformJsonRowComponent: updateAttachmentConfigs()');
-    this.chosenFileAttachments = this.chosenFileAttachments.map( config => {
-      const newConfig: FileAttachmentUIConfig = {
-        id: config.id,
-      };
-
-      if (config.filename !== config.originalFilename) {
-        newConfig.filenameOverride = config.filename;
-      }
-
-      if (config.mediaFile !== config.originalMediaFile) {
-        newConfig.mediaFileOverride = config.mediaFile;
-      }
-
-      const originalCommentDefined = 'originalComment' in config;
-      const overrideCommentDefined = 'comment' in config && config.comment !== '';
-      if (originalCommentDefined && overrideCommentDefined && config.comment !== config.originalComment) {
-        newConfig.commentOverride = config.comment;
-      }
-      else if (!originalCommentDefined && overrideCommentDefined) {
-        newConfig.commentOverride = config.comment;
-      }
-
-      return newConfig;
-    });
-  }*/
-
-
-
   onRemoveAttachmentClicked(id) {
     console.log('FreeformJsonRowComponent: onRemoveAttachmentClicked()');
     for (let i = 0; i < this.chosenFileAttachments.length; i++) {
