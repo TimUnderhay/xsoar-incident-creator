@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, ViewChild } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { FetcherService } from './fetcher-service';
 import { DemistoEndpoints } from './types/demisto-endpoints';
 import { User } from './types/user';
@@ -221,11 +221,13 @@ export class AppComponent implements OnInit {
   editFileAttachmentType: string;
   editFileAttachmentDisplayAsMediaSelection = false;
 
+  // RxJS Subscriptions
   private subscriptions = new Subscription();
 
 
 
   async ngOnInit() {
+    console.log('AppComponent: ngOnInit()');
     // Take Subscriptions
     this.subscriptions.add(this.fetcherService.fieldMappingSelectionActive.subscribe( () => this.onFieldMappingSelectionActive() ));
 
@@ -267,17 +269,22 @@ export class AppComponent implements OnInit {
       }
     }
 
+    const initPromises = [];
+
+    initPromises.push(this.getSavedIncidentConfigurations());
+
+    initPromises.push(this.getSavedJsonConfigurations());
+
+    initPromises.push(this.getSavedJsonGroupConfigurations());
+
+    initPromises.push(this.getSavedFileAttachmentConfigurations());
+
+    await Promise.all(initPromises);
+
     if (this.demistoEndpointsLen === 0) {
+      // Don't move to ngAfterViewInit, as that won't wait for async calls to finish in ngOnInit before running
       setTimeout(() => this.onNewDemistoEndpointClicked(), 0);
     }
-
-    await this.getSavedIncidentConfigurations();
-
-    await this.getSavedJsonConfigurations();
-
-    await this.getSavedJsonGroupConfigurations();
-
-    await this.getSavedFileAttachmentConfigurations();
 
   }
 
@@ -401,9 +408,8 @@ export class AppComponent implements OnInit {
 
         this.buildDemistoEndpointItems();
       }
-
-
     }
+
     catch (err) {
       console.log('AppComponent: demistoEndpointInit(): Caught error fetching Demisto endpoint status:', err);
     }

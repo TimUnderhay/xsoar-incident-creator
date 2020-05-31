@@ -57,69 +57,64 @@
           The selected incident type '<span style="font-weight: bold;">{{selectedIncidentType}}</span>' is not available on the selected XSOAR server.  Either select a different incident type, create the incident type in XSOAR, or choose a different server.
       </div>
 
-      <!-- Menu Bar -->
-      <div class="menuContainer">
+      <!-- Button Bar -->
+      <div class="incidentButtonBar">
+        
+        <!-- Add Field Button -->
+        <p-button type="button" label="Add Field" (onClick)="onAddIncidentFieldClicked()"></p-button>
 
-        <!-- Toolbar Buttons -->
-        <span>
-          
-          <!-- Add Field Button -->
-          <p-button type="button" label="Add Field" (onClick)="onAddIncidentFieldClicked()"></p-button>
+        <!-- Save -->
+        <p-button
+          label="Save"
+          (onClick)="onIncidentSaveClicked()"
+          [disabled]="!(loadedIncidentConfigId && loadedIncidentConfigName)">
+        </p-button>
 
-          <!-- Save -->
-          <p-button
-            label="Save"
-            (onClick)="onIncidentSaveClicked()"
-            [disabled]="!(loadedIncidentConfigId && loadedIncidentConfigName)">
-          </p-button>
+        <!-- Save As -->
+        <p-button
+          label="Save As"
+          (onClick)="onIncidentSaveAsClicked()">
+        </p-button>
 
-          <!-- Save As -->
-          <p-button
-            label="Save As"
-            (onClick)="onIncidentSaveAsClicked()">
-          </p-button>
+        <!-- Short / Long Field Names -->
+        <p-toggleButton
+          name="shortFieldNames"
+          [onLabel]="'Long Names'"
+          offLabel="Short Names"
+          [(ngModel)]="displayIncidentFieldShortNames"
+          [disabled]="!currentDemistoEndpointInit">
+        </p-toggleButton>
 
-          <!-- Short / Long Field Names -->
-          <p-toggleButton
-            name="shortFieldNames"
-            [onLabel]="'Long Names'"
-            offLabel="Short Names"
-            [(ngModel)]="displayIncidentFieldShortNames"
-            [disabled]="!currentDemistoEndpointInit">
-          </p-toggleButton>
+        <!-- Create Investigation Toggle -->
+        <p-toggleButton
+          [onLabel]="'Create Investigation On'"
+          offLabel="Create Investigation Off"
+          [(ngModel)]="createInvestigation"
+          pTooltip="If enabled, this option will cause an investigation to be created along with a new incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so."
+          showDelay="750">
+        </p-toggleButton>
 
-          <!-- Create Investigation Toggle -->
-          <p-toggleButton
-            [onLabel]="'Create Investigation On'"
-            offLabel="Create Investigation Off"
-            [(ngModel)]="createInvestigation"
-            pTooltip="If enabled, this option will cause an investigation to be created along with a new incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so."
-            showDelay="750">
-          </p-toggleButton>
-
-          <!-- Reload Field Definitions -->
-          <p-button
-            type="button"
-            label="Reload Definitions"
-            name="createIncidentButton"
-            (onClick)="onReloadFieldDefinitions()"
-            [disabled]="!currentDemistoEndpointInit"
-            pTooltip="Reload the field definitions from XSOAR">
-          </p-button>
-
-        </span>
+        <!-- Reload Field Definitions -->
+        <p-button
+          type="button"
+          label="Reload Definitions"
+          name="createIncidentButton"
+          (onClick)="onReloadFieldDefinitions()"
+          [disabled]="!currentDemistoEndpointInit"
+          pTooltip="Reload the field definitions from XSOAR">
+        </p-button>
 
         <!-- Create Incident Button -->
-        <button pButton
+        <p-button
           type="button"
           label="Create Incident"
-          (click)="onCreateIncident()"
+          (onClick)="onCreateIncident()"
           [disabled]="(!json && requiresJson) || enabledFieldsCount === 0"
-          class="ui-button-warning">
-        </button>
-
+          styleClass="ui-button-warning">
+        </p-button>
 
       </div>
+
 
       <!-- Incident Fields -->
       <div class="freeformFieldContainer">
