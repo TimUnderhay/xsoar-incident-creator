@@ -518,3 +518,56 @@
     </div>
 
 </p-dialog>
+
+
+
+<!-- Incident Created Modal -->
+<p-dialog
+  [(visible)]="showIncidentCreatedDialog"
+  [modal]="true"
+  [resizable]="false"
+  [showHeader]="false"
+  [style]="{maxWidth: '25%', maxHeight: '50%'}"
+  styleClass="bulkCreateDialog">
+
+  <div style="padding: 1em;">
+
+    <div *ngIf="incidentCreatedId" style="font-size: 1.25em;">
+      
+      XSOAR 
+      
+      <a
+        href="javascript:void(0)"
+        (click)="onClickDemistoInvestigateUrl(incidentCreatedId)">
+          incident {{incidentCreatedId}}
+      </a> 
+  
+      was created.
+  
+    </div>
+  
+    <div *ngIf="incidentCreatedError">
+      
+      <div style="font-weight: bold; font-size: 1.25em;">
+        An error was encountered whilst creating the incident:
+      </div>
+      
+      <div style="color: red; margin-top: 1em; font-size: 1.5em;">
+        {{incidentCreatedError}}
+      </div>
+  
+    </div>
+
+  </div>
+
+
+  <div style="margin-top: .5em; float: right;">
+
+    <p-button
+      label="OK"
+      (onClick)="showIncidentCreatedDialog = false">
+    </p-button>
+
+  </div>
+
+</p-dialog>

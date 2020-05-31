@@ -870,15 +870,39 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
   }
   catch (error) {
     if ( error && 'response' in error && error.response && 'statusCode' in error.response && error.statusCode !== null) {
-      return returnError(`Caught error opening XSOAR incident: code ${error.response.status}: ${error.response.statusMessage}`, res, { success: false, statusCode: error.statusCode, statusMessage: error.response.statusMessage });
+      return returnError(
+        `Caught error opening XSOAR incident: code ${error.response.status}: ${error.response.statusMessage}`,
+        res,
+        {
+          success: false,
+          statusCode: error.statusCode,
+          statusMessage: error.response.statusMessage
+        }
+      );
     }
     else if (error && 'message' in error) {
-      return returnError(`Caught error opening XSOAR incident: ${error.message}`, res, { success: false, statusCode: null, error: error.message });
+      return returnError(
+        `Caught error opening XSOAR incident: ${error.message}`,
+        res,
+        {
+          success: false,
+          statusCode: null,
+          error: error.message
+        },
+        503
+      );
     }
     else {
-      return returnError(`Caught unspecified error opening XSOAR incident: ${error}`, res, { success: false, statusCode: 500, error: 'unspecified' });
+      return returnError(
+        `Caught unspecified error opening XSOAR incident: ${error}`,
+        res,
+        {
+          success: false,
+          statusCode: 500,
+          error: 'unspecified'
+        }
+      );
     }
-    return;
   }
 
   let incidentId = result.body.id;

@@ -1352,7 +1352,7 @@ export class AppComponent implements OnInit {
 
 
 
-  async switchCurrentDemistoEndpoint(serverId: string): Promise<void> {
+  async switchCurrentDemistoEndpoint(serverId: string, previousTestResult?): Promise<void> {
     /*
     Called from onDemistoEndpointSelected()
     Tests selected server, then fetches the list of incident types, then fetches the field definitions.
@@ -1364,22 +1364,26 @@ export class AppComponent implements OnInit {
     const serverPreviouslySelected = this.currentDemistoEndpointName !== undefined;
     const incidentConfigIsLoaded = this.loadedIncidentConfigName !== undefined;
 
-    if (currentDemistoEndpointNameReselected) {
-      console.log('AppComponent: switchCurrentDemistoEndpoint(): currentDemistoEndpointName was re-selected.  Returning');
-      return;
-    }
+    const oldDemistoEndpointInit = this.currentDemistoEndpointInit;
 
     // this is the procedure to load a demistoEndpoint
     // test it and then 'load' it
     let testRes;
     try {
-      testRes = await this.fetcherService.testDemistoEndpointById(serverId);
+      if (previousTestResult === undefined) {
+        testRes = await this.fetcherService.testDemistoEndpointById(serverId);
+      }
+      this.currentDemistoEndpointInit = testRes ? testRes.success : previousTestResult;
       this.currentDemistoEndpointName = serverId;
-      this.currentDemistoEndpointInit = testRes.success;
     }
     catch (error) {
       this.currentDemistoEndpointInit = false;
       console.error('AppComponent: switchCurrentDemistoEndpoint(): Error loading Demisto endpoint:', testRes ? testRes : error);
+    }
+
+    if (currentDemistoEndpointNameReselected && oldDemistoEndpointInit && this.currentDemistoEndpointInit) {
+      console.log('AppComponent: switchCurrentDemistoEndpoint(): currentDemistoEndpointName was re-selected.  Returning');
+      return;
     }
 
     if (this.currentDemistoEndpointInit) {
@@ -1525,7 +1529,7 @@ export class AppComponent implements OnInit {
 
 
 
-  async onSetDefaultDemistoEndpoint() {
+  async onSetDefaultDemistoEndpointClicked() {
     console.log('AppComponent: onSetDefaultDemistoEndpoint()');
     await this.fetcherService.setDefaultDemistoEndpoint(this.selectedDemistoEndpointName);
     await this.refreshDemistoEndpoints();
@@ -1533,16 +1537,19 @@ export class AppComponent implements OnInit {
 
 
 
-  async onRefreshDemistoEndpoints() {
+  async onRefreshDemistoEndpointsClicked() {
     console.log('AppComponent: onRefreshDemistoEndpoints()');
     await this.refreshDemistoEndpoints();
   }
 
 
 
-  async onTestDemistoEndpoint() {
+  async onTestDemistoEndpointClicked() {
     console.log('AppComponent: onTestDemistoEndpoint(): selectedDemistoEndpointName:', this.selectedDemistoEndpointName);
     const success = await this.testDemistoEndpointById(this.selectedDemistoEndpointName);
+    if (this.selectedDemistoEndpointName === this.currentDemistoEndpointName) {
+      await this.switchCurrentDemistoEndpoint(this.selectedDemistoEndpointName, success);
+    }
     if (success) {
       this.messagesReplace( [{ severity: 'success', summary: 'Success', detail: `XSOAR endpoint ${this.selectedDemistoEndpointName} test success`}] );
     }
@@ -1553,7 +1560,7 @@ export class AppComponent implements OnInit {
 
 
 
-  async onEditDemistoEndpoint() {
+  async onEditDemistoEndpointClicked() {
     console.log('AppComponent: onEditDemistoEndpoint()');
     this.newDemistoServerDialogMode = 'edit';
     this.showNewDemistoEndpointDialog = true;

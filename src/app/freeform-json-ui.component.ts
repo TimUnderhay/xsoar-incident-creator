@@ -157,6 +157,11 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   @Input() fileAttachmentConfigsList: FileAttachmentConfig[];
   @Output() fileAttachmentConfigsChanged = new EventEmitter<void>();
 
+  // Incident Created Dialog
+  showIncidentCreatedDialog = false;
+  incidentCreatedId: number;
+  incidentCreatedError: string;
+
   // RxJS Subscriptions
   private subscriptions = new Subscription();
 
@@ -654,8 +659,38 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     console.log('FreeformJsonUIComponent: onCreateIncident(): incident:', incident);
     console.log('FreeformJsonUIComponent: onCreateIncident(): filesToPush:', filesToPush);
 
-    const res = await this.fetcherService.createDemistoIncident(incident);
-    // console.log('FreeformJsonUIComponent: onCreateIncident(): res:', res);
+    let res;
+    try {
+      res = await this.fetcherService.createDemistoIncident(incident);
+      // console.log('FreeformJsonUIComponent: onCreateIncident(): res:', res);
+    }
+    catch (error) {
+      console.error(error);
+      this.showIncidentCreatedDialog = true;
+      this.incidentCreatedId = undefined;
+      let result: any;
+      if ('error' in error) {
+        // fetches inner HTTP body
+        result = error.error;
+      }
+      if (result && 'statusCode' in result && 'statusMessage' in result) {
+        this.incidentCreatedError = `XSOAR HTTP Status: ${result.statusCode}: "${result.statusMessage}"`;
+      }
+      else if (result && 'error' in result) {
+        this.incidentCreatedError = result.error;
+      }
+      else if ('message' in error) {
+        this.incidentCreatedError = error.message;
+      }
+      else {
+        console.error(error);
+        this.incidentCreatedError = 'Unhandled exception whilst submitting incident.  Check browser console log for error.';
+      }
+      // const resultMessage = `Incident creation failed with XSOAR status code ${res.statusCode}: "${res.statusMessage}"`;
+      // this.messagesReplace.emit( [{ severity: 'error', summary: 'Failure', detail: resultMessage}] );
+      return;
+    }
+
 
     if (res.success) {
 
@@ -692,13 +727,12 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       }
 
       if (success) {
-        this.messagesReplace.emit( [{ severity: 'success', summary: 'Success', detail: `XSOAR incident created with id ${incidentId}`}] );
+        this.showIncidentCreatedDialog = true;
+        this.incidentCreatedId = incidentId;
+        this.incidentCreatedError = undefined;
+        // this.messagesReplace.emit( [{ severity: 'success', summary: 'Success', detail: `XSOAR incident created with id ${incidentId}`}] );
       }
 
-    }
-    else {
-      const resultMessage = `Incident creation failed with XSOAR status code ${res.statusCode}: "${res.statusMessage}"`;
-      this.messagesReplace.emit( [{ severity: 'error', summary: 'Failure', detail: resultMessage}] );
     }
   }
 
@@ -1831,5 +1865,24 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /// End Incident Save As ///
+
+
+
+  /// Incident Created Dialog ///
+
+  async onClickDemistoInvestigateUrl(incidentId: number) {
+    console.log('FreeformJsonUIComponent: onClickDemistoInvestigateUrl(): id:', incidentId);
+    const serverId = this.currentDemistoEndpointName;
+    const result = await this.fetcherService.createInvestigation(incidentId, serverId);
+    if (result.success) {
+      const url = `${serverId}/#/incident/${incidentId}`;
+      window.open(url, '_blank');
+    }
+    else if ('error' in result) {
+      console.error(`FreeformJsonUIComponent: onClickDemistoInvestigateUrl(): XSOAR threw error when opening investigation ${incidentId} on ${serverId}:`, result.error);
+    }
+  }
+
+  /// End Incident Created Dialog ///
 
 }

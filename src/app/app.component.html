@@ -201,7 +201,7 @@
         <p-button
           *ngIf="demistoEndpointsLen !== 0"
           label="Edit"
-          (onClick)="onEditDemistoEndpoint()"
+          (onClick)="onEditDemistoEndpointClicked()"
           styleClass="alignButton"
           [disabled]="!selectedDemistoEndpointName">
         </p-button>
@@ -219,7 +219,7 @@
         <p-button
           *ngIf="demistoEndpointsLen !== 0"
           label="Test"
-          (onClick)="onTestDemistoEndpoint()"
+          (onClick)="onTestDemistoEndpointClicked()"
           styleClass="alignButton"
           [disabled]="!selectedDemistoEndpointName">
         </p-button>
@@ -228,7 +228,7 @@
         <p-button
           *ngIf="demistoEndpointsLen !== 0"
           label="Set Default"
-          (onClick)="onSetDefaultDemistoEndpoint()"
+          (onClick)="onSetDefaultDemistoEndpointClicked()"
           styleClass="alignButton"
           [disabled]="!selectedDemistoEndpointName">
         </p-button>
@@ -236,7 +236,7 @@
         <!-- Refresh -->
         <p-button
           label="Refresh"
-          (onClick)="onRefreshDemistoEndpoints()"
+          (onClick)="onRefreshDemistoEndpointsClicked()"
           styleClass="alignButton">
         </p-button>
 
@@ -282,19 +282,19 @@
 
       </ng-template>
 
-        <div style="margin-top: .5em; float: right;">
+      <div style="margin-top: .5em; float: right;">
 
-          <p-button
-            *ngIf="demistoEndpointsLen !== 0"
-            label="Select"
-            (onClick)="onDemistoEndpointSelected()"
-            [disabled]="!selectedDemistoEndpointName">
-          </p-button>
+        <p-button
+          *ngIf="demistoEndpointsLen !== 0"
+          label="Select"
+          (onClick)="onDemistoEndpointSelected()"
+          [disabled]="!selectedDemistoEndpointName">
+        </p-button>
 
-          <p-button
-            label="Close"
-            (onClick)="showDemistoEndpointOpenDialog = false">
-          </p-button>
+        <p-button
+          label="Close"
+          (onClick)="showDemistoEndpointOpenDialog = false">
+        </p-button>
 
       </div>
 
@@ -636,6 +636,7 @@
     header="Bulk Create Incident Results"
     [(visible)]="showBulkResultsDialog"
     [modal]="true"
+    [showHeader]="false"
     [style]="{width: '95%'}">
 
       <div class="bulkCreateResults">
