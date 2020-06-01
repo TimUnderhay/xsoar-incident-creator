@@ -8,24 +8,30 @@ const os = require('os');
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 const mv = util.promisify(require('mv'));
+const fs = require('fs');
 
+// Directories
+const configDir = '../etc';
+const defsDir = `./definitions`; // contains static user definitions
+const sampleIncidentsDir = `${configDir}/incidents`; // not used in prod
+const staticDir = '../../dist/xsoar-incident-creator'; // where to find pre-built Angular client files
+
+// Default Settings
+var appSettings = {};
+const settingsFile = `${configDir}/settings.json`;
+const foundSettingsFile =  fs.existsSync(settingsFile);
+loadIncidentCreatorSettings();
 
 // Config parameters
-const listenPort = 4002;
-const proxyDest = 'http://localhost:4200'; // used in client development mode
+const listenPort = appSettings.listenPort;
+const listenAddress = appSettings.listenAddress;
+const proxyDest = appSettings.developmentProxyDestination; // used in client development mode
 const apiPath = '/api';
 
 // XSOAR API Config
 var demistoApiConfigs = {};
 var defaultDemistoApiName; // the key/url of the default demistoApiConfig
 
-// Directories and files
-const fs = require('fs');
-const configDir = '../etc';
-const defsDir = `./definitions`; // contains static user definitions
-const sampleIncidentsDir = `${configDir}/incidents`; // not used in prod
-
-const staticDir = '../../dist/xsoar-incident-creator';
 const foundDist = fs.existsSync(staticDir); // check for presence of pre-built angular client directory
 
 const apiCfgFile = `${configDir}/servers.json`;
@@ -95,8 +101,8 @@ const express = require('express');
 const app = express();
 var server;
 const bodyParser = require('body-parser');
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+app.use(bodyParser.json({ limit: appSettings.jsonBodyUploadLimit }));
+app.use(bodyParser.urlencoded({ extended: true, limit: appSettings.urlEncodedBodyUploadLimit }));
 
 // Multipart form data handler
 const multer  = require('multer');
@@ -1714,7 +1720,35 @@ app.post(apiPath + '/attachment/push', async (req, res) => {
 
 
 
-///// STARTUP UTILITY FUNCTIONS //////
+///// STARTUP UTILITY FUNCTIONS /////
+
+function loadIncidentCreatorSettings() {
+  const defaultSettings = require('./default-settings');
+  const tmpSettings = {};
+  
+  if (!foundSettingsFile) {
+    // Did not find the app configuration file.  Write default settings to the app settings file
+    console.log('No settings file was found.  Loading and writing defaults');
+    fs.writeFileSync(settingsFile, JSON.stringify(defaultSettings, null, 2), { encoding: 'utf8', mode: 0o660});
+  }
+
+  try {
+    const loadedSettings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+    for (const key of Object.keys(defaultSettings)) {
+      tmpSettings[key] = loadedSettings.hasOwnProperty(key) ? loadedSettings[key] : defaultSettings[key];
+    }
+  }
+  catch (error) {
+    for (const key of Object.keys(defaultSettings)) {
+      const value = defaultSettings[key];
+      tmpSettings[key] = value;
+    }
+  }
+
+  appSettings = tmpSettings;
+}
+
+
 
 async function loadDemistoApiConfigs() {
   // Read XSOAR API configs
@@ -2090,5 +2124,5 @@ function checkAndCreateDirs() {
     });
   }
 
-  server.listen(listenPort, () => console.log(`Listening for client connections at https://*:${listenPort}`)); // listen for client connections
+  server.listen(listenPort, listenAddress, () => console.log(`Listening for client connections at https://${listenAddress}:${listenPort}`)); // listen for client connections
 })();
