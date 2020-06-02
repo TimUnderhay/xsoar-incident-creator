@@ -1138,7 +1138,10 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
         newField.dateConfig = field.dateConfig;
       }
       if (field.fieldType === 'attachments' || field.shortName === 'attachment') {
-        newField.attachmentConfig = this.FileAttachmentUIConfigToAttachmentFieldConfig(field.attachmentConfig);
+        if (field.attachmentConfig) {
+          // attachment fields may not have any field configs yet
+          newField.attachmentConfig = this.FileAttachmentUIConfigToAttachmentFieldConfig(field.attachmentConfig);
+        }
       }
       res[name] = newField;
     }

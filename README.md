@@ -91,7 +91,7 @@ It's recommended that when creating or running a container, the configuration da
 
 1. Create a directory called `xsoar-incident-creator` under your home directory: `mkdir ~/xsoar-incident-creator`
 
-2. The docker command line parameter to map that directory would be: `-v ~/xsoar-incident-creator:/opt/xsoar/xsoar-incident-creator/server/etc`
+2. The docker command line parameter to map that directory for Mac/Linux would be: `-v ~/xsoar-incident-creator:/opt/xsoar/xsoar-incident-creator/server/etc`
  
 This will be reflected in the below command line examples.
 
