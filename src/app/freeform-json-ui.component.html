@@ -386,9 +386,16 @@
 
     <div style="margin-bottom: .5em;" class="formLabel">JSON Configuration Name</div>
 
-    <input pInputText #saveAsJsonInput type="text" [(ngModel)]="jsonSaveAsConfigName" class="inputDisplay"/>
+    <input
+      pInputText
+      #saveAsJsonInput
+      type="text"
+      [(ngModel)]="jsonSaveAsConfigName"
+      class="inputDisplay"/>
 
-    <div style="margin-top: .5em;">{{jsonSaveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+    <div style="margin-top: .5em;">
+      {{jsonSaveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}
+    </div>
 
     <div style="margin-top: .5em; float: right;">
 

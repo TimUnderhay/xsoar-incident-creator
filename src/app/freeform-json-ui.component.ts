@@ -913,6 +913,11 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     let skippedIncidentFields = [];
 
     Object.keys(customFields).forEach( shortName => {
+      if (shortName === '') {
+        // Incidents sometimes return from XSOAR with a blank custom fields entry, for some strange reason
+        return;
+      }
+
       let value = customFields[shortName];
       let tmpField: IncidentFieldUI = {
         shortName,
@@ -939,7 +944,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
         for (const fieldType of this.blacklistedFieldTypes) {
           // skip blacklisted field types
           if (fieldType === fetchedField.type) {
-            console.log(`Not adding field '${shortName}' of blacklisted type '${fieldType}'`);
+            console.warn(`Not adding field '${shortName}' of blacklisted type '${fieldType}'`);
             skippedIncidentFields.push(shortName);
             // tmpField.locked = true;
             // tmpField.lockedReason = `Field type ${fieldType} is not supported for import`;
@@ -960,6 +965,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
       else {
         // field isn't defined in fetchedIncidentFieldDefinitions
+        console.warn(`Field ${shortName} not defined in XSOAR`);
         tmpField.locked = true;
         tmpField.fieldType = 'undefined';
         tmpField.lockedReason = 'This field is not defined in XSOAR';
@@ -1507,13 +1513,13 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
     try {
       const jsonConfig: FreeformJSONConfig = {
-        name: this.incidentSaveAsConfigName,
+        name: this.jsonSaveAsConfigName,
         json: this.json
       };
-      const res = await this.fetcherService.saveNewFreeformJSONConfiguration(jsonConfig);
-      this.messageWithAutoClear.emit({severity: 'success', summary: 'Successful', detail: `JSON configuration '${this.incidentSaveAsConfigName}' has been saved`});
-      this.loadedJsonConfigName = this.incidentSaveAsConfigName;
-      this.incidentSaveAsConfigName = '';
+      await this.fetcherService.saveNewFreeformJSONConfiguration(jsonConfig);
+      this.messageWithAutoClear.emit({severity: 'success', summary: 'Successful', detail: `JSON configuration '${this.jsonSaveAsConfigName}' has been saved`});
+      this.loadedJsonConfigName = this.jsonSaveAsConfigName;
+      this.jsonSaveAsConfigName = '';
     }
     catch (error) {
       console.error('FreeformJsonUIComponent: onJsonSaveAsAccepted(): caught error saving JSON config:', error);
