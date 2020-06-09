@@ -76,6 +76,12 @@
           (onClick)="onIncidentSaveAsClicked()">
         </p-button>
 
+        <!-- Export -->
+        <p-button
+          label="Export"
+          (onClick)="onIncidentExportClicked()">
+        </p-button>
+
         <!-- Short / Long Field Names -->
         <p-toggleButton
           name="shortFieldNames"
@@ -539,19 +545,49 @@
 
   <div style="padding: 1em;">
 
-    <div *ngIf="incidentCreatedId" style="font-size: 1.25em;">
-      
-      XSOAR 
-      
-      <a
-        href="javascript:void(0)"
-        (click)="onClickDemistoInvestigateUrl(incidentCreatedId)">
-          incident {{incidentCreatedId}}
-      </a> 
-  
-      was created.
-  
-    </div>
+    <ng-container *ngIf="incidentCreatedId">
+
+      <div style="font-size: 1.25em; font-weight: bolder;">
+        
+        XSOAR 
+        
+        <a
+          href="javascript:void(0)"
+          (click)="onClickDemistoInvestigateUrl(incidentCreatedId)">
+            incident {{incidentCreatedId}}
+        </a> 
+    
+        was created.
+    
+      </div>
+
+      <div style="font-size: 1.25em; font-weight: bolder; margin-top: 1em;">
+        
+        Incident JSON <span
+          *ngIf="hasAnEnabledAttachmentField"
+          class="pi pi-info-circle"
+          style="line-height: 14px; vertical-align: middle;"
+          pTooltip="Attachment fields do not appear in incident JSON.  They are added to the incident separately, after the incident has been created.">
+        </span>:
+        
+        &nbsp;
+
+        <p-button
+         label="View"
+         (onClick)="onViewIncidentJSONClicked(incidentCreatedId, currentDemistoEndpointName)">
+        </p-button>
+
+        &nbsp;
+
+        <p-button
+          label="Download"
+          (onClick)="onDownloadIncidentJSONClicked(incidentCreatedId)">
+        </p-button>
+
+      </div>
+
+
+    </ng-container>
   
     <div *ngIf="incidentCreatedError">
       

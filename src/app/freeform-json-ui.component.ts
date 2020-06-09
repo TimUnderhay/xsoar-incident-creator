@@ -91,6 +91,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   // Raw JSON
   json: object;
+  incidentJson: object;
   defaultJsonConfigName: string;
   loadedJsonConfigName: string;
   @Input() savedJsonConfigurations: string[];
@@ -161,6 +162,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   showIncidentCreatedDialog = false;
   incidentCreatedId: number;
   incidentCreatedError: string;
+  hasAnEnabledAttachmentField = false;
 
   // RxJS Subscriptions
   private subscriptions = new Subscription();
@@ -572,13 +574,13 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       return inc;
     }
 
-    const hasAnEnabledAttachmentField = utils.fieldsHaveEnabledAttachmentField(this.chosenIncidentFields);
+    this.hasAnEnabledAttachmentField = utils.fieldsHaveEnabledAttachmentField(this.chosenIncidentFields);
 
     const filesToPush: FileToPush[] = [];
 
     let incident: IncidentCreationConfig = {
       serverId: this.currentDemistoEndpointName,
-      createInvestigation: hasAnEnabledAttachmentField ? false : this.createInvestigation // if we are uploading attachments to the incident, we don't want the playbook to run until after the attachments have been uploaded
+      createInvestigation: this.hasAnEnabledAttachmentField ? false : this.createInvestigation // if we are uploading attachments to the incident, we don't want the playbook to run until after the attachments have been uploaded
     };
 
 
@@ -663,6 +665,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     try {
       res = await this.fetcherService.createDemistoIncident(incident);
       // console.log('FreeformJsonUIComponent: onCreateIncident(): res:', res);
+      this.incidentJson = incident;
     }
     catch (error) {
       console.error(error);
@@ -1693,15 +1696,14 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   async onIncidentConfigOpened(selectedConfig: IncidentConfig) {
     console.log('FreeformJsonUIComponent: onIncidentConfigOpened()');
-    // this.json = selectedConfig.incident;
     // console.log('FreeformJsonUIComponent: onIncidentConfigOpened(): json:', this.json);
     this.buildChosenFieldsFromConfig(selectedConfig);
     this.buildIncidentFieldOptions(selectedConfig.incidentType);
-    // this.mergeLoadedFieldConfig(selectedConfig);
     this.createInvestigation = selectedConfig.createInvestigation;
     this.selectedIncidentType = selectedConfig.incidentType;
     this.setSelectedIncidentTypeIsAvailable();
     this.defaultJsonConfigName = 'defaultJsonName' in selectedConfig ? selectedConfig.defaultJsonName : undefined;
+    this.incidentJson = undefined;
 
     if (!this.fetchedIncidentTypeNames.includes(selectedConfig.incidentType)) {
       this.updateChosenFieldLocks();
@@ -1749,6 +1751,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
     if (importResult.success) {
       this.json = importResult.incident;
+      this.incidentJson = undefined;
       const incidentType = 'type' in importResult.incident ? importResult.incident.type : undefined;
       this.buildChosenFieldsFromDemisto(this.json);
       this.buildIncidentFieldOptions(incidentType);
@@ -1781,6 +1784,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   onUploadIncidentJson(json: object) {
     this.json = json;
+    this.incidentJson = undefined;
     this.buildChosenFieldsFromDemisto(json);
     this.buildIncidentFieldOptions((json as any).type);
     this.selectedIncidentType = (json as any).type;
@@ -1795,10 +1799,9 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  /// Incident Save ///
+  /// Incident Save & Export ///
 
-  async onIncidentSaveClicked() {
-    // console.log('FreeformJsonUIComponent(): onSaveClicked()');
+  buildSavedIncidentConfig(): IncidentConfig {
     const incidentConfig: IncidentConfig = {
       name: this.loadedIncidentConfigName,
       id: this.loadedIncidentConfigId,
@@ -1809,6 +1812,14 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     if (this.defaultJsonConfigName) {
       incidentConfig.defaultJsonName = this.defaultJsonConfigName;
     }
+    return incidentConfig;
+  }
+
+
+
+  async onIncidentSaveClicked() {
+    // console.log('FreeformJsonUIComponent(): onSaveClicked()');
+    const incidentConfig = this.buildSavedIncidentConfig();
     console.log('FreeformJsonUIComponent: onSaveClicked(): incidentConfig:', incidentConfig);
     try {
       await this.fetcherService.saveIncidentConfiguration(incidentConfig);
@@ -1821,7 +1832,17 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  /// End Incident Save ///
+
+
+  async onIncidentExportClicked() {
+    // console.log('FreeformJsonUIComponent(): onIncidentExportClicked()');
+    const incidentConfig = this.buildSavedIncidentConfig();
+    console.log('FreeformJsonUIComponent: onIncidentExportClicked(): incidentConfig:', incidentConfig);
+    const filename = this.loadedIncidentConfigName !== undefined ? `${this.loadedIncidentConfigName}_mapping.json` : `unsaved_mapping.json`;
+    this.fetcherService.downloadJSONFile(incidentConfig, filename);
+  }
+
+  /// End Incident Save & Export ///
 
 
 
@@ -1891,6 +1912,34 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     else if ('error' in result) {
       console.error(`FreeformJsonUIComponent: onClickDemistoInvestigateUrl(): XSOAR threw error when opening investigation ${incidentId} on ${serverId}:`, result.error);
     }
+  }
+
+
+
+  onViewIncidentJSONClicked(incidentId: number, serverId: string) {
+    console.log('FreeformJsonUIComponent: onViewIncidentJSONClicked()');
+
+    let config: DynamicDialogConfig = {
+      header: `JSON of XSOAR Incident ${incidentId} for '${serverId}'`,
+      closable: true,
+      closeOnEscape: true,
+      data: {
+        value: this.incidentJson,
+        readOnly: true,
+        showResetValues: false
+      },
+      width: '95%',
+      height: '90%'
+    };
+    const dialogRef = this.dialogService.open(JsonEditorComponent, config);
+  }
+
+
+
+  onDownloadIncidentJSONClicked(incidentId: number) {
+    console.log('FreeformJsonUIComponent: onDownloadIncidentJSONClicked()');
+
+    this.fetcherService.downloadJSONFile(this.incidentJson, `xsoar_incident_${incidentId}.json`);
   }
 
   /// End Incident Created Dialog ///

@@ -28,6 +28,7 @@ There is no warranty or official support for this project.  Issues will be addre
 - I'm not thrilled with the way that file attachment functionality was implemented (using a 'repo'), but it's functional.
 - It does not implement any kind of websocket / live update functionality, so any changes made in other tabs or by other users will not immediately be reflected in any other tabs.
 - It uses JSON files as simple databases.  Modifying them by hand may make the app unusable.
+- UI doesn't yet use responsive layout, so it may look bad on small screens.
 
 ## Security (or Rather, Lack of Security)
 - No front-end user security / login functionality is provided, so this is potentially a back-door into XSOAR if left on the network for other users to use.  See note on how **NOT** to use this app.

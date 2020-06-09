@@ -457,6 +457,23 @@ export class FetcherService {
 
 
 
+  downloadJSONFile(incidentJson, filename) {
+    const jsonse = JSON.stringify(incidentJson, null, 2);
+    const encoder = new TextEncoder();
+    encoder.encode(jsonse);
+
+    const downloadLink = document.createElement('a');
+    const newBlob = new Blob([jsonse], {type: 'application/json'});
+    downloadLink.href = window.URL.createObjectURL(newBlob);
+    downloadLink.setAttribute('download', filename);
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    window.URL.revokeObjectURL(downloadLink.href);
+    downloadLink.parentNode.removeChild(downloadLink);
+  }
+
+
+
   uploadFileToDemistoIncident(file: FileToPush): Promise<any> {
     const headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/attachment/push', file, { headers } )
