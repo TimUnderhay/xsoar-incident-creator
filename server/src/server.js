@@ -1201,7 +1201,7 @@ app.delete(apiPath + '/json/:name', async (req, res) => {
 
 
 
-app.get(apiPath + '/json', async (req, res) => {
+app.get(apiPath + '/json/all', async (req, res) => {
   // retrieve all freeform JSON config names
   const freeJsonNames = Object.values(freeJsonConfig).map( config => config.name );
   res.status(200).json(freeJsonNames);
@@ -1211,9 +1211,11 @@ app.get(apiPath + '/json', async (req, res) => {
 
 app.get(apiPath + '/json/:name', async (req, res) => {
   // get a particular freeform JSON config (just the json)
+  console.log('got to 1');
   const name = req.params.name;
   if (name in freeJsonConfig) {
-    res.status(200).json(freeJsonConfig[name].json);
+    const json = freeJsonConfig[name].json;
+    res.status(200).json(json);
     return;
   }
   else {

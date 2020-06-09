@@ -1116,6 +1116,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
   async getJsonConfig(configName) {
+    console.log('FreeformJsonUIComponent: getJsonConfig(): configName:', configName);
     // we want the calling function to use its own try/catch blocks, as error handling can differ depending on use case.
     this.json = await this.fetcherService.getSavedJSONConfiguration(configName);
     this.loadedJsonConfigName = configName;

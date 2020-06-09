@@ -176,7 +176,7 @@ export class FetcherService {
     } );
     serverId = encodeURIComponent(serverId);
     console.log('FetcherService: deleteDemistoEndpoint(): serverId:', serverId);
-    return this.http.delete(`${this.apiPath}/demistoEndpoint/${serverId}`, { headers } )
+    return this.http.delete(`${this.apiPath}/demistoEndpoint/${encodeURIComponent(serverId)}`, { headers } )
                     .toPromise()
                     .then( res => res as DemistoEndpointTestResult );
   }
@@ -206,7 +206,7 @@ export class FetcherService {
   getIncidentFieldDefinitions(serverId): Promise<FetchedIncidentField[]> {
     serverId = encodeURIComponent(serverId);
     const headers = this.buildHeaders();
-    return this.http.get(`${this.apiPath}/incidentFields/${serverId}`, { headers } )
+    return this.http.get(`${this.apiPath}/incidentFields/${encodeURIComponent(serverId)}`, { headers } )
                     .toPromise()
                     .then( (res: any) => res.incident_fields );
   }
@@ -216,7 +216,7 @@ export class FetcherService {
   getIncidentTypes(serverId): Promise<FetchedIncidentType[]> {
     serverId = encodeURIComponent(serverId);
     const headers = this.buildHeaders();
-    return this.http.get(`${this.apiPath}/incidentType/${serverId}`, { headers } )
+    return this.http.get(`${this.apiPath}/incidentType/${encodeURIComponent(serverId)}`, { headers } )
                     .toPromise()
                     // .then( (res: any) => this.logResult(res) )
                     .then( (res: any) => res.incident_types as FetchedIncidentType[] );
@@ -259,7 +259,7 @@ export class FetcherService {
 
   deleteIncidentConfiguration(name: string): Promise<any> {
     const headers = this.buildHeaders();
-    return this.http.delete(this.apiPath + `/incidentConfig/${name}`, { headers } )
+    return this.http.delete(this.apiPath + `/incidentConfig/${encodeURIComponent(name)}`, { headers } )
                     .toPromise();
   }
 
@@ -311,7 +311,7 @@ export class FetcherService {
 
   getSavedJSONConfigurationNames(): Promise<string[]> {
     const headers = this.buildHeaders();
-    return this.http.get(this.apiPath + '/json', { headers } )
+    return this.http.get(this.apiPath + '/json/all', { headers } )
                     .toPromise()
                     .then(value => value as string[]);
   }
@@ -320,7 +320,7 @@ export class FetcherService {
 
   getSavedJSONConfiguration(name): Promise<object | Array<any>> {
     const headers = this.buildHeaders();
-    return this.http.get(`${this.apiPath}/json/${name}`, { headers } )
+    return this.http.get(`${this.apiPath}/json/${encodeURIComponent(name)}`, { headers } )
                     .toPromise<object | Array<any>>();
   }
 
@@ -336,7 +336,7 @@ export class FetcherService {
 
   deleteFreeformJSONConfiguration(name: string): Promise<any> {
     const headers = this.buildHeaders();
-    return this.http.delete(this.apiPath + `/json/${name}`, { headers } )
+    return this.http.delete(this.apiPath + `/json/${encodeURIComponent(name)}`, { headers } )
                     .toPromise();
   }
 
@@ -395,7 +395,7 @@ export class FetcherService {
 
   deleteJsonGroupConfiguration(name: string): Promise<any> {
     const headers = this.buildHeaders();
-    return this.http.delete(this.apiPath + `/jsonGroup/${name}`, { headers } )
+    return this.http.delete(this.apiPath + `/jsonGroup/${encodeURIComponent(name)}`, { headers } )
                     .toPromise();
   }
 
@@ -429,14 +429,14 @@ export class FetcherService {
 
   deleteFileAttachment(id: string): Promise<any> {
     const headers = this.buildHeaders();
-    return this.http.delete(this.apiPath + `/attachment/${id}`, { headers } )
+    return this.http.delete(this.apiPath + `/attachment/${encodeURIComponent(id)}`, { headers } )
                     .toPromise();
   }
 
 
 
   downloadFileAttachment(id) {
-    this.http.get(this.apiPath + `/attachment/${id}`, { observe: 'response', responseType: 'blob' })
+    this.http.get(this.apiPath + `/attachment/${encodeURIComponent(id)}`, { observe: 'response', responseType: 'blob' })
              .subscribe( response => {
                const headers = response.headers;
                let filename = headers.get('Content-Disposition').split('filename="')[1];
