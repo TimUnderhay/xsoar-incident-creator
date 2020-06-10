@@ -1365,6 +1365,14 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
+  onDownloadJsonClicked() {
+    console.log('FreeformJsonUIComponent: onDownloadJsonClicked()');
+    const filename = this.loadedJsonConfigName !== undefined ? this.loadedJsonConfigName : `untitled.json`;
+    this.fetcherService.downloadJSONFile(this.json, filename);
+  }
+
+
+
   calculateRequiresJson() {
     let requiresJson = false;
     for (const field of Object.values(this.chosenIncidentFields)) {

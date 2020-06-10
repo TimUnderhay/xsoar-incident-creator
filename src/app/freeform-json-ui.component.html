@@ -256,8 +256,16 @@
           <!-- View JSON Button -->
           <button pButton
             type="button"
-            label="View JSON"
+            label="View"
             (click)="onViewJsonClicked()"
+            [disabled]="!json">
+          </button>
+
+          <!-- Download JSON Button -->
+          <button pButton
+            type="button"
+            label="Download"
+            (click)="onDownloadJsonClicked()"
             [disabled]="!json">
           </button>
 
