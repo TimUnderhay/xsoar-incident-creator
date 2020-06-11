@@ -61,17 +61,26 @@
 
         <!-- New Mapping -->
         <p-button
-          label="New Mapping"
+          label="New"
           (onClick)="onNewJsonMappingClicked()">
         </p-button>
         
         <!-- Open -->
         <p-button
-          label="Open Incident"
+          label="Open"
           (onClick)="onOpenClicked()"
           styleClass="alignButton"
           [disabled]="savedIncidentConfigurationsLen === 0"
           pTooltip="Open a saved incident configuration"
+          showDelay="750">
+        </p-button>
+
+        <!-- Import Mapped Config -->
+        <p-button
+          label="Import"
+          (onClick)="onImportConfigClicked()"
+          [disabled]="!currentDemistoEndpointInit"
+          pTooltip="Import an exported mapping"
           showDelay="750">
         </p-button>
         
@@ -1278,6 +1287,82 @@
       </p-button>
 
     </div>
+
+  </p-dialog>
+
+
+
+  <!-- Import Mapping Dialog -->
+  <p-dialog
+    header="Import Incident Mapping"
+    [(visible)]="showImportIncidentMappingDialog"
+    [modal]="true"
+    [style]="{width: '50%'}"
+    styleClass="loadFromDemistoDialog">
+
+      <div style="margin-top: 1em;">
+
+        <!-- Upload Button -->
+        <p-fileUpload
+          #incidentMappingUpload
+          name="myfile[]"
+          mode="basic"
+          chooseLabel="Select Mapping File"
+          [customUpload]="true"
+          (uploadHandler)="onIncidentMappingUploaded($event, incidentMappingUpload)"
+          accept=".json"
+          [multiple]="false"
+          [auto]="true"
+          pTooltip="Import an exported incident mapping file"
+          showDelay="750">
+        </p-fileUpload>
+
+      </div>
+
+      <div
+        *ngIf="mappingToImport"
+        style="margin-top: .5em; font-weight: bold;">
+
+          Name: {{mappingToImport.name}}
+
+      </div>
+
+      <div
+        *ngIf="duplicateIncidentMappingFromImport"
+        style="margin-top: 1em;">
+        
+          <p-checkbox
+            [(ngModel)]="overrideDuplicateIncidentMappingFromImport"
+            (onChange)="onOverrideDuplicateIncidentMappingFromImportChanged(overrideDuplicateIncidentMappingFromImport)"
+            [binary]="true"
+            label="The uploaded config already exists.  Overwrite?">
+          </p-checkbox>
+      
+      
+      </div>
+
+      <div
+        *ngIf="!validIncidentMappingFile"
+        style="margin-top: 1em; color: red;">
+        
+          The uploaded file is not a valid incident mapping configuration.
+      
+      </div>
+
+      <div style="margin-top: .5em; float: right;">
+
+        <p-button
+          label="Load"
+          (onClick)="onImportMappingAccepted()"
+          [disabled]="!incidentMappingSubmitButtonEnabled">
+        </p-button>
+
+        <p-button
+          label="Cancel"
+          (onClick)="onImportMappingCancelled()">
+        </p-button>
+
+      </div>
 
   </p-dialog>
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ChangeDetectorRef, ViewChild } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { FetcherService } from './fetcher-service';
 import { DemistoEndpoints } from './types/demisto-endpoints';
 import { User } from './types/user';
@@ -69,8 +69,13 @@ export class AppComponent implements OnInit {
   }
   set savedIncidentConfigurations(value: IncidentConfigs) {
     this._savedIncidentConfigurations = value;
-
+    const savedIncidentConfigIds: string[] = [];
+    for (const config of Object.values(value)) {
+      savedIncidentConfigIds.push(config.id);
+    }
+    this.savedIncidentConfigIds = savedIncidentConfigIds;
   }
+  savedIncidentConfigIds: string[];
   get savedIncidentConfigurationsLen(): number {
     // returns the number of saved field configs
     return Object.keys(this.savedIncidentConfigurations).length;
@@ -2132,6 +2137,119 @@ export class AppComponent implements OnInit {
     }
 
   }
+
+  /// END Edit File Attachment ///
+
+
+
+  /// Import Mapped Configuration ///
+
+  showImportIncidentMappingDialog = false;
+  duplicateIncidentMappingFromImport = false;
+  overrideDuplicateIncidentMappingFromImport = false;
+  incidentMappingSubmitButtonEnabled = false;
+  validIncidentMappingFile = true;
+  mappingToImport: IncidentConfig;
+
+  onImportConfigClicked() {
+    console.log('AppComponent: onImportConfigClicked()');
+    this.showImportIncidentMappingDialog = true;
+    this.duplicateIncidentMappingFromImport = false;
+    this.overrideDuplicateIncidentMappingFromImport = false;
+    this.incidentMappingSubmitButtonEnabled = false;
+    this.validIncidentMappingFile = true;
+    this.mappingToImport = undefined;
+  }
+
+
+
+  validateImportedMapping(mapping: object): boolean {
+    const propertiesToCheck = ['name', 'id', 'chosenFields', 'createInvestigation', 'incidentType'];
+
+    for (const property of propertiesToCheck) {
+      if (!mapping.hasOwnProperty(property)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+
+
+  onIncidentMappingUploaded(data: { files: File }, uploadRef) {
+    const file = data.files[0];
+    console.log('AppComponent: onIncidentMappingUploaded(): file:', file);
+
+    const reader = new FileReader();
+
+    reader.onloadend = (progressEvent: ProgressEvent) => {
+
+      let parsedMapping;
+      // these values must be reset every time a new file is uploaded
+      this.duplicateIncidentMappingFromImport = false;
+      this.overrideDuplicateIncidentMappingFromImport = false;
+      this.incidentMappingSubmitButtonEnabled = false;
+      this.validIncidentMappingFile = true;
+      this.mappingToImport = undefined;
+
+      try {
+        parsedMapping = JSON.parse(reader.result as string);
+        console.log('AppComponent: onIncidentMappingUploaded(): parsedMapping:', parsedMapping);
+        uploadRef.clear(); // allow future uploads
+      }
+      catch (error) {
+        console.error('onIncidentJsonUploaded(): Error parsing uploaded JSON:', error);
+        uploadRef.clear(); // allow future uploads
+        return;
+      }
+
+      if (!this.validateImportedMapping(parsedMapping)) {
+        this.validIncidentMappingFile = false;
+        return;
+      }
+
+      this.mappingToImport = parsedMapping;
+
+      if (
+        this.savedIncidentConfigIds.includes(this.mappingToImport.id)
+        || this.savedIncidentConfigurations.hasOwnProperty(this.mappingToImport.name) ) {
+          this.duplicateIncidentMappingFromImport = true;
+      }
+
+      this.incidentMappingSubmitButtonEnabled = this.duplicateIncidentMappingFromImport ? false : true;
+    };
+
+    reader.readAsText(data.files[0]); // kick off the read operation (calls reader.onloadend())
+  }
+
+
+
+  onOverrideDuplicateIncidentMappingFromImportChanged(value: boolean) {
+    console.log('AppComponent: onOverrideDuplicateIncidentMappingFromImportChanged()');
+    this.incidentMappingSubmitButtonEnabled = value;
+  }
+
+
+
+  onImportMappingAccepted() {
+    console.log('AppComponent: onImportMappingAccepted()');
+    this.showImportIncidentMappingDialog = false;
+
+    // this.loadDefaultChosenFields = false;
+    // this.loadedIncidentConfigName = undefined;
+    // this.loadedIncidentConfigId = undefined;
+    // this.changeDetector.detectChanges();
+    // this.freeformJsonUIComponent.onUploadIncidentJson(parsedIncidentJson);
+  }
+
+
+
+  onImportMappingCancelled() {
+    console.log('AppComponent: onImportMappingCancelled()');
+    this.showImportIncidentMappingDialog = false;
+  }
+
+  /// END Import Mapped Configuration ///
 
 
 }
