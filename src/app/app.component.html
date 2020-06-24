@@ -80,7 +80,7 @@
           label="Import"
           (onClick)="onImportConfigClicked()"
           [disabled]="!currentDemistoEndpointInit"
-          pTooltip="Import an exported mapping"
+          pTooltip="Import an exported incident mapping configuration"
           showDelay="750">
         </p-button>
         
@@ -412,7 +412,7 @@
 
   <!--------------INCIDENT FIELD CONFIG MODAL DIALOGS SECTION-------------->
 
-  <!-- Open Fields Config Dialog -->
+  <!-- Open Incident Config Dialog -->
   <p-dialog
     header="Select a Saved Incident"
     [(visible)]="showOpenDialog"
@@ -449,7 +449,7 @@
   
 
 
-  <!-- Delete Saved Incident Dialog -->
+  <!-- Delete Saved Incident Config Dialog -->
   <p-dialog
     header="Delete Saved Incident"
     [(visible)]="showDeleteDialog"

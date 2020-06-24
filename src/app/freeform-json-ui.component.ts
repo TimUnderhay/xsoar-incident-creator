@@ -1830,7 +1830,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     const incidentConfig = this.buildSavedIncidentConfig();
     console.log('FreeformJsonUIComponent: onSaveClicked(): incidentConfig:', incidentConfig);
     try {
-      await this.fetcherService.saveIncidentConfiguration(incidentConfig);
+      await this.fetcherService.saveUpdatedIncidentConfiguration(incidentConfig);
       this.messageWithAutoClear.emit({severity: 'success', summary: 'Successful', detail: `Configuration '${this.loadedIncidentConfigName}' has been saved`});
       this.savedIncidentConfigurationsChanged.emit();
     }
@@ -1846,7 +1846,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     // console.log('FreeformJsonUIComponent(): onIncidentExportClicked()');
     const incidentConfig = this.buildSavedIncidentConfig();
     console.log('FreeformJsonUIComponent: onIncidentExportClicked(): incidentConfig:', incidentConfig);
-    const filename = this.loadedIncidentConfigName !== undefined ? `${this.loadedIncidentConfigName}_mapping.json` : `unsaved_mapping.json`;
+    const filename = this.loadedIncidentConfigName !== undefined ? `${this.loadedIncidentConfigName}_incident_mapping_config.json` : `unsaved_incident_mapping_config.json`;
     this.fetcherService.downloadJSONFile(incidentConfig, filename);
   }
 

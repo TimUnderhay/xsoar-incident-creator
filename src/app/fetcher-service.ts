@@ -249,7 +249,7 @@ export class FetcherService {
 
 
 
-  saveIncidentConfiguration(config: IncidentConfig): Promise<any> {
+  saveUpdatedIncidentConfiguration(config: IncidentConfig): Promise<any> {
     const headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/incidentConfig/update', config, { headers } )
                     .toPromise();

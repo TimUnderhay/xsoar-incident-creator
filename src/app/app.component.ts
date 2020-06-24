@@ -226,6 +226,14 @@ export class AppComponent implements OnInit {
   editFileAttachmentType: string;
   editFileAttachmentDisplayAsMediaSelection = false;
 
+  // Incident Config Import
+  showImportIncidentMappingDialog = false;
+  duplicateIncidentMappingFromImport = false;
+  overrideDuplicateIncidentMappingFromImport = false;
+  incidentMappingSubmitButtonEnabled = false;
+  validIncidentMappingFile = true;
+  mappingToImport: IncidentConfig;
+
   // RxJS Subscriptions
   private subscriptions = new Subscription();
 
@@ -1684,7 +1692,7 @@ export class AppComponent implements OnInit {
 
 
 
-  async getSavedIncidentConfigurations() {
+  async getSavedIncidentConfigurations(): Promise<boolean> {
     // Get Incident Configurations
     try {
       this.savedIncidentConfigurations = await this.fetcherService.getSavedIncidentConfigurations();
@@ -1693,9 +1701,11 @@ export class AppComponent implements OnInit {
       if (this.loadedIncidentConfigName) {
         this.loadedIncidentConfigId = this.savedIncidentConfigurations[this.loadedIncidentConfigName].id;
       }
+      return true;
     }
     catch (error) {
       console.error('AppComponent: getSavedIncidentConfigurations(): Caught error fetching fields configuration:', error);
+      return false;
     }
   }
 
@@ -2144,13 +2154,6 @@ export class AppComponent implements OnInit {
 
   /// Import Mapped Configuration ///
 
-  showImportIncidentMappingDialog = false;
-  duplicateIncidentMappingFromImport = false;
-  overrideDuplicateIncidentMappingFromImport = false;
-  incidentMappingSubmitButtonEnabled = false;
-  validIncidentMappingFile = true;
-  mappingToImport: IncidentConfig;
-
   onImportConfigClicked() {
     console.log('AppComponent: onImportConfigClicked()');
     this.showImportIncidentMappingDialog = true;
@@ -2231,9 +2234,55 @@ export class AppComponent implements OnInit {
 
 
 
-  onImportMappingAccepted() {
+  async onImportMappingAccepted() {
     console.log('AppComponent: onImportMappingAccepted()');
+
     this.showImportIncidentMappingDialog = false;
+
+    // add to the server here
+
+    let saveRes;
+    if (this.duplicateIncidentMappingFromImport) {
+      // console.log('got to 1');
+      try {
+        saveRes = await this.fetcherService.saveUpdatedIncidentConfiguration(this.mappingToImport);
+      }
+      catch (error) {
+        console.error('AppComponent: onImportMappingAccepted(): caught error saving updated incident configuration: error:', error);
+        return;
+      }
+    }
+    else {
+      // console.log('got to 2');
+      try {
+        saveRes = await this.fetcherService.saveNewIncidentConfiguration(this.mappingToImport);
+      }
+      catch (error) {
+        console.error('AppComponent: onImportMappingAccepted(): caught error saving new incident configuration: error:', error);
+        return;
+      }
+    }
+
+    // console.log('got to 3');
+
+    // now refresh incident configs
+    const res = await this.getSavedIncidentConfigurations();
+
+    if (!res) {
+      // console.log('got to 4');
+      console.error('AppComponent: onImportMappingAccepted(): Incident config refresh failed.  Aborting');
+      return;
+    }
+
+    // console.log('got to 5');
+    const namesMatch = this.loadedIncidentConfigName === this.mappingToImport.name;
+    const idsMatch = this.loadedIncidentConfigId === this.mappingToImport.id;
+
+    if (namesMatch || idsMatch) {
+      // console.log('got to 6');
+      this.selectedOpenConfig = this.mappingToImport.name;
+      this.onConfigOpened();
+    }
 
     // this.loadDefaultChosenFields = false;
     // this.loadedIncidentConfigName = undefined;

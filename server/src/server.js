@@ -1267,7 +1267,7 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
   };
 
   if ('defaultJsonName' in body) {
-    updatedField.defaultJsonName = body.defaultJsonName;
+    entry.defaultJsonName = body.defaultJsonName;
   }
 
   incidentsConfig[name] = entry;
@@ -1281,41 +1281,66 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
 app.post(apiPath + '/incidentConfig/update', async (req, res) => {
   // update an existing field config
   const body = req.body;
-  const requiredFields = ['name', 'chosenFields', 'createInvestigation', 'incidentType'];
+  const requiredFields = ['id', 'name', 'chosenFields', 'createInvestigation', 'incidentType'];
 
-  for (let i = 0; i < requiredFields.length; i++) {
-    // check for valid request
-    let fieldName = requiredFields[i];
-    if (!(fieldName in body)) {
-      const error = `Invalid request: Key '${fieldName}' is missing`;
-      res.status(400).json({error});
-      return;
-    }
+  try {
+    checkForRequiredFields(requiredFields, body);
+  }
+  catch(fieldName) {
+    return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing from request body`});
   }
 
-  if (body.id === '') {
+  const id = body.id;
+  const name = body.name;
+
+  if (id === '') {
     const error = `Invalid request: 'id' key may not be empty`;
-    res.status(400).json({error});
-    return;
+    return res.status(400).json({error});
   }
 
   // remove any invalid fields
-  const updatedField = {
-    name: body.name,
-    id: body.id,
+  const updatedIncidentConfig = {
+    name,
+    id,
     incidentType: body.incidentType,
     chosenFields: body.chosenFields,
     createInvestigation: body.createInvestigation
   };
 
   if ('defaultJsonName' in body) {
-    updatedField.defaultJsonName = body.defaultJsonName;
+    updatedIncidentConfig.defaultJsonName = body.defaultJsonName;
   }
 
-  incidentsConfig[body.name] = updatedField;
+  let foundId = false;
+  let foundIdName; // the name of the config where we found the id
+  for (const incident of Object.values(incidentsConfig)) {
+    if (incident.id === id) {
+      foundId = true;
+      foundIdName = incident.name;
+      break;
+    }
+  }
+  const foundName = incidentsConfig.hasOwnProperty(name);
+  const idAndNameBelongToSameSavedConfig = foundId && foundName && incidentsConfig[name].id === id;
+
+  if (idAndNameBelongToSameSavedConfig) {
+    incidentsConfig[name] = updatedIncidentConfig;
+  }
+  else if (!foundId && foundName) {
+    incidentsConfig[name] = updatedIncidentConfig;
+  }
+  else if (foundId && !foundName) {
+    delete incidentsConfig[foundIdName];
+    incidentsConfig[name] = updatedIncidentConfig;
+  }
+  else if (foundId && foundName && !idAndNameBelongToSameSavedConfig) {
+    const error = `Incident config update failed with bad request: 'id' and 'name' paramteres belong to different saved configs: '${name}' and '${foundIdName}'`;
+    console.info(error);
+    return res.status(400).json({error});
+  }
   await saveIncidentsConfig();
 
-  res.status(200).json({success: true});; // send 'OK'
+  res.status(200).json({success: true}); // send 'OK'
 } );
 
 
