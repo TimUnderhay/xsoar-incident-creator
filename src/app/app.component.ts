@@ -634,14 +634,14 @@ export class AppComponent implements OnInit {
 
 
 
-  onConfigOpened() {
+  onConfigOpened(config?: IncidentConfig) {
     console.log('AppComponent: onConfigOpened()');
     this.showOpenDialog = false;
     this.showJsonMappingUI = true;
     this.loadDefaultChosenFields = false;
     this.changeDetector.detectChanges();
 
-    const selectedConfig = this.savedIncidentConfigurations[this.selectedOpenConfig];
+    const selectedConfig = config ? config : this.savedIncidentConfigurations[this.selectedOpenConfig];
     this.loadedIncidentConfigName = selectedConfig.name;
     this.loadedIncidentConfigId = selectedConfig.id;
     this.freeformJsonUIComponent.onIncidentConfigOpened(selectedConfig);
@@ -2243,7 +2243,6 @@ export class AppComponent implements OnInit {
 
     let saveRes;
     if (this.duplicateIncidentMappingFromImport) {
-      // console.log('got to 1');
       try {
         saveRes = await this.fetcherService.saveUpdatedIncidentConfiguration(this.mappingToImport);
       }
@@ -2253,7 +2252,6 @@ export class AppComponent implements OnInit {
       }
     }
     else {
-      // console.log('got to 2');
       try {
         saveRes = await this.fetcherService.saveNewIncidentConfiguration(this.mappingToImport);
       }
@@ -2263,32 +2261,20 @@ export class AppComponent implements OnInit {
       }
     }
 
-    // console.log('got to 3');
-
     // now refresh incident configs
     const res = await this.getSavedIncidentConfigurations();
 
     if (!res) {
-      // console.log('got to 4');
       console.error('AppComponent: onImportMappingAccepted(): Incident config refresh failed.  Aborting');
       return;
     }
 
-    // console.log('got to 5');
     const namesMatch = this.loadedIncidentConfigName === this.mappingToImport.name;
     const idsMatch = this.loadedIncidentConfigId === this.mappingToImport.id;
 
     if (namesMatch || idsMatch) {
-      // console.log('got to 6');
-      this.selectedOpenConfig = this.mappingToImport.name;
-      this.onConfigOpened();
+      this.onConfigOpened(this.mappingToImport);
     }
-
-    // this.loadDefaultChosenFields = false;
-    // this.loadedIncidentConfigName = undefined;
-    // this.loadedIncidentConfigId = undefined;
-    // this.changeDetector.detectChanges();
-    // this.freeformJsonUIComponent.onUploadIncidentJson(parsedIncidentJson);
   }
 
 
