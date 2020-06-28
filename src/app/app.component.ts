@@ -18,6 +18,7 @@ import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { FileAttachmentConfig, FileAttachmentConfigs, FileToPush } from './types/file-attachment';
 import { FileUpload } from 'primeng/fileupload';
+import { JSONConfigRef, JSONConfigRefs } from './types/json-config';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -149,41 +150,55 @@ export class AppComponent implements OnInit {
   showFieldMappingSelectionBox = false;
 
   // Freeform JSON Configs
-  _savedJsonConfigurations: string[] = [];
-  get savedJsonConfigurations(): string[] {
+  _savedJsonConfigurations: JSONConfigRef[] = [];
+  get savedJsonConfigurations(): JSONConfigRef[] {
     return this._savedJsonConfigurations;
   }
-  set savedJsonConfigurations(value: string[]) {
+  set savedJsonConfigurations(value: JSONConfigRef[]) {
     this._savedJsonConfigurations = value;
-    this.savedJsonConfigurationItems = this.savedJsonConfigurations.map( val => ({value: val, label: val} as SelectItem));
+    this.savedJsonConfigurationItems = value.map( val => ({value: val.id, label: val.name} as SelectItem));
+    const savedJsonConfigurationsObj = {};
+    for (const config of this._savedJsonConfigurations) {
+      savedJsonConfigurationsObj[config.id] = config;
+    }
+    this.savedJsonConfigurationsObj = savedJsonConfigurationsObj;
     this.buildJsonFileAndGroupConfigurationsItems();
   }
+  savedJsonConfigurationsObj: JSONConfigRefs = {};
   savedJsonConfigurationItems: SelectItem[];
 
   // JSON Groups Config & UI
   _jsonGroupConfigurations: JsonGroups = {};
+  jsonGroupConfigurationsByName: JsonGroups = {};
   get jsonGroupConfigurations(): JsonGroups {
     return this._jsonGroupConfigurations;
   }
-  set jsonGroupConfigurations(value: JsonGroups) {
-    this._jsonGroupConfigurations = value;
-    this.jsonGroupConfigurationsItems = Object.values(this._jsonGroupConfigurations).map( jsonConfig => ({
-      value: jsonConfig.name,
+  set jsonGroupConfigurations(values: JsonGroups) {
+    this._jsonGroupConfigurations = values;
+    this.jsonGroupConfigurationsItems = Object.values(values).map( jsonConfig => ({
+      value: jsonConfig.id,
       label: jsonConfig.name} as SelectItem) );
+    const jsonGroupConfigurationsByName = {};
+    for (const jsonGroup of Object.values(values)) {
+      jsonGroupConfigurationsByName[jsonGroup.name] = jsonGroup;
+    }
+    this.jsonGroupConfigurationsByName = jsonGroupConfigurationsByName;
     this.buildJsonFileAndGroupConfigurationsItems();
   }
   showJsonGroupsDialog = false;
   jsonGroupConfigurationsItems: SelectItem[] = [];
   jsonFileAndGroupConfigurationsItems: SelectItem[] = [];
   // tslint:disable-next-line:variable-name
-  jsonGroupSelection_JsonGroupDialog: string;
+  jsonGroupDialog_jsonGroupSelection: string;
   showNewJsonConfigDialog = false;
   newJsonGroupConfigName: string;
   showJsonGroupDeleteDialog = false;
   jsonGroupDialogItems = {}; // temporary holder for group membership items in JSON Groups dialog
-  jsonGroupDialogSelections = {}; // temporary holder for group membership selections in JSON Groups dialog
+  // tslint:disable-next-line:variable-name
+  jsonGroupDialog_jsonFileSelections = {}; // temporary holder for group membership selections in JSON Groups dialog
   get newJsonGroupAcceptButtonDisabled(): boolean {
-    return this.newJsonGroupConfigName in this._jsonGroupConfigurations;
+    const jsonGroupNames = Object.values(this.jsonGroupConfigurations).map( jsonGroup => jsonGroup.name );
+    return jsonGroupNames.includes(this.newJsonGroupConfigName);
   }
 
   // File Attachments Config & UI
@@ -305,7 +320,7 @@ export class AppComponent implements OnInit {
 
   async getSavedJsonConfigurations() {
     try {
-      this.savedJsonConfigurations = await this.fetcherService.getSavedJSONConfigurationNames();
+      this.savedJsonConfigurations = await this.fetcherService.getSavedJSONConfigurations();
       console.log('AppComponent: getSavedJsonConfigurations(): savedJsonConfigurations:', this.savedJsonConfigurations);
     }
     catch (error) {
@@ -321,7 +336,7 @@ export class AppComponent implements OnInit {
       console.log('AppComponent: getSavedJsonGroupConfigurations(): savedJsonConfigurations:', this.jsonGroupConfigurations);
     }
     catch (error) {
-      console.error('AppComponent: getSavedJsonGroupConfigurations(): Caught error fetching JSON Groups configurations:', error);
+    console.error('AppComponent: getSavedJsonGroupConfigurations(): Caught error fetching JSON Groups configurations:', error);
     }
   }
 
@@ -792,10 +807,10 @@ export class AppComponent implements OnInit {
     const validConfigs: BulkCreateSelections = {};
     for (const incidentConfigName of Object.keys(this.bulkCreateSelections)) {
       const bulkCreateSelection: BulkCreateSelection = this.bulkCreateSelections[incidentConfigName];
-      const [jsonGroups, jsonFiles] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection);
+      const [jsonGroupIds, jsonFileIds] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection);
 
-      const jsonGroupsGood = jsonGroups && jsonGroups.length !== 0;
-      const jsonFilesGood = jsonFiles && jsonFiles.length !== 0;
+      const jsonGroupsGood = jsonGroupIds && jsonGroupIds.length !== 0;
+      const jsonFilesGood = jsonFileIds && jsonFileIds.length !== 0;
       const endpointsGood = bulkCreateSelection.endpoints.length !== 0;
       const jsonRequired = this.savedIncidentConfigurations[incidentConfigName].requiresJson;
 
@@ -830,23 +845,23 @@ export class AppComponent implements OnInit {
 
 
   getAllJsonFilesForBulkConfiguration(bulkSelection: BulkCreateSelection): BulkCreateSelection {
-    const [jsonGroups, jsonFiles] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkSelection);
-    for (const jsonGroupName of jsonGroups) {
-      const jsonConfigs = this.jsonGroupConfigurations[jsonGroupName].jsonConfigs;
-      for (const jsonFile of jsonConfigs) {
-        if (!jsonFiles.includes(jsonFile)) {
-          jsonFiles.push(jsonFile);
+    const [jsonGroupIds, jsonFileIds] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkSelection);
+    for (const jsonGroupId of jsonGroupIds) {
+      const jsonFileIdsForGroup = this.jsonGroupConfigurations[jsonGroupId].jsonFileIds;
+      for (const jsonFileId of jsonFileIdsForGroup) {
+        if (!jsonFileIds.includes(jsonFileId)) {
+          jsonFileIds.push(jsonFileId);
         }
       }
     }
-    bulkSelection.jsonFiles = jsonFiles;
+    bulkSelection.jsonFileIds = jsonFileIds;
     return bulkSelection;
   }
 
 
 
   reduceBulkConfigurationServersToGood(bulkSelections: BulkCreateSelections, successfulServers: string[]): BulkCreateSelections {
-    // runs the endpoints of a bulCreateSelections through an array of endpoints that have tested successully, and returns the sanitised result
+    // runs the endpoints of a bulkCreateSelections through an array of endpoints that have tested successully, and returns the sanitised result
 
     for (let bulkSelection of Object.values(bulkSelections)) {
       const successfulEndpoints = [];
@@ -856,8 +871,9 @@ export class AppComponent implements OnInit {
       }
       bulkSelection.successfulEndpoints = successfulEndpoints;
       bulkSelection.failedEndpoints = failedEndpoints;
+
       // add jsonFiles property to bulkSelection
-      this.getAllJsonFilesForBulkConfiguration(bulkSelection);
+      this.getAllJsonFilesForBulkConfiguration(bulkSelection); // modifies the original bulkSelections object, so there is no assignment operator here
     }
     return bulkSelections;
   }
@@ -865,69 +881,72 @@ export class AppComponent implements OnInit {
 
 
   reduceBulkConfigurationJsonFilesToFetch(bulkCreateSelections: BulkCreateSelections): string[] {
-    // can reduce all bulkSelectionConfigs to a single list, or just a single bulkSelection
+    // can reduce all bulkSelectionConfigs to a single list of JSON files to fetch, or just a single bulkSelection
 
-    function loopOverJsonFiles(jsonFiles: string[], result) {
-      for (const jsonFile of jsonFiles) {
-        if (!result.includes(jsonFile)) {
-          result.push(jsonFile);
+    function loopOverJsonFiles(jsonFileIds: string[], result) {
+      for (const jsonFileId of jsonFileIds) {
+        if (!result.includes(jsonFileId)) {
+          result.push(jsonFileId);
         }
       }
       return result;
     }
 
-    const loopOverJsonGroups = (jsonGroups: string[], result) => {
-      for (const jsonGroup of jsonGroups) {
+    const loopOverJsonGroups = (jsonGroupIds: string[], result) => {
+      for (const jsonGroupId of jsonGroupIds) {
         // lookup the group
-        const jsonConfigs = this.jsonGroupConfigurations[jsonGroup].jsonConfigs;
-        for (const jsonFile of jsonConfigs) {
-          if (!result.includes(jsonFile)) {
-            result.push(jsonFile);
+        const jsonFileIds = this.jsonGroupConfigurations[jsonGroupId].jsonFileIds;
+        for (const jsonFileId of jsonFileIds) {
+          if (!result.includes(jsonFileId)) {
+            result.push(jsonFileId);
           }
         }
       }
       return result;
     };
 
-    return Object.keys(bulkCreateSelections).reduce( (result, incidentConfigName) => {
+    const fileIdsToFetch = Object.keys(bulkCreateSelections).reduce( (result, incidentConfigName) => {
       const bulkCreateSelection: BulkCreateSelection = bulkCreateSelections[incidentConfigName];
 
-      const [jsonGroups, jsonFiles] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection);
+      const [jsonGroupIds, jsonFileIds] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection);
 
-      if (jsonGroups && jsonGroups.length !== 0) {
-        result = loopOverJsonGroups(jsonGroups, result);
+      if (jsonGroupIds && jsonGroupIds.length !== 0) {
+        result = loopOverJsonGroups(jsonGroupIds, result);
       }
 
-      if (jsonFiles && jsonFiles.length !== 0) {
-        result = loopOverJsonFiles(jsonFiles, result);
+      if (jsonFileIds && jsonFileIds.length !== 0) {
+        result = loopOverJsonFiles(jsonFileIds, result);
       }
 
       return result;
     }, []);
+
+    return fileIdsToFetch;
   }
 
 
 
   reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection: BulkCreateSelection): [string[], string[]] {
-    const jsonGroups = bulkCreateSelection.jsonSelections.reduce( (result, value: string) => {
-      const type = value.slice(0, 1); // 'g' for json group or 'j' for json file
-      if (type === 'g') {
-        result.push(value.slice(1));
+    // separates bulkCreateSelection.jsonSelections (which contains both json group id's and json file id's), into discrete jsonGroupIds and jsonFileIds arrays
+    const jsonGroupIds = bulkCreateSelection.jsonSelections.reduce( (result, value: string) => {
+      const type = value.slice(0, 2); // 'g_' for json group or 'j_' for json file
+      if (type === 'g_') {
+        result.push(value.slice(2));
       }
       return result;
     }, []);
     // console.log('AppComponent: reduceBulkConfigurationJSONConfigsOrGroups(): jsonGroups:', jsonGroups);
 
-    const jsonFiles = bulkCreateSelection.jsonSelections.reduce( (result, value: string) => {
-      const type = value.slice(0, 1); // 'g' for json group or 'j' for json file
-      if (type === 'j') {
-        result.push(value.slice(1));
+    const jsonFileIds = bulkCreateSelection.jsonSelections.reduce( (result, value: string) => {
+      const type = value.slice(0, 2); // 'g_' for json group or 'j_' for json file
+      if (type === 'j_') {
+        result.push(value.slice(2));
       }
       return result;
     }, []);
     // console.log('AppComponent: reduceBulkConfigurationJSONConfigsOrGroups(): jsonFiles:', jsonFiles);
 
-    return [jsonGroups, jsonFiles];
+    return [jsonGroupIds, jsonFileIds];
   }
 
 
@@ -939,10 +958,10 @@ export class AppComponent implements OnInit {
     for (const incidentConfigName of Object.keys(this.bulkCreateSelections).sort(utils.sortArrayNaturally)) {
       const bulkCreateSelection = this.bulkCreateSelections[incidentConfigName];
 
-      const [jsonGroups, jsonFiles] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection);
+      const [jsonGroupIds, jsonFileIds] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection);
 
-      const jsonGroupsGood = jsonGroups && jsonGroups.length !== 0;
-      const jsonFilesGood = jsonFiles && jsonFiles.length !== 0;
+      const jsonGroupsGood = jsonGroupIds && jsonGroupIds.length !== 0;
+      const jsonFilesGood = jsonFileIds && jsonFileIds.length !== 0;
       const endpointsGood = bulkCreateSelection.endpoints.length !== 0;
       const jsonRequired = this.savedIncidentConfigurations[incidentConfigName].requiresJson;
 
@@ -954,10 +973,10 @@ export class AppComponent implements OnInit {
 
       if ((jsonGroupsGood || jsonFilesGood) && endpointsGood && jsonRequired) {
         if (jsonGroupsGood) {
-          bulkConfigToPush.jsonGroups = jsonGroups.join(', ');
+          bulkConfigToPush.jsonGroupIds = jsonGroupIds.join(', ');
         }
         if (jsonFilesGood) {
-          bulkConfigToPush.jsonConfigs = jsonFiles.join(', ');
+          bulkConfigToPush.jsonFileIds = jsonFileIds.join(', ');
         }
         bulkConfigurationsToPush.push(bulkConfigToPush);
       }
@@ -983,12 +1002,7 @@ export class AppComponent implements OnInit {
         jsonSelections: [],
         endpoints: []
       };
-      // selections[incidentConfigName]['jsonGroups'] = [];
-      // selections[incidentConfigName]['endpoints'] = [];
     }
-    /*for (const jsonGroup of Object.values(this.jsonGroupConfigurations)) {
-      selections[jsonGroup.name]['jsonGroups'] = Object.assign(jsonGroup.jsonConfigs);
-    }*/
     this.bulkCreateSelections = selections;
   }
 
@@ -1049,7 +1063,7 @@ export class AppComponent implements OnInit {
     const serverFieldDefinitions = {};
     const serverIncidentTypes: EndpointIncidentTypes = {};
     const serverIncidentTypeNames: EndpointIncidentTypeNames = {};
-    const jsonFiles = {};
+    const jsonFileIds = {};
     const bulkCreateIncidentJson: BulkCreateIncidentJSON = {};
 
     let validBulkConfigurations: BulkCreateSelections = this.getValidBulkConfigurations();
@@ -1099,17 +1113,17 @@ export class AppComponent implements OnInit {
     console.log('AppComponent: onCreateBulkIncidents(): serverIncidentTypes:', serverIncidentTypes);
     console.log('AppComponent: onCreateBulkIncidents(): serverIncidentTypeNames:', serverIncidentTypeNames);
 
-    // add 'successfulEndpoints' and 'failedEndpoints' to validBulkConfigurations
+    // add 'successfulEndpoints', 'failedEndpoints', and 'jsonFiles' properties to validBulkConfigurations
     validBulkConfigurations = this.reduceBulkConfigurationServersToGood(validBulkConfigurations, successfulServers);
     console.log('AppComponent: onCreateBulkIncidents(): validBulkConfigurations:', validBulkConfigurations);
 
     // get list of JSON files to fetch
-    const jsonFilesToFetch = this.reduceBulkConfigurationJsonFilesToFetch(validBulkConfigurations);
-    console.log('AppComponent: onCreateBulkIncidents(): jsonFilesToFetch:', jsonFilesToFetch);
+    const jsonFileIdsToFetch = this.reduceBulkConfigurationJsonFilesToFetch(validBulkConfigurations);
+    console.log('AppComponent: onCreateBulkIncidents(): jsonFileIdsToFetch:', jsonFileIdsToFetch);
 
     // retrieve JSON files
-    const jsonFetchPromises = jsonFilesToFetch.map( async jsonFile => {
-      jsonFiles[jsonFile] = await this.fetcherService.getSavedJSONConfiguration(jsonFile);
+    const jsonFetchPromises = jsonFileIdsToFetch.map( async jsonFileId => {
+      jsonFileIds[jsonFileId] = await this.fetcherService.getSavedJSONConfiguration(jsonFileId);
     });
     const jsonFilesFetchSuccessful = jsonFetchPromises.length !== 0;
     // wait for JSON retrieve tests to finish
@@ -1119,7 +1133,7 @@ export class AppComponent implements OnInit {
     if (jsonFilesFetchSuccessful) {
       // it's possible that no JSON files were needed
       console.log('AppComponent: onCreateBulkIncidents(): retrieved all JSON files');
-      console.log('AppComponent: onCreateBulkIncidents(): jsonFiles:', jsonFiles);
+      console.log('AppComponent: onCreateBulkIncidents(): jsonFileIds:', jsonFileIds);
     }
 
     // Loop through the bulk configs to create incidents from
@@ -1179,7 +1193,7 @@ export class AppComponent implements OnInit {
             createInvestigation: hasAnEnabledAttachmentField ? false : incidentConfig.createInvestigation
           };
 
-          const json = jsonFile ? jsonFiles[jsonFile] : undefined;
+          const json = jsonFile ? jsonFileIds[jsonFile] : undefined;
 
           Object.values(incidentConfig.chosenFields).forEach( field => {
             // Loop through the chosen fields of the incident
@@ -1321,7 +1335,7 @@ export class AppComponent implements OnInit {
 
         // Now build the incident(s)
         if (incidentConfig.requiresJson) {
-          for (const jsonFile of validBulkCreateConfig.jsonFiles) {
+          for (const jsonFile of validBulkCreateConfig.jsonFileIds) {
             buildIncidentConfig(jsonFile);
           }
         }
@@ -1814,9 +1828,10 @@ export class AppComponent implements OnInit {
 
     const jsonGroupDialogSelections = {};
     for (const jsonGroup of Object.values(this.jsonGroupConfigurations)) {
-      jsonGroupDialogSelections[jsonGroup.name] = Object.assign(jsonGroup.jsonConfigs);
+      jsonGroupDialogSelections[jsonGroup.id] = Object.assign([], jsonGroup.jsonFileIds);
     }
-    this.jsonGroupDialogSelections = jsonGroupDialogSelections;
+    this.jsonGroupDialog_jsonFileSelections = jsonGroupDialogSelections;
+    console.log('AppComponent: refreshJsonGroupUIConfig(): jsonGroupDialogSelections:', this.jsonGroupDialog_jsonFileSelections);
   }
 
 
@@ -1851,15 +1866,16 @@ export class AppComponent implements OnInit {
     console.log('AppComponent: onNewJsonGroupAccepted()');
     const newJsonGroupConfig: JsonGroup = {
       name: this.newJsonGroupConfigName,
-      jsonConfigs: []
+      jsonFileIds: []
     };
     this.showNewJsonConfigDialog = false;
 
     try {
-      await this.fetcherService.saveNewJsonGroupConfiguration(newJsonGroupConfig);
+      const res = await this.fetcherService.saveNewJsonGroupConfiguration(newJsonGroupConfig);
+      const {id} = res;
       await this.getSavedJsonGroupConfigurations();
-      this.jsonGroupSelection_JsonGroupDialog = this.newJsonGroupConfigName;
-      this.jsonGroupDialogSelections[this.newJsonGroupConfigName] = [];
+      this.jsonGroupDialog_jsonGroupSelection = id;
+      this.jsonGroupDialog_jsonFileSelections[id] = [];
     }
     catch (error) {
       console.error('AppComponent: onNewJsonGroupAccepted(): Caught error saving JSON Groups configurations:', error);
@@ -1869,18 +1885,18 @@ export class AppComponent implements OnInit {
 
 
 
-  async onDeleteJsonGroupConfirmed(jsonGroupToDelete: string) {
-    console.log(`AppComponent: onDeleteJsonGroupConfirmed(): jsonGroupToDelete: ${jsonGroupToDelete}`);
+  async onDeleteJsonGroupConfirmed(jsonGroupIdToDelete: string) {
+    console.log(`AppComponent: onDeleteJsonGroupConfirmed(): jsonGroupIdToDelete: ${jsonGroupIdToDelete}`);
     try {
-      await this.fetcherService.deleteJsonGroupConfiguration(jsonGroupToDelete);
+      await this.fetcherService.deleteJsonGroupConfiguration(jsonGroupIdToDelete);
       await this.getSavedJsonGroupConfigurations();
-      if (jsonGroupToDelete === this.jsonGroupSelection_JsonGroupDialog) {
-        this.jsonGroupSelection_JsonGroupDialog = undefined;
+      if (jsonGroupIdToDelete === this.jsonGroupDialog_jsonGroupSelection) {
+        this.jsonGroupDialog_jsonGroupSelection = undefined;
       }
-      delete this.jsonGroupDialogSelections[jsonGroupToDelete];
+      delete this.jsonGroupDialog_jsonFileSelections[jsonGroupIdToDelete];
     }
     catch (error) {
-      console.error(`AppComponent: onDeleteJsonGroupConfirmed(): Caught error deleting JSON Group configuration '${jsonGroupToDelete}':`, error);
+      console.error(`AppComponent: onDeleteJsonGroupConfirmed(): Caught error deleting JSON Group configuration '${jsonGroupIdToDelete}':`, error);
       return;
     }
   }
@@ -1888,14 +1904,15 @@ export class AppComponent implements OnInit {
 
 
   onDeleteJsonGroupClicked() {
-    console.log(`AppComponent: onDeleteJsonGroupClicked(): ${this.jsonGroupSelection_JsonGroupDialog}`);
+    console.log(`AppComponent: onDeleteJsonGroupClicked(): ${this.jsonGroupDialog_jsonGroupSelection}`);
     this.showJsonGroupDeleteDialog = true;
     // this.showJsonGroupsDialog = false;
-    const jsonGroupToDelete = this.jsonGroupSelection_JsonGroupDialog;
+    const jsonGroupIdToDelete = this.jsonGroupDialog_jsonGroupSelection;
+    const jsonGroupToDelete = this.jsonGroupConfigurations[jsonGroupIdToDelete];
     this.confirmationService.confirm( {
       header: `Confirm Deletion`,
-      message: `Are you sure that you would like to delete JSON group '${jsonGroupToDelete}'`,
-      accept: () => this.onDeleteJsonGroupConfirmed(this.jsonGroupSelection_JsonGroupDialog),
+      message: `Are you sure that you would like to delete JSON group '${jsonGroupToDelete.name}'`,
+      accept: () => this.onDeleteJsonGroupConfirmed(jsonGroupIdToDelete),
       icon: 'pi pi-exclamation-triangle'
     });
   }
@@ -1904,14 +1921,17 @@ export class AppComponent implements OnInit {
 
   async onAcceptJsonGroupChanges() {
     console.log(`AppComponent: onAcceptJsonGroupChanges()`);
-    for (const jsonGroupName of Object.keys(this.jsonGroupDialogSelections)) {
-      const jsonSelections = this.jsonGroupDialogSelections[jsonGroupName];
-      // console.log(`jsonSelection:`, jsonSelections);
+    // console.log(`AppComponent: onAcceptJsonGroupChanges(): jsonGroupDialog_jsonFileSelections:`, this.jsonGroupDialog_jsonFileSelections);
+
+    for (const jsonGroupId of Object.keys(this.jsonGroupDialog_jsonFileSelections)) {
+      const jsonGroup = this.jsonGroupConfigurations[jsonGroupId];
+      const jsonSelections = this.jsonGroupDialog_jsonFileSelections[jsonGroupId];
       const groupConfig: JsonGroup = {
-        name: jsonGroupName,
-        jsonConfigs: jsonSelections
+        id: jsonGroupId,
+        name: jsonGroup.name,
+        jsonFileIds: jsonSelections
       };
-      await this.fetcherService.saveJsonGroupConfiguration(groupConfig);
+      await this.fetcherService.saveUpdatedJsonGroupConfiguration(groupConfig);
     }
     await this.getSavedJsonGroupConfigurations();
     this.showJsonGroupsDialog = false;
@@ -1921,14 +1941,14 @@ export class AppComponent implements OnInit {
 
   onSelectAllJsonConfigurations() {
     console.log(`AppComponent: onSelectAllJsonConfigurations()`);
-    this.jsonGroupDialogSelections[this.jsonGroupSelection_JsonGroupDialog] = Object.assign(this.savedJsonConfigurations, []);
+    this.jsonGroupDialog_jsonFileSelections[this.jsonGroupDialog_jsonGroupSelection] = Object.assign(this.savedJsonConfigurations, []);
   }
 
 
 
   onUnselectAllJsonConfigurations() {
     console.log(`AppComponent: onUnselectAllJsonConfigurations()`);
-    this.jsonGroupDialogSelections[this.jsonGroupSelection_JsonGroupDialog] = [];
+    this.jsonGroupDialog_jsonFileSelections[this.jsonGroupDialog_jsonGroupSelection] = [];
   }
 
 
@@ -1936,14 +1956,14 @@ export class AppComponent implements OnInit {
   buildJsonFileAndGroupConfigurationsItems() {
     let items: SelectItem[] = [];
     if (this.jsonGroupConfigurations) {
-      items = items.concat( Object.values(this._jsonGroupConfigurations).map( jsonConfig => ({
-        value: `g${jsonConfig.name}`,
-        label: `${jsonConfig.name} (Group)` } as SelectItem) ));
+      items = items.concat( Object.values(this.jsonGroupConfigurations).map( jsonGroupConfig => ({
+        value: `g_${jsonGroupConfig.id}`,
+        label: `${jsonGroupConfig.name} (Group)` } as SelectItem) ));
     }
     if (this.savedJsonConfigurations) {
-      items = items.concat(this.savedJsonConfigurations.map( val => ({
-        value: `j${val}`,
-        label: `${val} (JSON)` } as SelectItem)));
+      items = items.concat(this.savedJsonConfigurations.map( jsonConfig => ({
+        value: `j_${jsonConfig.id}`,
+        label: `${jsonConfig.name} (JSON)` } as SelectItem)));
     }
     this.jsonFileAndGroupConfigurationsItems = items.sort(utils.sortArrayNaturally);
   }

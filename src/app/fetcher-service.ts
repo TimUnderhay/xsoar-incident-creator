@@ -9,10 +9,10 @@ import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
 import { DefaultDemistoEndpoint } from './types/default-demisto-endpoint';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
 import * as JSEncrypt from 'jsencrypt';
-import { Subject } from 'rxjs';
+import { Subject, Observable } from 'rxjs';
 import { IncidentFieldUI } from './types/incident-fields';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
-import { FreeformJSONConfig } from './types/freeform-json-config';
+import { JSONConfig, JSONConfigRef } from './types/json-config';
 import { JsonGroup, JsonGroups } from './types/json-group';
 import { FileAttachmentConfig, FileAttachmentConfigs, FileToPush } from './types/file-attachment';
 
@@ -309,26 +309,35 @@ export class FetcherService {
 
   ///////// JSON /////////
 
-  getSavedJSONConfigurationNames(): Promise<string[]> {
+  getSavedJSONConfigurations(): Promise<JSONConfigRef[]> {
     const headers = this.buildHeaders();
     return this.http.get(this.apiPath + '/json/all', { headers } )
                     .toPromise()
-                    .then(value => value as string[]);
+                    .then(value => value as JSONConfigRef[]);
   }
 
 
 
-  getSavedJSONConfiguration(name): Promise<object | Array<any>> {
+  getSavedJSONConfiguration(id): Promise<JSONConfig> {
     const headers = this.buildHeaders();
-    return this.http.get(`${this.apiPath}/json/${encodeURIComponent(name)}`, { headers } )
-                    .toPromise<object | Array<any>>();
+    return this.http.get(`${this.apiPath}/json/${encodeURIComponent(id)}`, { headers } )
+                .toPromise()
+                .then( value => value as JSONConfig);
   }
 
 
 
-  saveNewFreeformJSONConfiguration(config: FreeformJSONConfig): Promise<any> {
+  saveNewFreeformJSONConfiguration(config: JSONConfig): Promise<any> {
     const headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/json', config, { headers } )
+                    .toPromise();
+  }
+
+
+
+  saveUpdatedFreeformJSONConfiguration(config: JSONConfig): Promise<any> {
+    const headers = this.buildHeaders();
+    return this.http.post(this.apiPath + '/json/update', config, { headers } )
                     .toPromise();
   }
 
@@ -342,11 +351,11 @@ export class FetcherService {
 
 
 
-  setDefaultIncidentJsonFile(incidentConfigName, jsonConfigName): Promise<any> {
+  setDefaultIncidentJsonFile(incidentConfigName, jsonConfigId): Promise<any> {
     const headers = this.buildHeaders();
     const config: IncidentJsonFileConfig = {
-      configName: incidentConfigName,
-      jsonName: jsonConfigName
+      incidentConfigName,
+      jsonId: jsonConfigId
     };
     return this.http.post(this.apiPath + '/incidentConfig/defaultJson', config, { headers } )
                     .toPromise();
@@ -357,8 +366,8 @@ export class FetcherService {
   clearDefaultIncidentJsonFile(incidentConfigName): Promise<any> {
     const headers = this.buildHeaders();
     const config: IncidentJsonFileConfig = {
-      configName: incidentConfigName,
-      jsonName: null
+      incidentConfigName,
+      jsonId: null
     };
     return this.http.post(this.apiPath + '/incidentConfig/defaultJson', config, { headers } )
                     .toPromise();
@@ -385,7 +394,7 @@ export class FetcherService {
 
 
 
-  saveJsonGroupConfiguration(config: JsonGroup): Promise<any> {
+  saveUpdatedJsonGroupConfiguration(config: JsonGroup): Promise<any> {
     const headers = this.buildHeaders();
     return this.http.post(this.apiPath + '/jsonGroup/update', config, { headers } )
                     .toPromise();
@@ -393,9 +402,9 @@ export class FetcherService {
 
 
 
-  deleteJsonGroupConfiguration(name: string): Promise<any> {
+  deleteJsonGroupConfiguration(id: string): Promise<any> {
     const headers = this.buildHeaders();
-    return this.http.delete(this.apiPath + `/jsonGroup/${encodeURIComponent(name)}`, { headers } )
+    return this.http.delete(this.apiPath + `/jsonGroup/${encodeURIComponent(id)}`, { headers } )
                     .toPromise();
   }
 

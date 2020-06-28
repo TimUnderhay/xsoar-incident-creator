@@ -168,6 +168,7 @@
       [savedIncidentConfigurations]="savedIncidentConfigurations"
       (savedIncidentConfigurationsChanged)="onSavedIncidentConfigurationsChanged($event)"
       [savedJsonConfigurations]="savedJsonConfigurations"
+      [savedJsonConfigurationsObj]="savedJsonConfigurationsObj"
       (messageAdd)="messageAdd($event)"
       (messagesReplace)="messagesReplace($event)"
       (messageWithAutoClear)="messageWithAutoClear($event)"
@@ -583,25 +584,27 @@
               {{item.incidentConfigName}}
             </span> :
 
-            <div *ngIf="item.jsonConfigs" style="margin-left: 3em;">
+            <div *ngIf="item.jsonFileIds" style="margin-left: 3em;">
               
               <span
                 class="dialogLabel">
                   JSON Configs: 
               </span>
               
-              <span>{{item.jsonConfigs}}</span>
+              <!-- !!! Needs to be transformed to names !!! -->
+              <span>{{item.jsonFileIds}}</span>
             
             </div>
 
-            <div *ngIf="item.jsonGroups" style="margin-left: 3em;">
+            <div *ngIf="item.jsonGroupIds" style="margin-left: 3em;">
               
               <span
                 class="dialogLabel">
                   JSON Groups: 
               </span>
               
-              <span>{{item.jsonGroups}}</span>
+              <!-- !!! Needs to be transformed to names !!! -->
+              <span>{{item.jsonGroupIds}}</span>
             
             </div>
 
@@ -816,7 +819,7 @@
           label="Delete"
           (onClick)="onDeleteJsonGroupClicked()"
           styleClass="alignButton"
-          [disabled]="!jsonGroupSelection_JsonGroupDialog || jsonGroupSelection_JsonGroupDialog === ''">
+          [disabled]="!jsonGroupDialog_jsonGroupSelection || jsonGroupDialog_jsonGroupSelection === ''">
         </p-button>
 
       </div>
@@ -836,7 +839,7 @@
 
           <p-listbox
             [options]="jsonGroupConfigurationsItems"
-            [(ngModel)]="jsonGroupSelection_JsonGroupDialog"
+            [(ngModel)]="jsonGroupDialog_jsonGroupSelection"
             [style]="{'width':'100%'}"
             [multiple]="false"
             [checkbox]="false"
@@ -848,13 +851,13 @@
         <div class="bulkCreateContainerColumn">
 
           <div
-            *ngIf="!jsonGroupSelection_JsonGroupDialog || jsonGroupSelection_JsonGroupDialog === ''"
+            *ngIf="!jsonGroupDialog_jsonGroupSelection || jsonGroupDialog_jsonGroupSelection === ''"
             class="formLabel">
               Select a JSON Group
           </div>
 
           <div
-            *ngIf="!['', undefined].includes(jsonGroupSelection_JsonGroupDialog)">
+            *ngIf="!['', undefined].includes(jsonGroupDialog_jsonGroupSelection)">
 
             <span class="formLabel">
               JSON Configurations
@@ -881,9 +884,9 @@
           </div>
 
           <p-listbox
-            *ngIf="jsonGroupSelection_JsonGroupDialog"
+            *ngIf="jsonGroupDialog_jsonGroupSelection"
             [options]="savedJsonConfigurationItems"
-            [(ngModel)]="jsonGroupDialogSelections[jsonGroupSelection_JsonGroupDialog]"
+            [(ngModel)]="jsonGroupDialog_jsonFileSelections[jsonGroupDialog_jsonGroupSelection]"
             [style]="{'width':'100%'}"
             [multiple]="true"
             [checkbox]="true"

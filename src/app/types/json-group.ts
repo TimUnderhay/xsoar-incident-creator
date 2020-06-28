@@ -1,8 +1,9 @@
 export interface JsonGroup extends Object {
+  id?: string; // added by the server
   name: string;
-  jsonConfigs: string[]; // an array of json config names
+  jsonFileIds: string[]; // an array of json config id's
 }
 
 export interface JsonGroups {
-  [index: string]: JsonGroup;
+  [id: string]: JsonGroup;
 }

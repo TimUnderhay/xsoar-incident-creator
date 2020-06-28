@@ -10,7 +10,7 @@ export interface IncidentConfig {
   chosenFields: IncidentFieldsConfig;
   createInvestigation: boolean;
   incidentType: string;
-  defaultJsonName?: string; // the json file to load when opening incident
+  defaultJsonId?: string; // the json file id to load when opening incident
   requiresJson?: boolean; // returned by the server
 }
 
@@ -39,8 +39,8 @@ export interface IncidentFieldsConfig {
 
 export interface IncidentJsonFileConfig {
   // for API call to set default JSON name for an incident config
-  configName: string; // the incident config name
-  jsonName: string | null; // the json config name -- set to null to clear
+  incidentConfigName: string; // the incident config name
+  jsonId: string | null; // the json config id -- set to null to clear
 }
 
 export interface IncidentCreationConfig {

@@ -231,6 +231,13 @@
           <!-- Json Uploader Button -->
           <ng-container *ngTemplateOutlet="jsonUploader"></ng-container>
 
+          <!-- Save Button -->
+          <p-button
+            label="Save"
+            (onClick)="onJsonSaveClicked()"
+            [disabled]="!json">
+          </p-button>
+
           <!-- Save As Button -->
           <p-button
             label="Save As"
@@ -443,7 +450,7 @@
 
     <p-listbox
       [options]="freeformJsonConfigurationItems"
-      [(ngModel)]="selectedDeleteJsonConfigs"
+      [(ngModel)]="selectedDeleteJsonConfigIds"
       [multiple]="true"
       [filter]="true"
       [checkbox]="true"

@@ -123,14 +123,14 @@ app.use(logConnection);
 
 ////////////////////// Support Functions //////////////////////
 
-function validateJsonGroup(jsonConfigs) {
-  if (!isArray(jsonConfigs)) {
-    throw `jsonConfigs is not an array`;
+function validateJsonGroup(jsonFileIds) {
+  if (!isArray(jsonFileIds)) {
+    throw `jsonFileIds is not an array`;
   }
-  for (const value of jsonConfigs) {
+  for (const value of jsonFileIds) {
     const valueType = typeof value;
     if (valueType !== 'string') {
-      throw `jsonConfigs contains non-string values`;
+      throw `jsonFileIds contains non-string values`;
     }
   }
 }
@@ -145,13 +145,14 @@ function isArray(value) {
 
 
 function saveFreeJsonConfig() {
-  return fs.promises.writeFile(freeJsonFile, JSON.stringify(freeJsonConfig, null, 2), { encoding: 'utf8', mode: 0o660});
+  const savedJsonConfig = Object.values(freeJsonConfig).map( config => config);
+  return fs.promises.writeFile(freeJsonFile, JSON.stringify(savedJsonConfig, null, 2), { encoding: 'utf8', mode: 0o660});
 }
 
 
 
 function saveJsonGroupsConfig() {
-  return fs.promises.writeFile(jsonGroupsFile, JSON.stringify(jsonGroupsConfig, null, 2), { encoding: 'utf8', mode: 0o660});
+  return fs.promises.writeFile(jsonGroupsFile, JSON.stringify(Object.values(jsonGroupsConfig), null, 2), { encoding: 'utf8', mode: 0o660});
 }
 
 
@@ -1130,24 +1131,58 @@ app.post(apiPath + '/json', async (req, res) => {
     return;
   }
 
-  const name = body.name;
-  const json = body.json;
+  const {name, json} = body;
   const id = uuidv4();
 
   // check for existing json name
-  if (name in freeJsonConfig) {
+  if (freeJsonConfig.hasOwnProperty(name)) {
     const error = `Invalid request: Name '${name}' is already defined`;
     res.status(400).json({error});
     return;
   }
 
   const entry = {
-    name,
     id,
+    name,
     json
   };
 
-  freeJsonConfig[name] = entry;
+  freeJsonConfig[id] = entry;
+  await saveFreeJsonConfig();
+
+  res.status(201).json({success: true, id}); // send 'created'
+} );
+
+
+
+app.post(apiPath + '/json/update', async (req, res) => {
+  // save updated freeform JSON
+  let body = req.body;
+  const requiredFields = ['id', 'name', 'json'];
+
+  try {
+    checkForRequiredFields(requiredFields, body);
+  }
+  catch(fieldName) {
+    return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+  }
+
+  const {id, name, json} = body;
+
+  // check for existing json name
+  if (!freeJsonConfig.hasOwnProperty(id)) {
+    const error = `Invalid request: Id '${id}' is not defined`;
+    res.status(400).json({error});
+    return;
+  }
+
+  const entry = {
+    id,
+    name,
+    json
+  };
+
+  freeJsonConfig[id] = entry;
   await saveFreeJsonConfig();
 
   res.status(201).json({success: true}); // send 'created'
@@ -1155,73 +1190,72 @@ app.post(apiPath + '/json', async (req, res) => {
 
 
 
-app.delete(apiPath + '/json/:name', async (req, res) => {
+app.delete(apiPath + '/json/:id', async (req, res) => {
   // delete a freeform JSON config
-  const name = req.params.name;
+  const id = req.params.id;
   let saveGroups = false;
   let saveIncidents = false;
-  if (name in freeJsonConfig) {
-      delete freeJsonConfig[name];
-      
-      for (const jsonGroup of Object.values(jsonGroupsConfig)) {
-        // remove deleted JSON from groups
-        for (let i = jsonGroup.length - 1; i >= 0; i--) {
-          const jsonConfigName = jsonGroup[i];
-          if (jsonConfigName === name) {
-            jsonGroup.splice(i, 1);
-            saveGroups = true;
-          }
+  if (freeJsonConfig.hasOwnProperty(id)) {
+    const jsonName = freeJsonConfig[id].name;
+    delete freeJsonConfig[id];
+    
+    for (const jsonGroup of Object.values(jsonGroupsConfig)) {
+      // remove deleted JSON from groups
+      for (let i = jsonGroup.jsonFileIds.length - 1; i >= 0; i--) {
+        const jsonConfigId = jsonGroup.jsonFileIds[i];
+        if (jsonConfigId === id) {
+          jsonGroup.jsonFileIds.splice(i, 1);
+          saveGroups = true;
         }
       }
-
-      for (const incidentConfig of Object.values(incidentsConfig)) {
-        // remove deleted JSON as default file for incident configs
-        if (incidentConfig.defaultJsonName === name) {
-          delete incidentConfig.defaultJsonName;
-          saveIncidentConfigs = true;
-        }
-      }
-
-      await saveFreeJsonConfig();
-      if (saveGroups) {
-        await saveJsonGroupsConfig();
-      }
-      if (saveIncidents) {
-        await saveIncidentsConfig();
-      }
-      res.status(200).json({name, success: true});
-      return;
     }
-    else {
-      const error = 'Resource not found';
-      res.status(400).json({error, name, success: false});
-      return;
+
+    for (const incidentConfig of Object.values(incidentsConfig)) {
+      // remove deleted JSON as default file for incident configs
+      if (incidentConfig.defaultJsonId === id) {
+        delete incidentConfig.defaultJsonId;
+        saveIncidentConfigs = true;
+      }
     }
+
+    await saveFreeJsonConfig();
+    if (saveGroups) {
+      await saveJsonGroupsConfig();
+    }
+    if (saveIncidents) {
+      await saveIncidentsConfig();
+    }
+    res.status(200).json({id, success: true});
+    return;
+  }
+  else {
+    const error = 'Resource not found';
+    res.status(400).json({error, id, success: false});
+    return;
+  }
 } );
 
 
 
 app.get(apiPath + '/json/all', async (req, res) => {
   // retrieve all freeform JSON config names
-  const freeJsonNames = Object.values(freeJsonConfig).map( config => config.name );
+  const freeJsonNames = Object.values(freeJsonConfig).map( config => ({ id: config.id, name: config.name}) );
   res.status(200).json(freeJsonNames);
 } );
 
 
 
-app.get(apiPath + '/json/:name', async (req, res) => {
-  // get a particular freeform JSON config (just the json)
-  console.log('got to 1');
-  const name = req.params.name;
-  if (name in freeJsonConfig) {
-    const json = freeJsonConfig[name].json;
-    res.status(200).json(json);
+app.get(apiPath + '/json/:id', async (req, res) => {
+  // get a particular freeform JSON config
+  const id = req.params.id;
+  if (freeJsonConfig.hasOwnProperty(id)) {
+    const jsonConfig = freeJsonConfig[id];
+    res.status(200).json(jsonConfig);
     return;
   }
   else {
     const error = `Freeform JSON config ${'name'} was not found`;
-    res.status(400).json({error});
-    return;
+    return returnError(error, res, statusCode = 400);
   }
 } );
 
@@ -1266,8 +1300,8 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
     createInvestigation
   };
 
-  if ('defaultJsonName' in body) {
-    entry.defaultJsonName = body.defaultJsonName;
+  if ('defaultJsonId' in body) {
+    entry.defaultJsonId = body.defaultJsonId;
   }
 
   incidentsConfig[name] = entry;
@@ -1307,8 +1341,8 @@ app.post(apiPath + '/incidentConfig/update', async (req, res) => {
     createInvestigation: body.createInvestigation
   };
 
-  if ('defaultJsonName' in body) {
-    updatedIncidentConfig.defaultJsonName = body.defaultJsonName;
+  if ('defaultJsonId' in body) {
+    updatedIncidentConfig.defaultJsonId = body.defaultJsonId;
   }
 
   let foundId = false;
@@ -1348,34 +1382,35 @@ app.post(apiPath + '/incidentConfig/update', async (req, res) => {
 app.post(apiPath + '/incidentConfig/defaultJson', async (req, res) => {
   // update an existing field config's default JSON file
   const body = req.body;
-  const requiredFields = ['configName', 'jsonName'];
+  const requiredFields = ['incidentConfigName', 'jsonId'];
 
   try {
     checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
-    return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+    const error = `Invalid request: Required field '${fieldName}' was missing`;
+    return returnError(error, res, statusCode=400);
+    // return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
   }
 
-  const configName = body.configName;
-  const jsonName = body.jsonName; // set to null to clear default
+  const {incidentConfigName, jsonId} = body; // set jsonId to null to clear default
 
-  if (!(configName in incidentsConfig)) {
-    return res.status(400).json({error: `Incident config ${configName} is not defined`});
+  if (!incidentsConfig.hasOwnProperty(incidentConfigName)) {
+    return res.status(400).json({error: `Incident config ${incidentConfigName} is not defined`});
   }
 
-  if (jsonName !== null && !(jsonName in freeJsonConfig)) {
-    return res.status(400).json({error: `JSON config ${jsonName} is not defined`});
+  if (jsonId !== null && !(freeJsonConfig.hasOwnProperty(jsonId))) {
+    return res.status(400).json({error: `JSON config ${jsonId} is not defined`});
   }
 
-  const incidentConfig = incidentsConfig[configName];
-  if (jsonName === null && 'defaultJsonName' in incidentConfig) {
-    delete incidentConfig['defaultJsonName'];
+  const incidentConfig = incidentsConfig[incidentConfigName];
+  if (jsonId === null && 'defaultJsonId' in incidentConfig) {
+    delete incidentConfig['defaultJsonId'];
     console.log(`Cleared default JSON config for incident config ${incidentConfig.name}`);
   }
-  else if (jsonName !== null) {
-    incidentConfig['defaultJsonName'] = jsonName;
-    console.log(`Set default JSON config to ${jsonName} for incident config ${incidentConfig.name}`);
+  else if (jsonId !== null) {
+    incidentConfig['defaultJsonId'] = jsonId;
+    console.log(`Set default JSON config to ${jsonId} for incident config ${incidentConfig.name}`);
   }
 
   await saveIncidentsConfig();
@@ -1433,37 +1468,48 @@ app.delete(apiPath + '/incidentConfig/:name', async (req, res) => {
 app.post(apiPath + '/jsonGroup', async (req, res) => {
   // save a new JSON group config
   let body = req.body;
-  const requiredFields = ['name', 'jsonConfigs'];
+  const requiredFields = ['name', 'jsonFileIds'];
 
   try {
     checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
-    res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
-    return;
+    return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
   }
 
-  const name = body.name;
-  const jsonConfigs = body.jsonConfigs;
+  const id = uuidv4();
+  const {name, jsonFileIds} = body;
 
   try {
-    validateJsonGroup(jsonConfigs);
+    validateJsonGroup(jsonFileIds);
   }
   catch(error) {
-    res.status(400).json({error: `Invalid request: ${error}`});
-    return;
+    return res.status(400).json({error: `Invalid request: ${error}`});
   }
 
   // check for existing config name
-  if (name in jsonConfigs) {
-    const error = `Invalid request: JSON Group '${name}' is already defined`;
+  const foundName = false;
+  for (const config of Object.values(jsonGroupsConfig)) {
+    if (config.name === name) {
+      foundName = true;
+      break;
+    }
+  }
+  if (foundName) {
+    const error = `Invalid request: a JSON Group named '${name}' is already defined`;
     return res.status(400).json({error});
   }
 
-  jsonGroupsConfig[name] = jsonConfigs;
+  const newJsonGroup = {
+    id,
+    name,
+    jsonFileIds
+  }
+
+  jsonGroupsConfig[id] = newJsonGroup;
   await saveJsonGroupsConfig();
 
-  res.status(201).json({success: true}); // send 'created'
+  res.status(201).json({success: true, id}); // send 'created'
 } );
 
 
@@ -1471,68 +1517,63 @@ app.post(apiPath + '/jsonGroup', async (req, res) => {
 app.post(apiPath + '/jsonGroup/update', async (req, res) => {
   // update an existing JSON group config
   const body = req.body;
-  const requiredFields = ['name', 'jsonConfigs'];;
+  const requiredFields = ['id', 'name', 'jsonFileIds'];
 
   try {
     checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
-    res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
-    return;
+    return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
   }
 
-  const name = body.name;
-  const jsonConfigs = body.jsonConfigs;
+  const {id, name, jsonFileIds} = body;
 
   try {
-    validateJsonGroup(jsonConfigs);
+    validateJsonGroup(jsonFileIds);
   }
   catch(error) {
     res.status(400).json({error: `Invalid request: ${error}`});
     return;
   }
 
-  // check for existing config name
-  if (!(name in jsonGroupsConfig)) {
-    const error = `Invalid request: JSON Group '${name}' is not defined`;
+  // check for existing config id
+  if (!jsonGroupsConfig.hasOwnProperty(id)) {
+    const error = `Invalid request: no JSON Group with id '${id}' exists`;
     return res.status(400).json({error});
   }
 
-  jsonGroupsConfig[name] = jsonConfigs;
+  const newJsonGroup = {
+    id,
+    name,
+    jsonFileIds
+  }
+
+  jsonGroupsConfig[id] = newJsonGroup;
   await saveJsonGroupsConfig();
 
-  res.status(200).json({success: true});; // send 'OK'
+  res.status(200).json({success: true}); // send 'OK'
 } );
 
 
 
 app.get(apiPath + '/jsonGroup/all', async (req, res) => {
-  // retrieve all JSON Group config names
-  const config = {};
-  for (const groupName of Object.keys(jsonGroupsConfig)) {
-    config[groupName] = {
-      name: groupName,
-      jsonConfigs: jsonGroupsConfig[groupName]
-    };
-  }
-  res.status(200).json(config);
+  // retrieve all JSON Group configs
+  res.status(200).json(jsonGroupsConfig);
 } );
 
 
 
-app.delete(apiPath + '/jsonGroup/:name', async (req, res) => {
+app.delete(apiPath + '/jsonGroup/:id', async (req, res) => {
   // delete a JSON Group config
-  const name = req.params.name;
-  if (name in jsonGroupsConfig) {
-    delete jsonGroupsConfig[name];
+  const id = req.params.id;
+  if (jsonGroupsConfig.hasOwnProperty(id)) {
+    delete jsonGroupsConfig[id];
     await saveJsonGroupsConfig();
-    res.status(200).json({name, success: true});
-    return;
+    return res.status(200).json({id, success: true});
   }
   else {
-    const error = `JSON Group '${name}' not found`;
-    res.status(400).json({error, name, success: false});
-    return;
+    const error = `JSON Group '${id}' was not found`;
+    return res.status(400).json({error, name, success: false});
   }
 } );
 
@@ -1876,7 +1917,10 @@ function loadFreeJsonConfig() {
   }
   else {
     try {
-      freeJsonConfig = JSON.parse(fs.readFileSync(freeJsonFile, 'utf8'));
+      const loadedConfig = JSON.parse(fs.readFileSync(freeJsonFile, 'utf8'));
+      for (const config of loadedConfig) {
+        freeJsonConfig[config.id] = config;
+      }
     }
     catch (error) {
       console.error(`Error parsing ${freeJsonFile}:`, error);
@@ -1896,7 +1940,12 @@ function loadJsonGroupsConfig() {
   }
   else {
     try {
-      jsonGroupsConfig = JSON.parse(fs.readFileSync(jsonGroupsFile, 'utf8'));
+      const tmpJsonGroupsConfig = {};
+      const readConfig = JSON.parse(fs.readFileSync(jsonGroupsFile, 'utf8'));
+      for (const config of readConfig) {
+        tmpJsonGroupsConfig[config.id] = config;
+      }
+      jsonGroupsConfig = tmpJsonGroupsConfig;
     }
     catch (error) {
       console.error(`Error parsing ${jsonGroupsFile}:`, error);

@@ -11,15 +11,15 @@ export interface BulkCreateResult extends Object {
 }
 
 export interface BulkCreateConfigurationToPush {
-  jsonGroups?: string;
-  jsonConfigs?: string;
+  jsonGroupIds?: string;
+  jsonFileIds?: string;
   endpoints: string;
   incidentConfigName: string;
 }
 
 export interface BulkCreateSelection {
-  jsonSelections: string[]; // sadly, contains both groups and files.  groups are prefixed with a 'g' and files with a 'j'
-  jsonFiles?: string[]; // all resolved json files (individual and those taken from groups)
+  jsonSelections: string[]; // sadly, contains both groups and files, as they are selected together.  groups are prefixed with a 'g_' and files with a 'j_'
+  jsonFileIds?: string[]; // all resolved json file id's (individual and those taken from groups)
   endpoints: string[];
   successfulEndpoints?: string[];
   failedEndpoints?: string[];
