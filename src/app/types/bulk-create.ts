@@ -12,7 +12,9 @@ export interface BulkCreateResult extends Object {
 
 export interface BulkCreateConfigurationToPush {
   jsonGroupIds?: string;
+  jsonGroupNames?: string;
   jsonFileIds?: string;
+  jsonFileNames?: string;
   endpoints: string;
   incidentConfigName: string;
 }

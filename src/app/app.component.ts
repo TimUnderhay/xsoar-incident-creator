@@ -960,6 +960,9 @@ export class AppComponent implements OnInit {
 
       const [jsonGroupIds, jsonFileIds] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection);
 
+      const jsonGroupNames = jsonGroupIds.map( groupId => this.jsonGroupConfigurations[groupId].name);
+      const jsonFileNames = jsonFileIds.map (fileId => this.savedJsonConfigurationsObj[fileId].name);
+
       const jsonGroupsGood = jsonGroupIds && jsonGroupIds.length !== 0;
       const jsonFilesGood = jsonFileIds && jsonFileIds.length !== 0;
       const endpointsGood = bulkCreateSelection.endpoints.length !== 0;
@@ -974,9 +977,11 @@ export class AppComponent implements OnInit {
       if ((jsonGroupsGood || jsonFilesGood) && endpointsGood && jsonRequired) {
         if (jsonGroupsGood) {
           bulkConfigToPush.jsonGroupIds = jsonGroupIds.join(', ');
+          bulkConfigToPush.jsonGroupNames = jsonGroupNames.join(', ');
         }
         if (jsonFilesGood) {
           bulkConfigToPush.jsonFileIds = jsonFileIds.join(', ');
+          bulkConfigToPush.jsonFileNames = jsonFileNames.join(', ');
         }
         bulkConfigurationsToPush.push(bulkConfigToPush);
       }
