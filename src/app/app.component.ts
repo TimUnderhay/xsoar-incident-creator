@@ -9,7 +9,7 @@ import { FetchedIncidentType } from './types/fetched-incident-types';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
 import { IncidentConfig, IncidentConfigs, IncidentCreationConfig } from './types/incident-config';
 import { PMessageOption } from './types/message-options';
-import { BulkCreateConfigurationToPush, BulkCreateSelection, BulkCreateSelections, BulkCreateResult, EndpointIncidentTypes, EndpointIncidentTypeNames, BulkCreateIncidentJSON } from './types/bulk-create';
+import { BulkCreateConfigurationToPush, BulkCreateSelection, BulkCreateSelections, BulkCreateResult, EndpointIncidentTypes, EndpointIncidentTypeNames, BulkCreateIncidentJSON, JsonFileIds, BulkCreateRetrieveJSONFilesResults, BulkCreateFetchedIncidentFields, BulkCreateServerTestResults } from './types/bulk-create';
 import { FreeformJsonUIComponent } from './freeform-json-ui.component';
 import { Subscription } from 'rxjs';
 import * as utils from './utils';
@@ -859,14 +859,14 @@ export class AppComponent implements OnInit {
 
 
 
-  reduceBulkConfigurationServersToGood(bulkSelections: BulkCreateSelections, successfulServers: string[]): BulkCreateSelections {
+  reduceBulkConfigurationServersToGood(bulkSelections: BulkCreateSelections, successfulServerIds: string[]): BulkCreateSelections {
     // runs the endpoints of a BulkCreateSelections through an array of endpoints that have tested successully, and returns the sanitised result
 
     for (let bulkSelection of Object.values(bulkSelections)) {
       const successfulEndpoints = [];
       const failedEndpoints = [];
       for (const serverId of bulkSelection.endpoints) {
-        successfulServers.includes(serverId) ? successfulEndpoints.push(serverId) : failedEndpoints.push(serverId);
+        successfulServerIds.includes(serverId) ? successfulEndpoints.push(serverId) : failedEndpoints.push(serverId);
       }
       bulkSelection.successfulEndpoints = successfulEndpoints;
       bulkSelection.failedEndpoints = failedEndpoints;
@@ -1033,12 +1033,12 @@ export class AppComponent implements OnInit {
 
 
 
-  async bulkCreateServerTests(serversToTest: string[]): Promise<any> {
+  async bulkCreateServerTests(serversToTest: string[]): Promise<BulkCreateServerTestResults> {
     const testResults: DemistoEndpointTestResults = {};
-    const successfulServers = [];
+    const successfulServerIds = [];
     const serverIncidentTypes: EndpointIncidentTypes = {}; //  holds incident type configs for servers, fetched from Demisto, indexed by serverId
     const serverIncidentTypeNames: EndpointIncidentTypeNames = {};
-    const serverFieldDefinitions = {};
+    const serverFieldDefinitions: BulkCreateFetchedIncidentFields = {};
 
     const serverTestPromises: Promise<any>[] = serversToTest.map( async serverId => {
       console.log(`AppComponent: bulkCreateServerTests(): Testing Demisto server ${serverId}`);
@@ -1047,7 +1047,7 @@ export class AppComponent implements OnInit {
       testResults[serverId] = testResult;
 
       if (testResult.success) {
-        successfulServers.push(serverId);
+        successfulServerIds.push(serverId);
 
         // Fetch incident types
         console.log(`AppComponent: bulkCreateServerTests(): Fetching incident types from XSOAR server ${serverId}`);
@@ -1075,13 +1075,13 @@ export class AppComponent implements OnInit {
     await Promise.all(serverTestPromises);
 
 
-    return { testResults, successfulServers, serverIncidentTypes, serverIncidentTypeNames, serverFieldDefinitions };
+    return { testResults, successfulServerIds, serverIncidentTypes, serverIncidentTypeNames, serverFieldDefinitions };
   }
 
 
 
-  async bulkCreateRetrieveJsonFiles(jsonFileIdsToFetch): Promise<any> {
-    const jsonFileIds = {};
+  async bulkCreateRetrieveJsonFiles(jsonFileIdsToFetch): Promise<BulkCreateRetrieveJSONFilesResults> {
+    const jsonFileIds: JsonFileIds = {};
 
     const jsonFetchPromises = jsonFileIdsToFetch.map( async jsonFileId => {
       jsonFileIds[jsonFileId] = await this.fetcherService.getSavedJSONConfiguration(jsonFileId);
@@ -1356,7 +1356,7 @@ export class AppComponent implements OnInit {
     console.log('AppComponent: onBulkCreateIncidentsAccepted(): serversToTest:', serversToTest);
 
     // run server tests
-    const { testResults, successfulServers, serverIncidentTypes, serverIncidentTypeNames, serverFieldDefinitions } = await this.bulkCreateServerTests(serversToTest);
+    const { testResults, successfulServerIds, serverIncidentTypes, serverIncidentTypeNames, serverFieldDefinitions } = await this.bulkCreateServerTests(serversToTest);
 
     // log results
     console.log('AppComponent: onBulkCreateIncidentsAccepted(): Server tests and field fetching complete');
@@ -1366,7 +1366,7 @@ export class AppComponent implements OnInit {
     console.log('AppComponent: onBulkCreateIncidentsAccepted(): serverIncidentTypeNames:', serverIncidentTypeNames);
 
     // add 'successfulEndpoints', 'failedEndpoints', and 'jsonFiles' properties to validBulkConfigurations
-    validBulkConfigurations = this.reduceBulkConfigurationServersToGood(validBulkConfigurations, successfulServers);
+    validBulkConfigurations = this.reduceBulkConfigurationServersToGood(validBulkConfigurations, successfulServerIds);
     console.log('AppComponent: onBulkCreateIncidentsAccepted(): second validBulkConfigurations:', validBulkConfigurations);
 
     // get list of JSON files to fetch
@@ -1374,7 +1374,7 @@ export class AppComponent implements OnInit {
     console.log('AppComponent: onBulkCreateIncidentsAccepted(): jsonFileIdsToFetch:', jsonFileIdsToFetch);
 
     // retrieve JSON files
-    const {jsonFileIds, jsonFilesFetchSuccessful} = await this.bulkCreateRetrieveJsonFiles(jsonFileIdsToFetch);
+    const { jsonFileIds, jsonFilesFetchSuccessful } = await this.bulkCreateRetrieveJsonFiles(jsonFileIdsToFetch);
     console.log('AppComponent: onBulkCreateIncidentsAccepted(): jsonFilesFetchSuccessful:', jsonFilesFetchSuccessful);
 
     if (jsonFilesFetchSuccessful) {

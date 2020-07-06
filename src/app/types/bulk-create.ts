@@ -1,4 +1,6 @@
 import { FetchedIncidentType } from './fetched-incident-types';
+import { DemistoEndpointTestResults } from './demisto-endpoint-status';
+import { FetchedIncidentFieldDefinitions } from './fetched-incident-field';
 
 export interface BulkCreateResult extends Object {
   configId: string;
@@ -41,4 +43,25 @@ export interface EndpointIncidentTypeNames {
 
 export interface BulkCreateIncidentJSON {
   [serverId: string]: { [incidentId: number]: object }; // Object is incident JSON
+}
+
+export interface BulkCreateFetchedIncidentFields {
+  [serverId: string]: FetchedIncidentFieldDefinitions;
+}
+
+export interface BulkCreateServerTestResults {
+  testResults: DemistoEndpointTestResults;
+  successfulServerIds: string[]; // contains server id's
+  serverIncidentTypes: EndpointIncidentTypes;
+  serverIncidentTypeNames: EndpointIncidentTypeNames;
+  serverFieldDefinitions: BulkCreateFetchedIncidentFields;
+}
+
+export interface BulkCreateRetrieveJSONFilesResults {
+  jsonFileIds: JsonFileIds;
+  jsonFilesFetchSuccessful: boolean;
+}
+
+export interface JsonFileIds {
+  [jsonFileId: string]: object; // 'object' is the actual freeform json
 }
