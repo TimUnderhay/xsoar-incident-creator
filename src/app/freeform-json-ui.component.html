@@ -73,7 +73,8 @@
         <!-- Save As -->
         <p-button
           label="Save As"
-          (onClick)="onIncidentSaveAsClicked()">
+          (onClick)="onIncidentSaveAsClicked()"
+          [disabled]="!selectedIncidentType || selectedIncidentType === ''">
         </p-button>
 
         <!-- Export -->

@@ -1,0 +1,9 @@
+uploads/*
+
+etc/certs/*
+etc/attachments/*
+etc/incidents/*
+etc/*.json
+
+# backup etc dirs
+etc.bak*

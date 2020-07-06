@@ -157,8 +157,8 @@
     <!-- Freeform JSON UI -->
     <freeform-json-ui
       *ngIf="showJsonMappingUI && fetchedIncidentFieldDefinitions && fetchedIncidentTypes"
-      [loadedIncidentConfigName]="loadedIncidentConfigName"
       [loadedIncidentConfigId]="loadedIncidentConfigId"
+      [loadedIncidentConfigName]="loadedIncidentConfigName"
       [loadDefaultChosenFields]="loadDefaultChosenFields"
       [demistoEndpointsItems]="demistoEndpointsItems"
       [currentDemistoEndpointName]="currentDemistoEndpointName"
@@ -426,7 +426,7 @@
 
       <p-listbox
         [options]="savedIncidentConfigItems"
-        [(ngModel)]="selectedOpenConfig"
+        [(ngModel)]="selectedIncidentConfigIdToOpen"
         [style]="{'width':'100%'}"
         (onDblClick)="onConfigOpened()"
         [filter]="true">
@@ -474,7 +474,7 @@
 
         <p-button
           label="Delete"
-          (onClick)="onDeleteConfigAccepted()">
+          (onClick)="onDeleteIncidentConfigAccepted()">
         </p-button>
 
         <p-button
@@ -581,7 +581,7 @@
           <div *ngFor="let item of bulkConfigurationsToPush">
             
             <span class="dialogLabel">
-              {{item.incidentConfigName}}
+              {{savedIncidentConfigurations[item.incidentConfigId].name}}
             </span> :
 
             <div *ngIf="item.jsonFileNames" style="margin-left: 3em;">
@@ -628,7 +628,7 @@
 
         <p-button
           label="Create Incidents"
-          (onClick)="onCreateBulkIncidents()"
+          (onClick)="onBulkCreateIncidentsAccepted()"
           [disabled]="!bulkConfigurationsToPush || (bulkConfigurationsToPush && bulkConfigurationsToPush.length === 0)">
         </p-button>
 
@@ -666,14 +666,14 @@
         <ng-container *ngFor="let result of bulkCreateResults">
 
           <!-- Incident Configuration Name -->
-          <div>{{result.configName}}</div>
+          <div>{{savedIncidentConfigurations[result.configId].name}}</div>
 
           <!-- Server ID -->
           <div>{{result.serverId}}</div>
 
           <!-- JSON File -->
           <div>
-            {{result.hasOwnProperty('jsonFile') ? savedJsonConfigurationsObj[result.jsonFile].name : undefined}}
+            {{result.hasOwnProperty('jsonFile') && result.jsonFile !== undefined ? savedJsonConfigurationsObj[result.jsonFile].name : 'N/A'}}
           </div>
 
           <!-- Success / Failure -->

@@ -1720,24 +1720,24 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     console.log('FreeformJsonUIComponent: onSetDefaultIncidentJsonFile()');
     if (!unset) {
       try {
-        await this.fetcherService.setDefaultIncidentJsonFile(this.loadedIncidentConfigName, this.loadedJsonConfigId);
+        await this.fetcherService.setDefaultIncidentJsonFile(this.loadedIncidentConfigId, this.loadedJsonConfigId);
         this.defaultJsonConfigId = this.loadedJsonConfigId;
         this.defaultJsonConfigName = this.loadedJsonConfigName;
-        this.savedIncidentConfigurationsChanged.emit(this.loadedIncidentConfigName);
+        this.savedIncidentConfigurationsChanged.emit(this.loadedIncidentConfigId);
       }
       catch (error) {
-        console.error(`FreeformJsonUIComponent: onSetDefaultIncidentJsonFile(): Caught error setting default JSON file for incident config ${this.loadedIncidentConfigName}:`, error);
+        console.error(`FreeformJsonUIComponent: onSetDefaultIncidentJsonFile(): Caught error setting default JSON file for incident config ${this.loadedIncidentConfigId}:`, error);
       }
     }
     else {
       try {
-        await this.fetcherService.clearDefaultIncidentJsonFile(this.loadedIncidentConfigName);
+        await this.fetcherService.clearDefaultIncidentJsonFile(this.loadedIncidentConfigId);
         this.defaultJsonConfigId = undefined;
         this.defaultJsonConfigName = undefined;
-        this.savedIncidentConfigurationsChanged.emit(this.loadedIncidentConfigName);
+        this.savedIncidentConfigurationsChanged.emit(this.loadedIncidentConfigId);
       }
       catch (error) {
-        console.error(`FreeformJsonUIComponent: onSetDefaultIncidentJsonFile(): Caught error clearing default JSON file for incident config ${this.loadedIncidentConfigName}:`, error);
+        console.error(`FreeformJsonUIComponent: onSetDefaultIncidentJsonFile(): Caught error clearing default JSON file for incident config ${this.loadedIncidentConfigId}:`, error);
       }
     }
   }
@@ -1824,8 +1824,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       this.buildChosenFieldsFromDemisto(this.json);
       this.buildIncidentFieldOptions(incidentType);
       this.messageWithAutoClear.emit( { severity: 'success', summary: 'Success', detail: `Incident ${demistoIncidentToLoad} was successfully loaded from ${demistoEndpointToLoadFrom}`} );
-      this.loadedIncidentConfigName = undefined;
       this.loadedIncidentConfigId = undefined;
+      this.loadedIncidentConfigName = undefined;
       this.createInvestigation = true;
       this.loadedJsonConfigId = undefined;
       this.loadedJsonConfigName = undefined;
@@ -1934,6 +1934,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     console.log('FreeformJsonUIComponent: onIncidentSaveAsAccepted()');
 
     let newIncidentConfigName: string;
+    let newIncidentConfigId: string;
 
     const incidentConfig: IncidentConfig = {
       name: this.incidentSaveAsConfigName,
@@ -1943,6 +1944,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     };
     try {
       const res = await this.fetcherService.saveNewIncidentConfiguration(incidentConfig);
+      newIncidentConfigId = res.id;
       this.messageWithAutoClear.emit({severity: 'success', summary: 'Successful', detail: `Configuration '${this.incidentSaveAsConfigName}' has been saved`});
       newIncidentConfigName = this.incidentSaveAsConfigName;
       this.incidentSaveAsConfigName = '';
@@ -1953,7 +1955,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     // Update Fields Configurations
-    this.savedIncidentConfigurationsChanged.emit(newIncidentConfigName);
+    this.savedIncidentConfigurationsChanged.emit(newIncidentConfigId);
     this.showIncidentSaveAsDialog = false;
   }
 

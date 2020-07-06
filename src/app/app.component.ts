@@ -68,15 +68,11 @@ export class AppComponent implements OnInit {
   get savedIncidentConfigurations(): IncidentConfigs {
     return this._savedIncidentConfigurations;
   }
-  set savedIncidentConfigurations(value: IncidentConfigs) {
-    this._savedIncidentConfigurations = value;
-    const savedIncidentConfigIds: string[] = [];
-    for (const config of Object.values(value)) {
-      savedIncidentConfigIds.push(config.id);
-    }
-    this.savedIncidentConfigIds = savedIncidentConfigIds;
+  set savedIncidentConfigurations(configs: IncidentConfigs) {
+    this._savedIncidentConfigurations = configs;
+    this.savedIncidentConfigurationNames = Object.values(configs).map(config => config.name);
   }
-  savedIncidentConfigIds: string[];
+  savedIncidentConfigurationNames: string[];
   get savedIncidentConfigurationsLen(): number {
     // returns the number of saved field configs
     return Object.keys(this.savedIncidentConfigurations).length;
@@ -90,7 +86,7 @@ export class AppComponent implements OnInit {
 
   // Open dialog
   showOpenDialog = false;
-  selectedOpenConfig = '';
+  selectedIncidentConfigIdToOpen = '';
 
   // Bulk create dialog
   showBulkCreateDialog = false;
@@ -610,7 +606,7 @@ export class AppComponent implements OnInit {
 
   async fetchIncidentTypes(serverId): Promise<FetchedIncidentType[]> {
     /*
-      Called from ngOnInit(), onCreateBulkIncidents()
+      Called from ngOnInit(), onBulkCreateIncidentsAccepted()
       Fetches incident types from Demisto
     */
     // console.log('AppComponent: fetchIncidentTypes()');
@@ -633,8 +629,8 @@ export class AppComponent implements OnInit {
         console.log('AppComponent: onIncidentJsonUploaded(): parsedIncidentJson:', parsedIncidentJson);
         this.showJsonMappingUI = true;
         this.loadDefaultChosenFields = false;
-        this.loadedIncidentConfigName = undefined;
         this.loadedIncidentConfigId = undefined;
+        this.loadedIncidentConfigName = undefined;
         this.changeDetector.detectChanges();
         this.freeformJsonUIComponent.onUploadIncidentJson(parsedIncidentJson);
       }
@@ -656,11 +652,11 @@ export class AppComponent implements OnInit {
     this.loadDefaultChosenFields = false;
     this.changeDetector.detectChanges();
 
-    const selectedConfig = config ? config : this.savedIncidentConfigurations[this.selectedOpenConfig];
-    this.loadedIncidentConfigName = selectedConfig.name;
+    const selectedConfig = config ? config : this.savedIncidentConfigurations[this.selectedIncidentConfigIdToOpen];
     this.loadedIncidentConfigId = selectedConfig.id;
+    this.loadedIncidentConfigName = selectedConfig.name;
     this.freeformJsonUIComponent.onIncidentConfigOpened(selectedConfig);
-    this.selectedOpenConfig = ''; // reset selection
+    this.selectedIncidentConfigIdToOpen = ''; // reset selection
   }
 
 
@@ -690,47 +686,50 @@ export class AppComponent implements OnInit {
 
 
 
-  onDeleteConfigAccepted() {
-    console.log('AppComponent: onDeleteConfigAccepted()');
+  onDeleteIncidentConfigAccepted() {
+    console.log('AppComponent: onDeleteIncidentConfigAccepted()');
     this.showDeleteDialog = false;
     let message = `Are you sure that you would like to delete the configuration${utils.sPlural(this.selectedDeleteConfigs)}: ${this.selectedDeleteConfigs.join(', ')} ?`;
-    if (this.selectedDeleteConfigs.includes(this.loadedIncidentConfigName) ) {
+    if (this.selectedDeleteConfigs.includes(this.loadedIncidentConfigId) ) {
       message = `Are you sure you want to delete the ACTIVE configuration '${this.loadedIncidentConfigName}' ?`;
     }
     this.confirmationService.confirm( {
       header: `Confirm Deletion`,
       message,
-      accept: () => this.onDeleteConfigConfirmed(),
+      accept: () => this.onDeleteIncidentConfigConfirmed(),
       icon: 'pi pi-exclamation-triangle'
     });
   }
 
 
 
-  async onDeleteConfigConfirmed() {
-    console.log('AppComponent: onDeleteConfigConfirmed()');
+  async onDeleteIncidentConfigConfirmed() {
+    console.log('AppComponent: onDeleteIncidentConfigConfirmed()');
 
-    this.selectedDeleteConfigs.forEach( async configName => {
+    const selectedDeleteConfigNames: string[] = [];
+
+    this.selectedDeleteConfigs.forEach( async configId => {
+      selectedDeleteConfigNames.push(this.savedIncidentConfigurations[configId].name);
       try {
-        await this.fetcherService.deleteIncidentConfiguration(configName);
+        await this.fetcherService.deleteIncidentConfiguration(configId);
       }
       catch (error) {
-        console.error(`onDeleteConfigConfirmed(): caught error whilst deleting configuration ${configName}`);
+        console.error(`onDeleteIncidentConfigConfirmed(): caught error whilst deleting configuration ${configId}`);
         return;
       }
     });
 
-    // console.log('AppComponent: onDeleteConfigConfirmed(): selectedDeleteConfigs:', this.selectedDeleteConfigs);
-    // console.log('AppComponent: onDeleteConfigConfirmed(): loadedIncidentConfigName:', this.loadedIncidentConfigName);
+    // console.log('AppComponent: onDeleteIncidentConfigConfirmed(): selectedDeleteConfigs:', this.selectedDeleteConfigs);
+    // console.log('AppComponent: onDeleteIncidentConfigConfirmed(): loadedIncidentConfigName:', this.loadedIncidentConfigName);
 
-    if (this.selectedDeleteConfigs.includes(this.loadedIncidentConfigName)) {
-      this.loadedIncidentConfigName = undefined;
+    if (this.selectedDeleteConfigs.includes(this.loadedIncidentConfigId)) {
       this.loadedIncidentConfigId = undefined;
+      this.loadedIncidentConfigName = undefined;
     }
 
     // fetch incident configs
     await this.getSavedIncidentConfigurations();
-    this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration${utils.sPlural(this.selectedDeleteConfigs)} ${this.selectedDeleteConfigs.join(', ')} was successfully deleted`});
+    this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration${utils.sPlural(selectedDeleteConfigNames)} ${selectedDeleteConfigNames.join(', ')} was successfully deleted`});
 
     this.selectedDeleteConfigs = []; // reset selection
   }
@@ -805,20 +804,20 @@ export class AppComponent implements OnInit {
 
   getValidBulkConfigurations(): BulkCreateSelections {
     const validConfigs: BulkCreateSelections = {};
-    for (const incidentConfigName of Object.keys(this.bulkCreateSelections)) {
-      const bulkCreateSelection: BulkCreateSelection = this.bulkCreateSelections[incidentConfigName];
+    for (const incidentConfigId of Object.keys(this.bulkCreateSelections)) {
+      const bulkCreateSelection: BulkCreateSelection = this.bulkCreateSelections[incidentConfigId];
       const [jsonGroupIds, jsonFileIds] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection);
 
       const jsonGroupsGood = jsonGroupIds && jsonGroupIds.length !== 0;
       const jsonFilesGood = jsonFileIds && jsonFileIds.length !== 0;
       const endpointsGood = bulkCreateSelection.endpoints.length !== 0;
-      const jsonRequired = this.savedIncidentConfigurations[incidentConfigName].requiresJson;
+      const jsonRequired = this.savedIncidentConfigurations[incidentConfigId].requiresJson;
 
       if ((jsonGroupsGood || jsonFilesGood) && endpointsGood && jsonRequired) {
-        validConfigs[incidentConfigName] = bulkCreateSelection;
+        validConfigs[incidentConfigId] = bulkCreateSelection;
       }
       else if (endpointsGood && !jsonRequired) {
-        validConfigs[incidentConfigName] = bulkCreateSelection;
+        validConfigs[incidentConfigId] = bulkCreateSelection;
       }
     }
     return validConfigs;
@@ -827,8 +826,8 @@ export class AppComponent implements OnInit {
 
 
   reduceBulkConfigurationServersToTest(bulkSelections: BulkCreateSelections): string[] {
-    const serversToTest = Object.keys(bulkSelections).reduce( (result, incidentConfigName) => {
-      const bulkCreateSelection: BulkCreateSelection = this.bulkCreateSelections[incidentConfigName];
+    const serversToTest = Object.keys(bulkSelections).reduce( (result, incidentConfigId) => {
+      const bulkCreateSelection: BulkCreateSelection = this.bulkCreateSelections[incidentConfigId];
 
       for (const serverId of bulkCreateSelection.endpoints) {
         if (!result.includes(serverId)) {
@@ -861,7 +860,7 @@ export class AppComponent implements OnInit {
 
 
   reduceBulkConfigurationServersToGood(bulkSelections: BulkCreateSelections, successfulServers: string[]): BulkCreateSelections {
-    // runs the endpoints of a bulkCreateSelections through an array of endpoints that have tested successully, and returns the sanitised result
+    // runs the endpoints of a BulkCreateSelections through an array of endpoints that have tested successully, and returns the sanitised result
 
     for (let bulkSelection of Object.values(bulkSelections)) {
       const successfulEndpoints = [];
@@ -955,8 +954,8 @@ export class AppComponent implements OnInit {
     // console.log('AppComponent: buildBulkConfigurationsToPushItems()');
     const bulkConfigurationsToPush: BulkCreateConfigurationToPush[] = [];
 
-    for (const incidentConfigName of Object.keys(this.bulkCreateSelections).sort(utils.sortArrayNaturally)) {
-      const bulkCreateSelection = this.bulkCreateSelections[incidentConfigName];
+    for (const incidentConfigId of Object.keys(this.bulkCreateSelections).sort(utils.sortArrayNaturally)) {
+      const bulkCreateSelection = this.bulkCreateSelections[incidentConfigId];
 
       const [jsonGroupIds, jsonFileIds] = this.reduceBulkConfigurationJSONConfigsAndGroups(bulkCreateSelection);
 
@@ -966,10 +965,10 @@ export class AppComponent implements OnInit {
       const jsonGroupsGood = jsonGroupIds && jsonGroupIds.length !== 0;
       const jsonFilesGood = jsonFileIds && jsonFileIds.length !== 0;
       const endpointsGood = bulkCreateSelection.endpoints.length !== 0;
-      const jsonRequired = this.savedIncidentConfigurations[incidentConfigName].requiresJson;
+      const jsonRequired = this.savedIncidentConfigurations[incidentConfigId].requiresJson;
 
       const bulkConfigToPush: BulkCreateConfigurationToPush = {
-        incidentConfigName,
+        incidentConfigId,
         endpoints: bulkCreateSelection.endpoints.join(', ')
       };
 
@@ -1002,8 +1001,8 @@ export class AppComponent implements OnInit {
 
     const selections: BulkCreateSelections = {};
     for (const incidentConfig of Object.values(this.savedIncidentConfigItems)) {
-      const incidentConfigName = incidentConfig.value;
-      selections[incidentConfigName] = {
+      const incidentConfigId = incidentConfig.value;
+      selections[incidentConfigId] = {
         jsonSelections: [],
         endpoints: []
       };
@@ -1034,53 +1033,15 @@ export class AppComponent implements OnInit {
 
 
 
-  async onCreateBulkIncidents() {
-    console.log('AppComponent: onCreateBulkIncidents()');
-
-    this.showBulkCreateDialog = false;
-    this.showBulkResultsDialog = true;
-    this.changeDetector.detectChanges(); // trigger change detection
-
-    this.bulkCreateResults = [];
-
-    console.log('AppComponent: onCreateBulkIncidents(): bulkCreateSelections:', this.bulkCreateSelections);
-
-
-    /*
-    Steps to complete:
-
-    1.  Load incident config
-    2.  Test server
-    3.  Load server fields
-    4.  Load server incident types
-    5.  Check whether incident requires JSON file
-    6.  Load JSON file, if needed
-    7.  Check for keys that can't be pushed
-    8.  Display them in a column
-    9.  Push case with all other fields
-    10.  Display results in a column
-    */
-
-
-    const createIncidentPromises: Promise<any>[] = [];
+  async bulkCreateServerTests(serversToTest: string[]): Promise<any> {
     const testResults: DemistoEndpointTestResults = {};
     const successfulServers = [];
-    const serverFieldDefinitions = {};
-    const serverIncidentTypes: EndpointIncidentTypes = {};
+    const serverIncidentTypes: EndpointIncidentTypes = {}; //  holds incident type configs for servers, fetched from Demisto, indexed by serverId
     const serverIncidentTypeNames: EndpointIncidentTypeNames = {};
-    const jsonFileIds = {};
-    const bulkCreateIncidentJson: BulkCreateIncidentJSON = {};
+    const serverFieldDefinitions = {};
 
-    let validBulkConfigurations: BulkCreateSelections = this.getValidBulkConfigurations();
-    console.log('AppComponent: onCreateBulkIncidents(): validBulkConfigurations:', validBulkConfigurations);
-
-    // get a list of servers to test
-    const serversToTest = this.reduceBulkConfigurationServersToTest(validBulkConfigurations);
-    console.log('AppComponent: onCreateBulkIncidents(): serversToTest:', serversToTest);
-
-    // run endpoint test connections, incident fields
     const serverTestPromises: Promise<any>[] = serversToTest.map( async serverId => {
-      console.log(`AppComponent: onCreateBulkIncidents(): Testing Demisto server ${serverId}`);
+      console.log(`AppComponent: bulkCreateServerTests(): Testing Demisto server ${serverId}`);
       const testResult: DemistoEndpointTestResult = await this.fetcherService.testDemistoEndpointById(serverId);
 
       testResults[serverId] = testResult;
@@ -1089,17 +1050,17 @@ export class AppComponent implements OnInit {
         successfulServers.push(serverId);
 
         // Fetch incident types
-        console.log(`AppComponent: onCreateBulkIncidents(): Fetching incident types from XSOAR server ${serverId}`);
+        console.log(`AppComponent: bulkCreateServerTests(): Fetching incident types from XSOAR server ${serverId}`);
         const incidentTypesPromise = this.fetchIncidentTypes(serverId).then( incidentTypes => {
-          console.log(`AppComponent: onCreateBulkIncidents(): got incident types`);
+          console.log(`AppComponent: bulkCreateServerTests(): got incident types`);
           serverIncidentTypes[serverId] = incidentTypes;
           serverIncidentTypeNames[serverId] = incidentTypes.map( incidentType => incidentType.name );
         });
 
         // Fetch field definitions
-        console.log(`AppComponent: onCreateBulkIncidents(): Fetching field definitions from XSOAR server ${serverId}`);
+        console.log(`AppComponent: bulkCreateServerTests(): Fetching field definitions from XSOAR server ${serverId}`);
         const fieldsPromise = this.fetcherService.getIncidentFieldDefinitions(serverId).then( fetchedIncidentFieldDefinitions => {
-          console.log(`AppComponent: onCreateBulkIncidents(): got incident field definitions`);
+          console.log(`AppComponent: bulkCreateServerTests(): got incident field definitions`);
           serverFieldDefinitions[serverId] = this.parseFetchedIncidentFieldDefinitions(fetchedIncidentFieldDefinitions);
         });
 
@@ -1112,38 +1073,35 @@ export class AppComponent implements OnInit {
 
     // wait for server tests to finish
     await Promise.all(serverTestPromises);
-    console.log('AppComponent: onCreateBulkIncidents(): Server tests and field fetching complete');
-    console.log('AppComponent: onCreateBulkIncidents(): testResults:', testResults);
-    console.log('AppComponent: onCreateBulkIncidents(): serverFieldDefinitions:', serverFieldDefinitions);
-    console.log('AppComponent: onCreateBulkIncidents(): serverIncidentTypes:', serverIncidentTypes);
-    console.log('AppComponent: onCreateBulkIncidents(): serverIncidentTypeNames:', serverIncidentTypeNames);
 
-    // add 'successfulEndpoints', 'failedEndpoints', and 'jsonFiles' properties to validBulkConfigurations
-    validBulkConfigurations = this.reduceBulkConfigurationServersToGood(validBulkConfigurations, successfulServers);
-    console.log('AppComponent: onCreateBulkIncidents(): validBulkConfigurations:', validBulkConfigurations);
 
-    // get list of JSON files to fetch
-    const jsonFileIdsToFetch = this.reduceBulkConfigurationJsonFilesToFetch(validBulkConfigurations);
-    console.log('AppComponent: onCreateBulkIncidents(): jsonFileIdsToFetch:', jsonFileIdsToFetch);
+    return { testResults, successfulServers, serverIncidentTypes, serverIncidentTypeNames, serverFieldDefinitions };
+  }
 
-    // retrieve JSON files
+
+
+  async bulkCreateRetrieveJsonFiles(jsonFileIdsToFetch): Promise<any> {
+    const jsonFileIds = {};
+
     const jsonFetchPromises = jsonFileIdsToFetch.map( async jsonFileId => {
       jsonFileIds[jsonFileId] = await this.fetcherService.getSavedJSONConfiguration(jsonFileId);
     });
     const jsonFilesFetchSuccessful = jsonFetchPromises.length !== 0;
     // wait for JSON retrieve tests to finish
     await Promise.all(jsonFetchPromises);
-    console.log('AppComponent: onCreateBulkIncidents(): jsonFilesFetchSuccessful:', jsonFilesFetchSuccessful);
+    return {jsonFileIds, jsonFilesFetchSuccessful};
+  }
 
-    if (jsonFilesFetchSuccessful) {
-      // it's possible that no JSON files were needed
-      console.log('AppComponent: onCreateBulkIncidents(): retrieved all JSON files');
-      console.log('AppComponent: onCreateBulkIncidents(): jsonFileIds:', jsonFileIds);
-    }
 
-    // Loop through the bulk configs to create incidents from
-    for (const configName of Object.keys(validBulkConfigurations)) {
-      const validBulkCreateConfig = validBulkConfigurations[configName];
+
+  async bulkCreateWorkLoop(validBulkConfigurations, testResults, serverIncidentTypeNames, jsonFileIds, serverFieldDefinitions): Promise<BulkCreateIncidentJSON> {
+
+    const createIncidentPromises: Promise<any>[] = [];
+    const bulkCreateIncidentJson: BulkCreateIncidentJSON = {};
+
+    for (const configId of Object.keys(validBulkConfigurations)) {
+
+      const validBulkCreateConfig = validBulkConfigurations[configId];
 
       // Loop through the bad endpoints of the bulk config
       for (const serverId of validBulkCreateConfig.failedEndpoints) {
@@ -1156,7 +1114,7 @@ export class AppComponent implements OnInit {
         else {
           error = `Server test failed with error: ${testResult.error}`;
         }
-        this.bulkCreateResults.push({configName, serverId, success: false, error});
+        this.bulkCreateResults.push({configId, serverId, success: false, error});
         this.changeDetector.detectChanges(); // update UI
       }
 
@@ -1170,19 +1128,21 @@ export class AppComponent implements OnInit {
       for (const serverId of validBulkCreateConfig.successfulEndpoints) {
         // Loop through the successfully-tested endpoints
 
-        console.log('AppComponent: onCreateBulkIncidents(): configName:', configName);
-        const incidentConfig = this.savedIncidentConfigurations[configName];
+        console.log('AppComponent: bulkCreateWorkLoop(): configId:', configId);
+        console.log('AppComponent: bulkCreateWorkLoop(): config name:', this.savedIncidentConfigurations[configId].name );
+
+        const incidentConfig = this.savedIncidentConfigurations[configId];
 
         const skippedFields: string[] = [];
         const hasAnEnabledAttachmentField = utils.fieldsHaveEnabledAttachmentField(Object.values(incidentConfig.chosenFields) as IncidentFieldUI[]);
 
         // Skip this server if the incident type isn't defined
-        console.log('AppComponent: onCreateBulkIncidents(): serverIncidentTypeNames:', serverIncidentTypeNames);
-        console.log('AppComponent: onCreateBulkIncidents(): serverIncidentTypeNames[serverId]:', serverIncidentTypeNames[serverId]);
+        console.log('AppComponent: bulkCreateWorkLoop(): serverIncidentTypeNames:', serverIncidentTypeNames);
+        console.log('AppComponent: bulkCreateWorkLoop(): serverIncidentTypeNames[serverId]:', serverIncidentTypeNames[serverId]);
         let incidentTypeFieldDefined = serverIncidentTypeNames[serverId].includes(incidentConfig.incidentType) ? true : false;
         if (!incidentTypeFieldDefined) {
           const error = `Incident type '${incidentConfig.incidentType}' is not defined on XSOAR server`;
-          this.bulkCreateResults.push({configName, serverId, success: false, error});
+          this.bulkCreateResults.push({configId, serverId, success: false, error});
           this.changeDetector.detectChanges(); // update UI
           continue;
         }
@@ -1293,8 +1253,8 @@ export class AppComponent implements OnInit {
             filesToPush[filesToPush.length - 1].last = true;
           }
 
-          console.log('AppComponent: onCreateBulkIncidents(): newIncident:', newIncident);
-          console.log('AppComponent: onCreateBulkIncidents(): filesToPush:', filesToPush);
+          console.log('AppComponent: bulkCreateWorkLoop(): newIncident:', newIncident);
+          console.log('AppComponent: bulkCreateWorkLoop(): filesToPush:', filesToPush);
 
 
 
@@ -1312,27 +1272,27 @@ export class AppComponent implements OnInit {
                   let result;
                   try {
                     result = await this.fetcherService.uploadFileToDemistoIncident(fileToPush);
-                    console.log('AppComponent: onCreateBulkIncidents(): attachment upload result:', result);
+                    console.log('AppComponent: bulkCreateWorkLoop(): attachment upload result:', result);
                   }
                   catch (error) {
-                    console.log('AppComponent: onCreateBulkIncidents(): attachment upload result:', result);
-                    console.error('AppComponent: onCreateBulkIncidents(): Caught error when uploading attachment. error:', error);
+                    console.log('AppComponent: bulkCreateWorkLoop(): attachment upload result:', result);
+                    console.error('AppComponent: bulkCreateWorkLoop(): Caught error when uploading attachment. error:', error);
                   }
                 }
               }
 
-              jsonFile = jsonFile ? jsonFile : 'N/A';
+              jsonFile = jsonFile ? jsonFile : undefined;
               if (!(serverId in bulkCreateIncidentJson)) {
                 bulkCreateIncidentJson[serverId] = {};
               }
               bulkCreateIncidentJson[serverId][incidentId] = newIncident;
-              this.bulkCreateResults.push({configName, serverId, success: true, skippedFields, incidentId, jsonFile});
+              this.bulkCreateResults.push({configId, serverId, success: true, skippedFields, incidentId, jsonFile});
             }
 
             else {
               // incident creation unsuccessful
               const error = res.statusMessage;
-              this.bulkCreateResults.push({configName, serverId, success: false, error});
+              this.bulkCreateResults.push({configId, serverId, success: false, error});
             }
             this.changeDetector.detectChanges(); // update UI
           })());
@@ -1354,11 +1314,78 @@ export class AppComponent implements OnInit {
 
     // Wait for all incidents to be created
     await Promise.all(createIncidentPromises);
-    console.log('AppComponent: onCreateBulkIncidents(): Incident creation complete');
 
-    this.bulkCreateIncidentJson = bulkCreateIncidentJson;
+    console.log('AppComponent: bulkCreateWorkLoop(): bulkCreateResults:', this.bulkCreateResults);
 
-    console.log('AppComponent: onCreateBulkIncidents(): bulkCreateResults:', this.bulkCreateResults);
+    return bulkCreateIncidentJson;
+  }
+
+
+
+  async onBulkCreateIncidentsAccepted() {
+    console.log('AppComponent: onBulkCreateIncidentsAccepted()');
+
+    console.log('AppComponent: onBulkCreateIncidentsAccepted(): bulkCreateSelections:', this.bulkCreateSelections);
+
+    this.showBulkCreateDialog = false;
+    this.showBulkResultsDialog = true;
+    this.changeDetector.detectChanges(); // trigger change detection
+
+    this.bulkCreateResults = [];
+
+    /*
+    Steps to complete:
+
+    1.  Load incident config
+    2.  Test server
+    3.  Load server fields
+    4.  Load server incident types
+    5.  Check whether incident requires JSON file
+    6.  Load JSON file, if needed
+    7.  Check for keys that can't be pushed
+    8.  Display them in a column
+    9.  Push case with all other fields
+    10.  Display results in a column
+    */
+
+    let validBulkConfigurations: BulkCreateSelections = this.getValidBulkConfigurations();
+    console.log('AppComponent: onBulkCreateIncidentsAccepted(): validBulkConfigurations:', validBulkConfigurations);
+
+    // get a list of servers to test
+    const serversToTest = this.reduceBulkConfigurationServersToTest(validBulkConfigurations);
+    console.log('AppComponent: onBulkCreateIncidentsAccepted(): serversToTest:', serversToTest);
+
+    // run server tests
+    const { testResults, successfulServers, serverIncidentTypes, serverIncidentTypeNames, serverFieldDefinitions } = await this.bulkCreateServerTests(serversToTest);
+
+    // log results
+    console.log('AppComponent: onBulkCreateIncidentsAccepted(): Server tests and field fetching complete');
+    console.log('AppComponent: onBulkCreateIncidentsAccepted(): testResults:', testResults);
+    console.log('AppComponent: onBulkCreateIncidentsAccepted(): serverFieldDefinitions:', serverFieldDefinitions);
+    console.log('AppComponent: onBulkCreateIncidentsAccepted(): serverIncidentTypes:', serverIncidentTypes);
+    console.log('AppComponent: onBulkCreateIncidentsAccepted(): serverIncidentTypeNames:', serverIncidentTypeNames);
+
+    // add 'successfulEndpoints', 'failedEndpoints', and 'jsonFiles' properties to validBulkConfigurations
+    validBulkConfigurations = this.reduceBulkConfigurationServersToGood(validBulkConfigurations, successfulServers);
+    console.log('AppComponent: onBulkCreateIncidentsAccepted(): second validBulkConfigurations:', validBulkConfigurations);
+
+    // get list of JSON files to fetch
+    const jsonFileIdsToFetch = this.reduceBulkConfigurationJsonFilesToFetch(validBulkConfigurations);
+    console.log('AppComponent: onBulkCreateIncidentsAccepted(): jsonFileIdsToFetch:', jsonFileIdsToFetch);
+
+    // retrieve JSON files
+    const {jsonFileIds, jsonFilesFetchSuccessful} = await this.bulkCreateRetrieveJsonFiles(jsonFileIdsToFetch);
+    console.log('AppComponent: onBulkCreateIncidentsAccepted(): jsonFilesFetchSuccessful:', jsonFilesFetchSuccessful);
+
+    if (jsonFilesFetchSuccessful) {
+      // it's possible that no JSON files were needed
+      console.log('AppComponent: onBulkCreateIncidentsAccepted(): retrieved all JSON files');
+      console.log('AppComponent: onBulkCreateIncidentsAccepted(): jsonFileIds:', jsonFileIds);
+    }
+
+    // Create incidents
+    this.bulkCreateIncidentJson = await this.bulkCreateWorkLoop(validBulkConfigurations, testResults, serverIncidentTypeNames, jsonFileIds, serverFieldDefinitions);
+    console.log('AppComponent: onBulkCreateIncidentsAccepted(): Incident creation complete');
   }
 
 
@@ -1394,7 +1421,7 @@ export class AppComponent implements OnInit {
 
     const currentDemistoEndpointNameReselected = this.currentDemistoEndpointName === serverId;
     const serverPreviouslySelected = this.currentDemistoEndpointName !== undefined;
-    const incidentConfigIsLoaded = this.loadedIncidentConfigName !== undefined;
+    const incidentConfigIsLoaded = this.loadedIncidentConfigId !== undefined;
 
     const oldDemistoEndpointInit = this.currentDemistoEndpointInit;
 
@@ -1441,7 +1468,7 @@ export class AppComponent implements OnInit {
             accept: () => {},
             rejectLabel: 'Revert to Saved State',
             // blow away the current config
-            reject: () => this.freeformJsonUIComponent.onIncidentConfigOpened(this.savedIncidentConfigurations[this.loadedIncidentConfigName])
+            reject: () => this.freeformJsonUIComponent.onIncidentConfigOpened(this.savedIncidentConfigurations[this.loadedIncidentConfigId])
 
           });
         }
@@ -1449,7 +1476,7 @@ export class AppComponent implements OnInit {
         else if (incidentConfigIsLoaded && !serverPreviouslySelected) {
           // an incident config is loaded and no server was previously selected, but now one is selected
           // destructive
-          const selectedConfig = this.savedIncidentConfigurations[this.loadedIncidentConfigName];
+          const selectedConfig = this.savedIncidentConfigurations[this.loadedIncidentConfigId];
           this.freeformJsonUIComponent.buildChosenFieldsFromConfig(selectedConfig);
         }
 
@@ -1640,7 +1667,7 @@ export class AppComponent implements OnInit {
       try {
         await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName);
 
-        if (this.loadedIncidentConfigName) {
+        if (this.loadedIncidentConfigId) {
           const message = `Do you want to attempt to keep your current field values and selections, or reset them to their saved state?`;
           this.confirmationService.confirm( {
             message,
@@ -1650,7 +1677,7 @@ export class AppComponent implements OnInit {
             accept: () => this.freeformJsonUIComponent.updateChosenFieldLocks(),
 
             rejectLabel: 'Reset to Saved State',
-            reject: () => this.freeformJsonUIComponent.buildChosenFieldsFromConfig(this.savedIncidentConfigurations[this.loadedIncidentConfigName])
+            reject: () => this.freeformJsonUIComponent.buildChosenFieldsFromConfig(this.savedIncidentConfigurations[this.loadedIncidentConfigId])
           });
         }
       }
@@ -1687,8 +1714,8 @@ export class AppComponent implements OnInit {
         message: `Proceed with creating a new JSON mapping?  Any unsaved changes will be lost.`,
         accept: () => {
           this.showJsonMappingUI = false;
-          this.loadedIncidentConfigName = undefined;
           this.loadedIncidentConfigId = undefined;
+          this.loadedIncidentConfigName = undefined;
           this.changeDetector.detectChanges();
           this.showJsonMappingUI = true;
           this.loadDefaultChosenFields = true;
@@ -1703,7 +1730,6 @@ export class AppComponent implements OnInit {
     else {
       this.showJsonMappingUI = true;
       this.loadDefaultChosenFields = true;
-      this.loadedIncidentConfigName = undefined;
       this.loadedIncidentConfigId = undefined;
       this.loadedIncidentConfigName = undefined;
     }
@@ -1717,8 +1743,8 @@ export class AppComponent implements OnInit {
       this.savedIncidentConfigurations = await this.fetcherService.getSavedIncidentConfigurations();
       console.log('AppComponent: getSavedIncidentConfigurations(): savedIncidentConfigurations:', this.savedIncidentConfigurations);
       this.savedIncidentConfigItems = this.buildFieldsConfigItems(this.savedIncidentConfigurations);
-      if (this.loadedIncidentConfigName) {
-        this.loadedIncidentConfigId = this.savedIncidentConfigurations[this.loadedIncidentConfigName].id;
+      if (this.loadedIncidentConfigId) {
+        this.loadedIncidentConfigName = this.savedIncidentConfigurations[this.loadedIncidentConfigId].name;
       }
       return true;
     }
@@ -1737,18 +1763,19 @@ export class AppComponent implements OnInit {
 
 
   buildFieldsConfigItems(configs: IncidentConfigs): SelectItem[] {
-    let items: SelectItem[] = Object.values(configs).map( (config: IncidentConfig) =>
-      ({ label: config.name, value: config.name })
+    const items: SelectItem[] = Object.values(configs).map( (config: IncidentConfig) =>
+      ({ label: config.name, value: config.id })
     );
     return items.sort(this.selectItemsSort);
   }
 
 
 
-  async onSavedIncidentConfigurationsChanged(newIncidentConfigName?) {
+  async onSavedIncidentConfigurationsChanged(newIncidentConfigId?) {
     // Update Incident Configurations
-    if (newIncidentConfigName) {
-      this.loadedIncidentConfigName = newIncidentConfigName;
+    if (newIncidentConfigId) {
+      this.loadedIncidentConfigId = newIncidentConfigId;
+      // it isn't necessary to set this.loadedIncidentConfigName here; getSavedIncidentConfigurations() will do this for us
     }
     await this.getSavedIncidentConfigurations();
   }
@@ -2239,8 +2266,8 @@ export class AppComponent implements OnInit {
       this.mappingToImport = parsedMapping;
 
       if (
-        this.savedIncidentConfigIds.includes(this.mappingToImport.id)
-        || this.savedIncidentConfigurations.hasOwnProperty(this.mappingToImport.name) ) {
+        this.savedIncidentConfigurations.hasOwnProperty(this.mappingToImport.id)
+        || this.savedIncidentConfigurationNames.hasOwnProperty(this.mappingToImport.name) ) {
           this.duplicateIncidentMappingFromImport = true;
       }
 

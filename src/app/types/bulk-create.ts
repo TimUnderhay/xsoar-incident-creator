@@ -1,7 +1,7 @@
 import { FetchedIncidentType } from './fetched-incident-types';
 
 export interface BulkCreateResult extends Object {
-  configName: string;
+  configId: string;
   skippedFields?: string[];
   success: boolean;
   error?: string;
@@ -16,7 +16,7 @@ export interface BulkCreateConfigurationToPush {
   jsonFileIds?: string;
   jsonFileNames?: string;
   endpoints: string;
-  incidentConfigName: string;
+  incidentConfigId: string;
 }
 
 export interface BulkCreateSelection {
@@ -28,7 +28,7 @@ export interface BulkCreateSelection {
 }
 
 export interface BulkCreateSelections {
-  [index: string]: BulkCreateSelection;
+  [incidentConfigId: string]: BulkCreateSelection;
 }
 
 export interface EndpointIncidentTypes {

@@ -29,8 +29,8 @@ export interface IncidentFieldConfig {
 }
 
 export interface IncidentConfigs {
-  // on object for storing multiple incident configs
-  [index: string]: IncidentConfig;
+  // an object for storing multiple incident configs
+  [id: string]: IncidentConfig;
 }
 
 export interface IncidentFieldsConfig {
@@ -39,7 +39,7 @@ export interface IncidentFieldsConfig {
 
 export interface IncidentJsonFileConfig {
   // for API call to set default JSON name for an incident config
-  incidentConfigName: string; // the incident config name
+  incidentConfigId: string; // the incident config ID
   jsonId: string | null; // the json config id -- set to null to clear
 }
 

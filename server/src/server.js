@@ -145,7 +145,7 @@ function isArray(value) {
 
 
 function saveFreeJsonConfig() {
-  const savedJsonConfig = Object.values(freeJsonConfig).map( config => config);
+  const savedJsonConfig = Object.values(freeJsonConfig);
   return fs.promises.writeFile(freeJsonFile, JSON.stringify(savedJsonConfig, null, 2), { encoding: 'utf8', mode: 0o660});
 }
 
@@ -256,7 +256,6 @@ async function removeAttachmentFromIncidents(attachmentId) {
   let save = false;
   for (const incident of Object.values(incidentsConfig)) {
     // loop through saved incidents
-    const name = incident.name;
 
     for (const field of Object.values(incident.chosenFields)) {
       // loop through chosen incident fields
@@ -457,7 +456,8 @@ async function getIncidentTypes(demistoUrl) {
 
 function saveIncidentsConfig() {
   calculateRequiresJson();
-  return fs.promises.writeFile(incidentsFile, JSON.stringify(incidentsConfig, null, 2), { encoding: 'utf8', mode: 0o660});
+  const savedIncidentsConfig = Object.values(incidentsConfig);
+  return fs.promises.writeFile(incidentsFile, JSON.stringify(savedIncidentsConfig, null, 2), { encoding: 'utf8', mode: 0o660});
 }
 
 
@@ -1267,7 +1267,7 @@ app.get(apiPath + '/json/:id', async (req, res) => {
 
 app.post(apiPath + '/incidentConfig', async (req, res) => {
   // save a new incident config
-  let body = req.body;
+  const body = req.body;
   const requiredFields = ['name', 'chosenFields', 'createInvestigation', 'incidentType'];
 
   try {
@@ -1278,14 +1278,12 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
     return;
   }
 
-  const name = body.name;
+  const {name, chosenFields, createInvestigation, incidentType} = body;
   const id = uuidv4();
-  const chosenFields = body.chosenFields;
-  const createInvestigation = body.createInvestigation;
-  const incidentType = body.incidentType;
 
   // check for existing config name
-  if (name in incidentsConfig) {
+  const incidentNames = Object.values(incidentsConfig).map( config => config.name);
+  if (incidentNames.includes(name)) {
     const error = `Invalid request: Name '${name}' is already defined`;
     res.status(400).json({error});
     return;
@@ -1304,16 +1302,16 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
     entry.defaultJsonId = body.defaultJsonId;
   }
 
-  incidentsConfig[name] = entry;
+  incidentsConfig[id] = entry;
   await saveIncidentsConfig();
 
-  res.status(201).json({success: true}); // send 'created'
+  res.status(201).json({success: true, id}); // send 'created'
 } );
 
 
 
 app.post(apiPath + '/incidentConfig/update', async (req, res) => {
-  // update an existing field config
+  // update an existing incident config
   const body = req.body;
   const requiredFields = ['id', 'name', 'chosenFields', 'createInvestigation', 'incidentType'];
 
@@ -1324,13 +1322,7 @@ app.post(apiPath + '/incidentConfig/update', async (req, res) => {
     return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing from request body`});
   }
 
-  const id = body.id;
-  const name = body.name;
-
-  if (id === '') {
-    const error = `Invalid request: 'id' key may not be empty`;
-    return res.status(400).json({error});
-  }
+  const {id, name} = body;
 
   // remove any invalid fields
   const updatedIncidentConfig = {
@@ -1345,33 +1337,16 @@ app.post(apiPath + '/incidentConfig/update', async (req, res) => {
     updatedIncidentConfig.defaultJsonId = body.defaultJsonId;
   }
 
-  let foundId = false;
-  let foundIdName; // the name of the config where we found the id
-  for (const incident of Object.values(incidentsConfig)) {
-    if (incident.id === id) {
-      foundId = true;
-      foundIdName = incident.name;
-      break;
+  for (const config of Object.values(incidentsConfig)) {
+    if (config.name === name && config.id !== id) {
+      const error = `Incident config update failed with bad request: another config with name '${name}' already exists`;
+      console.info(error);
+      return res.status(400).json({error});
     }
   }
-  const foundName = incidentsConfig.hasOwnProperty(name);
-  const idAndNameBelongToSameSavedConfig = foundId && foundName && incidentsConfig[name].id === id;
 
-  if (idAndNameBelongToSameSavedConfig) {
-    incidentsConfig[name] = updatedIncidentConfig;
-  }
-  else if (!foundId && foundName) {
-    incidentsConfig[name] = updatedIncidentConfig;
-  }
-  else if (foundId && !foundName) {
-    delete incidentsConfig[foundIdName];
-    incidentsConfig[name] = updatedIncidentConfig;
-  }
-  else if (foundId && foundName && !idAndNameBelongToSameSavedConfig) {
-    const error = `Incident config update failed with bad request: 'id' and 'name' paramteres belong to different saved configs: '${name}' and '${foundIdName}'`;
-    console.info(error);
-    return res.status(400).json({error});
-  }
+  incidentsConfig[id] = updatedIncidentConfig;
+
   await saveIncidentsConfig();
 
   res.status(200).json({success: true}); // send 'OK'
@@ -1380,9 +1355,9 @@ app.post(apiPath + '/incidentConfig/update', async (req, res) => {
 
 
 app.post(apiPath + '/incidentConfig/defaultJson', async (req, res) => {
-  // update an existing field config's default JSON file
+  // update an existing incident config's default JSON file
   const body = req.body;
-  const requiredFields = ['incidentConfigName', 'jsonId'];
+  const requiredFields = ['incidentConfigId', 'jsonId'];
 
   try {
     checkForRequiredFields(requiredFields, body);
@@ -1393,17 +1368,17 @@ app.post(apiPath + '/incidentConfig/defaultJson', async (req, res) => {
     // return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
   }
 
-  const {incidentConfigName, jsonId} = body; // set jsonId to null to clear default
+  const {incidentConfigId, jsonId} = body; // set jsonId to null to clear default
 
-  if (!incidentsConfig.hasOwnProperty(incidentConfigName)) {
-    return res.status(400).json({error: `Incident config ${incidentConfigName} is not defined`});
+  if (!incidentsConfig.hasOwnProperty(incidentConfigId)) {
+    return res.status(400).json({error: `Incident config id ${incidentConfigId} is not defined`});
   }
 
   if (jsonId !== null && !(freeJsonConfig.hasOwnProperty(jsonId))) {
     return res.status(400).json({error: `JSON config ${jsonId} is not defined`});
   }
 
-  const incidentConfig = incidentsConfig[incidentConfigName];
+  const incidentConfig = incidentsConfig[incidentConfigId];
   if (jsonId === null && 'defaultJsonId' in incidentConfig) {
     delete incidentConfig['defaultJsonId'];
     console.log(`Cleared default JSON config for incident config ${incidentConfig.name}`);
@@ -1421,21 +1396,21 @@ app.post(apiPath + '/incidentConfig/defaultJson', async (req, res) => {
 
 
 app.get(apiPath + '/incidentConfig/all', async (req, res) => {
-  // retrieve all field configs -- must come before /incidentConfig/:name
+  // retrieve all incident configs -- must come before /incidentConfig/:name
   res.status(200).json(incidentsConfig);
 } );
 
 
 
-app.get(apiPath + '/incidentConfig/:name', async (req, res) => {
-  // get a particular field config
-  const name = req.params.name;
-  if (name in incidentsConfig) {
-    res.status(200).json(incidentsConfig[name]);
+app.get(apiPath + '/incidentConfig/:id', async (req, res) => {
+  // fetch a particular incident config
+  const id = req.params.id;
+  if (incidentsConfig.hasOwnProperty(id)) {
+    res.status(200).json(incidentsConfig[id]);
     return;
   }
   else {
-    const error = `Config ${'name'} was not found`;
+    const error = `A config with id ${id} was not found`;
     res.status(400).json({error});
     return;
   }
@@ -1443,18 +1418,18 @@ app.get(apiPath + '/incidentConfig/:name', async (req, res) => {
 
 
 
-app.delete(apiPath + '/incidentConfig/:name', async (req, res) => {
+app.delete(apiPath + '/incidentConfig/:id', async (req, res) => {
   // delete an incident config
-  const name = req.params.name;
-  if (name in incidentsConfig) {
-      delete incidentsConfig[name];
+  const id = req.params.id;
+  if (incidentsConfig.hasOwnProperty(id)) {
+      delete incidentsConfig[id];
       await saveIncidentsConfig();
-      res.status(200).json({name, success: true});
+      res.status(200).json({id, success: true});
       return;
     }
     else {
-      const error = 'Resource not found';
-      res.status(400).json({error, name, success: false});
+      const error = `A config with id ${id} was not found`;
+      res.status(400).json({error, id, success: false});
       return;
     }
 } );
@@ -1897,7 +1872,10 @@ function loadIncidentsConfig() {
   }
   else {
     try {
-      incidentsConfig = JSON.parse(fs.readFileSync(incidentsFile, 'utf8'));
+      const loadedIncidentsConfig = JSON.parse(fs.readFileSync(incidentsFile, 'utf8'));
+      for (const config of loadedIncidentsConfig) {
+        incidentsConfig[config.id] = config;
+      }
     }
     catch (error) {
       console.error(`Error parsing ${incidentsFile}:`, error);
