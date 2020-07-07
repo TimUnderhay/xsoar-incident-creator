@@ -55,7 +55,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   @Input() loadedIncidentConfigName: string; // must clear when loaded from json or when current config is deleted
   @Input() loadedIncidentConfigId: string;
-  @Input() currentDemistoEndpointName: string;
+  @Input() currentDemistoEndpointId: string;
   @Input() currentDemistoEndpointInit: boolean;
   @Input() fetchedIncidentFieldDefinitions: FetchedIncidentFieldDefinitions; // the fields taken from Demisto
 
@@ -590,7 +590,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     const filesToPush: FileToPush[] = [];
 
     let incident: IncidentCreationConfig = {
-      serverId: this.currentDemistoEndpointName,
+      serverId: this.currentDemistoEndpointId,
       createInvestigation: this.hasAnEnabledAttachmentField ? false : this.createInvestigation // if we are uploading attachments to the incident, we don't want the playbook to run until after the attachments have been uploaded
     };
 
@@ -618,7 +618,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
           const fileToPush: FileToPush = {
             attachmentId: attachment.id,
             incidentFieldName: field.shortName,
-            serverId: this.currentDemistoEndpointName,
+            serverId: this.currentDemistoEndpointId,
             filename: attachment.overrideFilename ? attachment.filename : attachment.originalFilename,
             last: false // will set the last value later
           };
@@ -1249,7 +1249,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  async onReloadFieldDefinitions(serverId = this.currentDemistoEndpointName) {
+  async onReloadFieldDefinitions(serverId = this.currentDemistoEndpointId) {
     /*
     Reload Demisto Incident Fields and Merge
 
@@ -1975,7 +1975,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   async onClickDemistoInvestigateUrl(incidentId: number) {
     console.log('FreeformJsonUIComponent: onClickDemistoInvestigateUrl(): id:', incidentId);
-    const serverId = this.currentDemistoEndpointName;
+    const serverId = this.currentDemistoEndpointId;
     const result = await this.fetcherService.createInvestigation(incidentId, serverId);
     if (result.success) {
       const url = `${serverId}/#/incident/${incidentId}`;

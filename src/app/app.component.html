@@ -22,8 +22,7 @@
     <!-- XSOAR Servers-->
     <p-card header="XSOAR Servers">
 
-      <h3 style="margin-top: .5em; text-decoration: underline; color: white;">{{currentDemistoEndpointName ? currentDemistoEndpointName : 'No XSOAR servers are defined'}}</h3>
-
+      <h3 style="margin-top: .5em; text-decoration: underline; color: white;">{{demistoEndpoints && currentDemistoEndpointId ? demistoEndpoints[currentDemistoEndpointId].url : 'No XSOAR servers are defined'}}</h3>
 
       <div style="margin-top: 1em;">
 
@@ -51,7 +50,7 @@
 
     <!-- File -->
     <p-card
-      *ngIf="currentDemistoEndpointName && currentDemistoEndpointInit"
+      *ngIf="currentDemistoEndpointId && currentDemistoEndpointInit"
       header="File"
       subheader="Load an incident from Cortex XSOAR, upload an incident JSON file, or perform other file and bulk create operations.">
 
@@ -161,7 +160,7 @@
       [loadedIncidentConfigName]="loadedIncidentConfigName"
       [loadDefaultChosenFields]="loadDefaultChosenFields"
       [demistoEndpointsItems]="demistoEndpointsItems"
-      [currentDemistoEndpointName]="currentDemistoEndpointName"
+      [currentDemistoEndpointId]="currentDemistoEndpointId"
       [currentDemistoEndpointInit]="currentDemistoEndpointInit"
       [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
       [fetchedIncidentTypes]="fetchedIncidentTypes"
@@ -213,7 +212,7 @@
           label="Edit"
           (onClick)="onEditDemistoEndpointClicked()"
           styleClass="alignButton"
-          [disabled]="!selectedDemistoEndpointName">
+          [disabled]="!selectedDemistoEndpointId">
         </p-button>
 
         <!-- Delete -->
@@ -222,7 +221,7 @@
           label="Delete"
           (onClick)="onDeleteDemistoEndpointClicked()"
           styleClass="alignButton"
-          [disabled]="!selectedDemistoEndpointName">
+          [disabled]="!selectedDemistoEndpointId">
         </p-button>
 
         <!-- Test -->
@@ -231,7 +230,7 @@
           label="Test"
           (onClick)="onTestDemistoEndpointClicked()"
           styleClass="alignButton"
-          [disabled]="!selectedDemistoEndpointName">
+          [disabled]="!selectedDemistoEndpointId">
         </p-button>
 
         <!-- Default -->
@@ -240,7 +239,7 @@
           label="Set Default"
           (onClick)="onSetDefaultDemistoEndpointClicked()"
           styleClass="alignButton"
-          [disabled]="!selectedDemistoEndpointName">
+          [disabled]="!selectedDemistoEndpointId">
         </p-button>
 
         <!-- Refresh -->
@@ -268,23 +267,23 @@
 
         <span class="formLabel">Current XSOAR Server: </span>
 
-            <span class="formLabel" style="text-decoration: underline;">{{currentDemistoEndpointName ? currentDemistoEndpointName : 'No server is selected'}}</span>
+            <span class="formLabel" style="text-decoration: underline;">{{currentDemistoEndpointId ? demistoEndpoints[currentDemistoEndpointId].url : 'No server is selected'}}</span>
 
       </div>
 
       <div style="margin-top: 1em;">
 
-        <span *ngIf="demistoEndpointsLen === 0; else demistoEndpoints" style="font-weight: bold;">No XSOAR servers are defined</span>
+        <span *ngIf="demistoEndpointsLen === 0; else demistoEndpointsSection" style="font-weight: bold;">No XSOAR servers are defined</span>
 
       </div>
 
-      <ng-template #demistoEndpoints>
+      <ng-template #demistoEndpointsSection>
 
         <div class="formLabel">Select a server</div>
 
         <p-listbox
           [options]="demistoEndpointsItems"
-          [(ngModel)]="selectedDemistoEndpointName"
+          [(ngModel)]="selectedDemistoEndpointId"
           [style]="{'width':'100%'}"
           (onDblClick)="onDemistoEndpointSelected()"
           [filter]="true">
@@ -298,7 +297,7 @@
           *ngIf="demistoEndpointsLen !== 0"
           label="Select"
           (onClick)="onDemistoEndpointSelected()"
-          [disabled]="!selectedDemistoEndpointName">
+          [disabled]="!selectedDemistoEndpointId">
         </p-button>
 
         <p-button
@@ -314,6 +313,7 @@
 
   <!-- Delete Demisto Endpoint Dialog -->
   <p-dialog
+    *ngIf="demistoEndpointIdToDelete"
     header="Delete XSOAR Server"
     [(visible)]="showDeleteDemistoEndpointDialog"
     [modal]="true"
@@ -321,7 +321,7 @@
     styleClass="deleteConfigDialog"
     (onHide)="onDeleteDemistoEndpointHidden()">
 
-      <div class="formLabel">Please confirm deletion of XSOAR server "{{demistoEndpointToDelete}}"</div>
+      <div class="formLabel">Please confirm deletion of XSOAR server "{{demistoEndpoints[demistoEndpointIdToDelete].url}}"</div>
 
       <div style="margin-top: .5em; float: right;">
 

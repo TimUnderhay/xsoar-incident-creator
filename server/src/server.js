@@ -30,7 +30,7 @@ const apiPath = '/api';
 
 // XSOAR API Config
 var demistoApiConfigs = {};
-var defaultDemistoApiName; // the key/url of the default demistoApiConfig
+var defaultDemistoApiId; // the ID of the default demistoApiConfig
 
 const foundDist = fs.existsSync(staticDir); // check for presence of pre-built angular client directory
 
@@ -230,10 +230,10 @@ function removeEmptyValues(obj) {
 
 function saveApiConfig() {
   const config = {
-    servers: demistoApiConfigs
+    servers: Object.values(demistoApiConfigs)
   };
-  if (defaultDemistoApiName) {
-    config['default'] = defaultDemistoApiName;
+  if (defaultDemistoApiId) {
+    config['default'] = defaultDemistoApiId;
   }
   return fs.promises.writeFile(apiCfgFile, JSON.stringify(config, null, 2), { encoding: 'utf8', mode: 0o660} );
 }
@@ -320,7 +320,7 @@ function uploadAttachmentToDemisto(serverId, incidentId, incidentFieldName, atta
 
 
 async function testApi(url, apiKey, trustAny) {
-  let options = {
+  const options = {
     url: url + '/user',
     method: 'GET',
     headers: {
@@ -363,10 +363,10 @@ function getDemistoApiConfig(serverId) {
 
 
 
-async function getIncidentFields(demistoUrl) {
+async function getIncidentFields(serverId) {
   // This method will get incident field definitions from a XSOAR server
 
-  const demistoServerConfig = getDemistoApiConfig(demistoUrl);
+  const demistoServerConfig = getDemistoApiConfig(serverId);
 
   console.log(`Fetching incident fields from '${demistoServerConfig.url}'`);
 
@@ -462,7 +462,7 @@ function saveIncidentsConfig() {
 
 
 
-function returnError(error, res, body = null, statusCode = 500 ) {
+function returnError(error, res, statusCode=500, body=undefined ) {
   console.error(error);
   if (!body) {
     body = {success: false, error};
@@ -565,40 +565,82 @@ app.post(apiPath + '/demistoEndpoint/test/adhoc', async (req, res) => {
   // Tests for good connectivity to Demisto server by fetching user settings.
   // Does not save settings.  Another call will handle that.
 
+  const requiredFields = ['url', 'trustAny'];
+  const body = req.body;
+  // console.log('body:', body);
+
+  try {
+    checkForRequiredFields(requiredFields, body);
+  }
+  catch(fieldName) {
+    const error = `Invalid request: Required field '${fieldName}' was missing`;
+    return returnError(error, res, 400);
+  }
+
   // check for client body fields
-  if (!('url' in req.body)) {
-    return returnError(`Client did not send url`, res);
-  }
-  if (!('apiKey' in req.body || 'serverId' in req.body)) {
-    return returnError('Client did not send apiKey or serverId', res);
-  }
-  if (!('trustAny' in req.body)) {
-    return returnError(`Client did not send trustAny`, res);
+  if (!('apiKey' in body || 'id' in body)) {
+    const error = `Invalid request: One of required fields 'apiKey' or 'id' was missing`;
+    return returnError(error, res, 400);
   }
 
-  // console.log('body:', req.body);
+  const {url, trustAny} = body;
+  const apiKey = body.hasOwnProperty('id') ? decrypt(getDemistoApiConfig(body.id).apiKey) : body.apiKey;
 
-  let apiKey;
-  const foundServerId = 'serverId' in req.body;
-  if (foundServerId) {
-    const serverId = req.body.serverId;
-    apiKey = getDemistoApiConfig(serverId).apiKey;
+  let testResult;
+  try {
+    testResult = await testApi(url, apiKey, trustAny);
+    // console.debug('testResult:', testResult);
   }
-  else {
-    apiKey = req.body.apiKey;
+  catch(error) {
+    return returnError(`Error testing XSOAR URL: ${url}: ${error}`, res);
   }
-  apiKey = decrypt(apiKey);
 
-  // console.log('body:', req.body);
+  if (!testResult.success) {
+    const error = testResult.error;
+    const statusCode = 'statusCode' in testResult ? testResult.statusCode : undefined;
+    // console.error('error:', error);
 
-  let testResult = await testApi(req.body.url, apiKey, req.body.trustAny);
+    // since this is a test, we don't want to return a 500 if it fails.  Status code should be normal
+    if (error && statusCode) {
+      console.info(`XSOAR server test failed with code ${statusCode}:`, error);
+      return res.json({ success: false, statusCode, error });
+    }
+    else if (error && !statusCode) {
+      console.info(`XSOAR server test failed:`, error);
+      return res.json({ success: false, error });
+    }
+    else {
+      console.info('XSOAR server test failed.  Unspecified error');
+      return res.json({ success: false, error: 'unspecified' });
+    }
+  }
+
+  console.log(`Logged into XSOAR as user '${testResult.result.body.username}'`);
+  console.log(`Successfully tested XSOAR URL '${url}'`);
+  return res.json( { success: true, statusCode: 200 } );
+});
+
+
+
+app.get(apiPath + '/demistoEndpoint/test/:serverId', async (req, res) => {
+  // Tests for good connectivity to XSOAR server by fetching user settings.
+  // Does not save settings.  Another call will handle that.
+
+  const serverId = decodeURIComponent(req.params.serverId);
+  const {url, apiKey, trustAny} = getDemistoApiConfig(serverId);
+  let testResult;
+
+  try {
+    testResult = await testApi(url, decrypt(apiKey), trustAny);
+  }
+  catch(error) {
+    return returnError(`Error testing XSOAR URL: ${url}: ${error}`, res);
+  }
+
   // console.debug('testResult:', testResult);
   if (!testResult.success) {
-    let error = testResult.error;
-    let statusCode = null;
-    if ('statusCode' in res) {
-      statusCode = testResult['statusCode'];
-    }
+    const error = testResult.error;
+    const statusCode = 'statusCode' in testResult ? testResult.statusCode : undefined;
     // console.error('error:', error);
 
     // since this is a test, we don't want to return a 500 if it fails.  Status code should be normal
@@ -616,56 +658,11 @@ app.post(apiPath + '/demistoEndpoint/test/adhoc', async (req, res) => {
     }
     return;
   }
+
   console.log(`Logged into XSOAR as user '${testResult.result.body.username}'`);
-  res.json( { success: true, statusCode: 200 } );
-  console.log(`Successfully tested URL '${req.body.url}'`);
-});
-
-
-
-app.get(apiPath + '/demistoEndpoint/test/:serverId', async (req, res) => {
-  // Tests for good connectivity to XSOAR server by fetching user settings.
-  // Does not save settings.  Another call will handle that.
-
-  const serverId = decodeURIComponent(req.params.serverId);
-
-  try {
-    const apiToTest = getDemistoApiConfig(serverId);
-
-    // console.log('body:', req.body);
-
-    let testResult = await testApi(apiToTest.url, decrypt(apiToTest.apiKey), apiToTest.trustAny);
-    // console.debug('testResult:', testResult);
-    if (!testResult.success) {
-      let error = testResult.error;
-      let statusCode = null;
-      if ('statusCode' in res) {
-        statusCode = testResult['statusCode'];
-      }
-      // console.error('error:', error);
-
-      // since this is a test, we don't want to return a 500 if it fails.  Status code should be normal
-      if (error && statusCode) {
-        console.info(`XSOAR server test failed with code ${statusCode}:`, error);
-        res.json({ success: false, statusCode, error });
-      }
-      else if (error && !statusCode) {
-        console.info(`XSOAR server test failed:`, error);
-        res.json({ success: false, error });
-      }
-      else {
-        console.info('XSOAR server test failed.  Unspecified error');
-        res.json({ success: false, error: 'unspecified' });
-      }
-      return;
-    }
-    console.log(`Logged into XSOAR as user '${testResult.result.body.username}'`);
-    res.json( { success: true, statusCode: 200 } );
-    console.log(`Successfully tested URL '${serverId}'`);
-  }
-  catch(error) {
-    return returnError(`Error testing ${serverId}: ${error}`, res);
-  }
+  console.log(`Successfully tested XSOAR URL '${serverId}'`);
+  return res.json( { success: true, statusCode: 200 } );
+  
 });
 
 
@@ -681,8 +678,8 @@ app.post(apiPath + '/demistoEndpoint/default', async (req, res) => {
     return returnError(`serverId not found in request body`, res);
   }
 
-  if (serverId in demistoApiConfigs) {
-    defaultDemistoApiName = serverId;
+  if (demistoApiConfigs.hasOwnProperty(serverId)) {
+    defaultDemistoApiId = serverId;
     res.status(200).json({success: true});
     await saveApiConfig();
   }
@@ -695,8 +692,8 @@ app.post(apiPath + '/demistoEndpoint/default', async (req, res) => {
 
 app.get(apiPath + '/demistoEndpoint/default', async (req, res) => {
   // fetch the default XSOAR API endpoint
-  if (defaultDemistoApiName) {
-    res.status(200).json({defined: true, serverId: defaultDemistoApiName});
+  if (defaultDemistoApiId) {
+    res.status(200).json({defined: true, serverId: defaultDemistoApiId});
   }
   else {
     res.status(200).json({defined: false});
@@ -709,29 +706,31 @@ app.post(apiPath + '/demistoEndpoint', async (req, res) => {
     // add a new XSOAR API server config
     // will overwrite existing config for url
 
-    let config = req.body;
+    const body = req.body;
+    const requiredFields = ['url', 'apiKey', 'trustAny'];
 
-    // check for client body fields
-    if (! 'url' in config) {
-      return returnError(`Client did not send url`, res);
+    try {
+      checkForRequiredFields(requiredFields, body);
     }
-    if (! 'apiKey' in config) {
-      return returnError(`Client did not send apiKey`, res);
+    catch(fieldName) {
+      res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+      return;
     }
-    if (! 'trustAny' in config) {
-      return returnError(`Client did not send trustAny`, res);
-    }
+
+    const {url, apiKey, trustAny} = body;
+    const id = uuidv4();
 
     // remove any junk data
     config = {
-      url: config.url,
-      apiKey: config.apiKey,
-      trustAny: config.trustAny
+      id,
+      url,
+      apiKey,
+      trustAny
     };
 
-    demistoApiConfigs[config.url] = config;
+    demistoApiConfigs[url] = config;
     await saveApiConfig();
-    res.status(200).json({success: true});
+    res.status(200).json({success: true, id});
 });
 
 
@@ -740,48 +739,28 @@ app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
     // saves XSOAR API config
     // will overwrite existing config for url
 
-    let config = req.body;
+    const body = req.body;
+    const requiredFields = ['id', 'url', 'trustAny']; // 'apiKey' properyty may be omitted so that the apiKey can be fetched from existing config using 'id' property
 
-    // check for client body fields
-    if (! 'url' in config) {
-      return returnError(`Client did not send url`, res);
+    try {
+      checkForRequiredFields(requiredFields, body);
     }
-    if (!('apiKey' in req.body || 'serverId' in req.body)) {
-      return returnError('Client did not send apiKey or serverId', res);
-    }
-    if (! 'trustAny' in config) {
-      return returnError(`Client did not send trustAny`, res);
+    catch(fieldName) {
+      return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
     }
 
-    let apiKey;
-    let serverId;
-    const foundApiKey = 'apiKey' in config;
-    if (!foundApiKey) {
-      serverId = config.serverId;
-      apiKey = getDemistoApiConfig(serverId).apiKey;
-    }
-    else {
-      serverId = config.serverId;
-      apiKey = config.apiKey;
-    }
-
+    const {id, url, trustAny} = body;
+    const apiKey = body.hasOwnProperty('apiKey') ? body.apiKey : getDemistoApiConfig(id).apiKey;
+    
     // remove any junk data
-    config = {
-      url: config.url,
-      apiKey: apiKey,
-      trustAny: config.trustAny
+    const config = {
+      id,
+      url,
+      apiKey,
+      trustAny
     };
 
-    if (serverId !== config.url) {
-      delete demistoApiConfigs[serverId];
-    }
-    demistoApiConfigs[config.url] = config;
-
-    if (defaultDemistoApiName === serverId) {
-      // update the default server, if necessary
-      defaultDemistoApiName = config.url;
-    }
-
+    demistoApiConfigs[id] = config;
 
     await saveApiConfig();
     res.status(200).json({success: true});
@@ -792,11 +771,11 @@ app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
 app.delete(apiPath + '/demistoEndpoint/:serverId', async (req, res) => {
   // deletes a XSOAR server from the API config
   const serverId = decodeURIComponent(req.params.serverId);
-  if (serverId in demistoApiConfigs) {
+  if (demistoApiConfigs.hasOwnProperty(serverId)) {
     delete demistoApiConfigs[serverId];
-    if (!(defaultDemistoApiName in demistoApiConfigs)) {
+    if (!demistoApiConfigs.hasOwnProperty(defaultDemistoApiId)) {
       // make sure default api is still defined.  If not, unset it
-      defaultDemistoApiName = undefined;
+      defaultDemistoApiId = undefined;
     }
     await saveApiConfig();
     res.status(200).json({success: true});
@@ -811,7 +790,7 @@ app.delete(apiPath + '/demistoEndpoint/:serverId', async (req, res) => {
 
 app.get(apiPath + '/demistoEndpoint', async (req, res) => {
   // return all demisto API configs to the client, minus their apiKeys
-  let tmpDemistoApiConfigs = JSON.parse(JSON.stringify(demistoApiConfigs));
+  const tmpDemistoApiConfigs = JSON.parse(JSON.stringify(demistoApiConfigs)); // poor man's deep copy
   Object.values(tmpDemistoApiConfigs).forEach( apiConfig => {
     delete apiConfig.apiKey;
   });
@@ -844,14 +823,14 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
 
   let currentUser = req.headers.authorization;
 
-  let body = req.body;
+  const body = req.body;
   let demistoServerConfig;
   try {
     const serverId = body.serverId;
     demistoServerConfig = getDemistoApiConfig(serverId);
   }
   catch {
-    return returnError(`'serverId' field not present in body`, res, { success: false, statusCode: 500, error });
+    return returnError(`'serverId' field not present in body`, res, 500, { success: false, statusCode: 500, error });
   }
 
   // console.debug(body);
@@ -880,6 +859,7 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
       return returnError(
         `Caught error opening XSOAR incident: code ${error.response.status}: ${error.response.statusMessage}`,
         res,
+        500,
         {
           success: false,
           statusCode: error.statusCode,
@@ -891,6 +871,7 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
       return returnError(
         `Caught error opening XSOAR incident: ${error.message}`,
         res,
+        500,
         {
           success: false,
           statusCode: null,
@@ -903,6 +884,7 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
       return returnError(
         `Caught unspecified error opening XSOAR incident: ${error}`,
         res,
+        500,
         {
           success: false,
           statusCode: 500,
@@ -943,7 +925,7 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
     demistoServerConfig = getDemistoApiConfig(serverId);
   }
   catch(error) {
-    return returnError('message' in error ? error.message : errror, res, { success: false, statusCode: 500, error });
+    return returnError('message' in error ? error.message : errror, res, 500, { success: false, statusCode: 500, error });
   }
 
   // console.debug(body);
@@ -970,13 +952,13 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
   }
   catch (error) {
     if ( error && 'response' in error && error.response && 'statusCode' in error.response && error.statusCode !== null) {
-      return returnError(`Caught error opening XSOAR incident: code ${error.response.status}: ${error.response.statusMessage}`, res, { success: false, statusCode: error.statusCode, statusMessage: error.response.statusMessage });
+      return returnError(`Caught error opening XSOAR incident: code ${error.response.status}: ${error.response.statusMessage}`, res, 500, { success: false, statusCode: error.statusCode, statusMessage: error.response.statusMessage });
     }
     else if (error && 'message' in error) {
-      return returnError(`Caught error opening XSOAR incident: ${error.message}`, res, { success: false, statusCode: null, error: error.message });
+      return returnError(`Caught error opening XSOAR incident: ${error.message}`, res, 500, { success: false, statusCode: null, error: error.message });
     }
     else {
-      return returnError(`Caught unspecified error opening XSOAR incident: ${error}`, res, { success: false, statusCode: 500, error: 'unspecified' });
+      return returnError(`Caught unspecified error opening XSOAR incident: ${error}`, res, 500, { success: false, statusCode: 500, error: 'unspecified' });
     }
     return;
   }
@@ -1011,7 +993,7 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
     demistoServerConfig = getDemistoApiConfig(serverId);
   }
   catch {
-    return returnError(`'serverId' field not present in body`, res, { success: false, statusCode: 500, error });
+    return returnError(`'serverId' field not present in body`, res, 500, { success: false, statusCode: 500, error });
   }
 
   const body = {
@@ -1060,7 +1042,7 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
       demistoServerConfig = getDemistoApiConfig(serverId);
     }
     catch {
-      return returnError(`'serverId' field not present in body`, res, { success: false, statusCode: 500, error });
+      return returnError(`'serverId' field not present in body`, res, 500, { success: false, statusCode: 500, error });
     }
 
     const body = {
@@ -1120,15 +1102,14 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
 
 app.post(apiPath + '/json', async (req, res) => {
   // save new freeform JSON
-  let body = req.body;
+  const body = req.body;
   const requiredFields = ['name', 'json'];
 
   try {
     checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
-    res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
-    return;
+    return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
   }
 
   const {name, json} = body;
@@ -1137,8 +1118,7 @@ app.post(apiPath + '/json', async (req, res) => {
   // check for existing json name
   if (freeJsonConfig.hasOwnProperty(name)) {
     const error = `Invalid request: Name '${name}' is already defined`;
-    res.status(400).json({error});
-    return;
+    return res.status(400).json({error});
   }
 
   const entry = {
@@ -1157,7 +1137,7 @@ app.post(apiPath + '/json', async (req, res) => {
 
 app.post(apiPath + '/json/update', async (req, res) => {
   // save updated freeform JSON
-  let body = req.body;
+  const body = req.body;
   const requiredFields = ['id', 'name', 'json'];
 
   try {
@@ -1255,7 +1235,7 @@ app.get(apiPath + '/json/:id', async (req, res) => {
   }
   else {
     const error = `Freeform JSON config ${'name'} was not found`;
-    return returnError(error, res, statusCode = 400);
+    return returnError(error, res, 400);
   }
 } );
 
@@ -1364,7 +1344,7 @@ app.post(apiPath + '/incidentConfig/defaultJson', async (req, res) => {
   }
   catch(fieldName) {
     const error = `Invalid request: Required field '${fieldName}' was missing`;
-    return returnError(error, res, statusCode=400);
+    return returnError(error, res, 400);
     // return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
   }
 
@@ -1442,7 +1422,7 @@ app.delete(apiPath + '/incidentConfig/:id', async (req, res) => {
 
 app.post(apiPath + '/jsonGroup', async (req, res) => {
   // save a new JSON group config
-  let body = req.body;
+  const body = req.body;
   const requiredFields = ['name', 'jsonFileIds'];
 
   try {
@@ -1585,7 +1565,7 @@ app.post(apiPath + '/attachment', multipartUploadHandler.single('attachment'), a
   // Upload a new file attachment
   const id = uuidv4();
 
-  let body = req.body;
+  const body = req.body;
   /*const requiredFields = ['name'];
 
   try {
@@ -1615,7 +1595,7 @@ app.post(apiPath + '/attachment', multipartUploadHandler.single('attachment'), a
   // console.log('detectedType:', detectedType);
 
   // check for existing id (should never collide, but just in case)
-  if (id in attachmentsConfig) {
+  if (attachmentsConfig.hasOwnProperty(id)) {
     const error = `Invalid request: Attachment ID '${id}' is already defined`;
     fs.promises.unlink(multerPath); // delete file
     return res.status(409).json({error});
@@ -1796,41 +1776,26 @@ function loadIncidentCreatorSettings() {
 async function loadDemistoApiConfigs() {
   // Read XSOAR API configs
   if (!foundDemistoApiConfig) {
-    console.log('No XSOAR API configuration was found');
+    console.log('No XSOAR API configuration file was found');
   }
   else {
-    let parsedApiConfig = JSON.parse(fs.readFileSync(apiCfgFile, 'utf8'));
+    const parsedApiConfig = JSON.parse(fs.readFileSync(apiCfgFile, 'utf8'));
     // console.log(parsedApiConfig);
 
-    if ('url' in parsedApiConfig && 'apiKey' in parsedApiConfig && 'trustAny' in parsedApiConfig) {
-      // convert legacy api config
-      let tmpConfig = {
-        servers: {
-          [parsedApiConfig.url]: parsedApiConfig
-        },
-        default: parsedApiConfig.url
-      };
-      if ('apiKey' in tmpConfig.servers[parsedApiConfig.url]) {
-        tmpConfig.servers[parsedApiConfig.url].apiKey = encrypt(tmpConfig.servers[parsedApiConfig.url].apiKey);
-      }
-      demistoApiConfigs = tmpConfig.servers;
-      defaultDemistoApiName = parsedApiConfig.url;
-      parsedApiConfig = tmpConfig;
-      await saveApiConfig();
+    for (const apiConfig of parsedApiConfig.servers) {
+      demistoApiConfigs[apiConfig.id] = apiConfig;
     }
-
-    demistoApiConfigs = parsedApiConfig.servers;
 
     // identify the default demisto api config
     let demistoServerConfig;
-    if ('default' in parsedApiConfig) {
-      defaultDemistoApiName = parsedApiConfig.default;
-      console.log(`The default API config is '${defaultDemistoApiName}'`);
-      demistoServerConfig = getDemistoApiConfig(defaultDemistoApiName);
+    if (parsedApiConfig.hasOwnProperty('default')) {
+      defaultDemistoApiId = parsedApiConfig.default;
+      demistoServerConfig = getDemistoApiConfig(defaultDemistoApiId);
+      console.log(`The default API config is '${demistoServerConfig.url}'`);
     }
 
 
-    if (demistoServerConfig && 'url' in demistoServerConfig && 'apiKey' in demistoServerConfig && 'trustAny' in demistoServerConfig) {
+    if (demistoServerConfig && demistoServerConfig.hasOwnProperty('url') && demistoServerConfig.hasOwnProperty('apiKey') && demistoServerConfig.hasOwnProperty('trustAny')) {
       console.log('Testing default XSOAR API server API communication');
 
       // test API communication
@@ -1853,10 +1818,10 @@ async function loadDemistoApiConfigs() {
         console.log('XSOAR API is initialised');
 
         // fetch incident fields
-        incident_fields = await getIncidentFields(defaultDemistoApiName);
+        incident_fields = await getIncidentFields(defaultDemistoApiId);
       }
       else {
-        console.error(`XSOAR API initialisation failed with URL ${defaultDemistoApiName} with trustAny = ${demistoApiConfigs[defaultDemistoApiName].trustAny}.`);
+        console.error(`XSOAR API initialisation failed with URL ${defaultDemistoApiId} with trustAny = ${demistoApiConfigs[defaultDemistoApiId].trustAny}.`);
       }
     }
   }

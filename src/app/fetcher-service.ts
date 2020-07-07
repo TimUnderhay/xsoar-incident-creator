@@ -179,11 +179,11 @@ export class FetcherService {
 
 
 
-  updateDemistoEndpoint(serverId, url, trustAny, apiKey?): Promise<DemistoEndpointTestResult> {
+  updateDemistoEndpoint(id, url, trustAny, apiKey?): Promise<DemistoEndpointTestResult> {
     const headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
-    const body = { url, trustAny, serverId };
+    const body = { url, trustAny, id };
     if (apiKey) {
       body['apiKey'] = this.encrypt(apiKey);
     }

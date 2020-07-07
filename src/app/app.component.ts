@@ -49,10 +49,11 @@ export class AppComponent implements OnInit {
   loggedInUser: User;
 
   // Endpoint Properties
-  demistoEndpoints: DemistoEndpoints = {};
-  get demistoEndpointsLen() { return Object.keys(this.demistoEndpoints).length; }
-  defaultDemistoEndpointName: string;
-  currentDemistoEndpointName: string;
+  demistoEndpoints: DemistoEndpoints;
+  demistoEndpointUrls: string[] = [];
+  demistoEndpointsLen = 0;
+  defaultDemistoEndpointId: string;
+  currentDemistoEndpointId: string;
   currentDemistoEndpointInit = false;
   fetchedIncidentFieldDefinitions: FetchedIncidentFieldDefinitions; // the field definitions loaded from Demisto
   fetchedIncidentTypes: FetchedIncidentType[];
@@ -101,7 +102,7 @@ export class AppComponent implements OnInit {
 
   // Select Demisto endpoint dialog
   showDemistoEndpointOpenDialog = false;
-  selectedDemistoEndpointName: string;
+  selectedDemistoEndpointId: string;
 
   // New / edit Demisto endpoint dialog
   showNewDemistoEndpointDialog = false;
@@ -110,10 +111,10 @@ export class AppComponent implements OnInit {
   newDemistoServerTrustAny = true;
   get newDemistoServerSaveDisabled() {
     if (this.newDemistoServerDialogMode === 'new') {
-      return this.newDemistoServerUrl in this.demistoEndpoints;
+      return this.demistoEndpointUrls.includes(this.newDemistoServerUrl);
     }
     // edit mode
-    return this.selectedDemistoEndpointName !== this.newDemistoServerUrl && this.newDemistoServerUrl in this.demistoEndpoints;
+    return this.demistoEndpoints[this.selectedDemistoEndpointId].url !== this.newDemistoServerUrl && this.demistoEndpointUrls.includes(this.newDemistoServerUrl);
   }
   newDemistoServerDialogMode: DemistoServerEditMode = 'new';
   get newEditTestButtonDisabled(): boolean {
@@ -126,7 +127,7 @@ export class AppComponent implements OnInit {
 
   // Delete Demisto endpoint dialog
   showDeleteDemistoEndpointDialog = false;
-  demistoEndpointToDelete: string;
+  demistoEndpointIdToDelete: string;
 
   loadDefaultChosenFields = false;
 
@@ -278,7 +279,7 @@ export class AppComponent implements OnInit {
 
       // Demisto Incident Fields
       try {
-        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName);
+        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointId);
       }
       catch (error) {
         console.error('AppComponent: ngOnInit(): Caught error fetching Demisto incident fields:', error);
@@ -286,7 +287,7 @@ export class AppComponent implements OnInit {
 
       // Demisto Incident Types
       try {
-        this.fetchedIncidentTypes = await this.fetchIncidentTypes(this.currentDemistoEndpointName);
+        this.fetchedIncidentTypes = await this.fetchIncidentTypes(this.currentDemistoEndpointId);
       }
       catch (error) {
         console.error('AppComponent: ngOnInit(): Caught error fetching Demisto incident types:', error);
@@ -390,60 +391,71 @@ export class AppComponent implements OnInit {
     console.log('AppComponent: demistoEndpointInit()');
     try {
 
-      this.demistoEndpoints = await this.fetcherService.getDemistoEndpoints(); // obtain saved Demisto endpoints
-      console.log('AppComponent: demistoEndpointInit(): demistoEndpoints:', this.demistoEndpoints);
+      const demistoEndpoints = await this.fetcherService.getDemistoEndpoints(); // obtain saved Demisto endpoints
+      this.setDemistoEndpoints(demistoEndpoints);
+
+      console.log('AppComponent: demistoEndpointInit(): demistoEndpoints:', demistoEndpoints);
 
       const defaultEndpointResult = await this.fetcherService.getDefaultDemistoEndpoint();
       console.log('AppComponent: demistoEndpointInit(): defaultEndpointResult:', defaultEndpointResult);
 
-      const configsAreEmpty = this.demistoEndpointsLen === 0;
-      const defaultDemistoEndpointDefinedButMissing = !configsAreEmpty && defaultEndpointResult.defined && !(defaultEndpointResult.serverId in this.demistoEndpoints);
-      const defaultDemistoEndpointIsDefined = !configsAreEmpty && defaultEndpointResult.defined && defaultEndpointResult.serverId in this.demistoEndpoints;
+      const configsAreEmpty = Object.keys(demistoEndpoints).length === 0;
+      const defaultDemistoEndpointDefinedButMissing = !configsAreEmpty && defaultEndpointResult.defined && !demistoEndpoints.hasOwnProperty(defaultEndpointResult.serverId);
+      const defaultDemistoEndpointIsDefined = !configsAreEmpty && defaultEndpointResult.defined && demistoEndpoints.hasOwnProperty(defaultEndpointResult.serverId);
+
+      this.currentDemistoEndpointInit = false;
+      this.currentDemistoEndpointId = undefined;
+      this.defaultDemistoEndpointId = undefined;
 
       if (configsAreEmpty) {
-        this.currentDemistoEndpointInit = false;
-        this.currentDemistoEndpointName = undefined;
-        this.defaultDemistoEndpointName = undefined;
         this.messageWithAutoClear( { severity: 'info', summary: 'Info', detail: `No Demisto servers are defined.  Configure one below`} );
       }
 
       else if (defaultDemistoEndpointDefinedButMissing) {
-        this.messageWithAutoClear( { severity: 'error', summary: 'Error', detail: `The default Demisto server ${this.defaultDemistoEndpointName} is not defined.  This shouldn't happen.`} );
-        this.currentDemistoEndpointInit = false;
-        this.currentDemistoEndpointName = undefined;
-        this.defaultDemistoEndpointName = undefined;
-      }
+        this.messageWithAutoClear( { severity: 'error', summary: 'Error', detail: `The default Demisto server id '${defaultEndpointResult.serverId}' is not defined.  This shouldn't happen.`} );
+        }
 
       else if (defaultDemistoEndpointIsDefined) {
+        this.defaultDemistoEndpointId = defaultEndpointResult.serverId;
+        this.currentDemistoEndpointId = this.defaultDemistoEndpointId;
 
-        this.defaultDemistoEndpointName = defaultEndpointResult.serverId;
-        this.currentDemistoEndpointName = this.defaultDemistoEndpointName;
-
-        let testRes = await this.fetcherService.testDemistoEndpointById(this.defaultDemistoEndpointName);
+        const testRes = await this.fetcherService.testDemistoEndpointById(this.defaultDemistoEndpointId);
 
         this.currentDemistoEndpointInit = testRes.success;
 
         if (this.currentDemistoEndpointInit) {
-          this.messageWithAutoClear( { severity: 'success', summary: 'Success', detail: `Communication to XSOAR endpoint ${this.currentDemistoEndpointName} is initialised`});
+          this.messageWithAutoClear( { severity: 'success', summary: 'Success', detail: `Communication to XSOAR endpoint ${demistoEndpoints[this.currentDemistoEndpointId].url} is initialised`});
         }
         else {
-          this.messageWithAutoClear( { severity: 'error', summary: 'Failure', detail: `Communication to XSOAR endpoint ${this.currentDemistoEndpointName} is not initialised`} );
+          this.messageWithAutoClear( { severity: 'error', summary: 'Failure', detail: `Communication to XSOAR endpoint ${demistoEndpoints[this.currentDemistoEndpointId].url} is not initialised`} );
         }
-
-        this.buildDemistoEndpointItems();
       }
     }
 
     catch (err) {
       console.log('AppComponent: demistoEndpointInit(): Caught error fetching Demisto endpoint status:', err);
     }
+    this.buildDemistoEndpointItems();
+  }
+
+
+
+  setDemistoEndpoints(demistoEndpoints: DemistoEndpoints) {
+    console.log('AppComponent: buildDemistoEndpointItems()');
+    this.demistoEndpoints = demistoEndpoints;
+    this.demistoEndpointUrls = Object.values(demistoEndpoints).map( endpoint => endpoint.url);
+    this.demistoEndpointsLen = Object.keys(demistoEndpoints).length;
   }
 
 
 
   buildDemistoEndpointItems() {
     console.log('AppComponent: buildDemistoEndpointItems()');
-    this.demistoEndpointsItems = Object.keys(this.demistoEndpoints).map( key => ({ value: key, label: this.defaultDemistoEndpointName && key === this.defaultDemistoEndpointName ? `${key} (default)` : key}
+    this.demistoEndpointsItems = Object.values(this.demistoEndpoints).map( demistoEndpoint => (
+      {
+        value: demistoEndpoint.id,
+        label: this.defaultDemistoEndpointId && demistoEndpoint.id === this.defaultDemistoEndpointId ? `${demistoEndpoint.url} (default)` : demistoEndpoint.url
+      }
     ) );
     console.log('AppComponent: buildDemistoEndpointItems(): demistoEndpointsItems:', this.demistoEndpointsItems);
   }
@@ -467,9 +479,10 @@ export class AppComponent implements OnInit {
 
     console.log('AppComponent: refreshDemistoEndpoints()');
     const lastDemistoEndpointsLen = this.demistoEndpointsLen;
-    const lastCurrentDemistoEndpointName = this.currentDemistoEndpointName;
+    const lastCurrentDemistoEndpointName = this.currentDemistoEndpointId;
 
-    this.demistoEndpoints = await this.fetcherService.getDemistoEndpoints(); // obtain saved Demisto endpoints
+    const demistoEndpoints = await this.fetcherService.getDemistoEndpoints(); // obtain saved Demisto endpoints
+    this.setDemistoEndpoints(demistoEndpoints);
 
     // console.log('AppComponent: refreshDemistoEndpoints(): demistoEndpoints:', this.demistoEndpoints);
 
@@ -491,26 +504,25 @@ export class AppComponent implements OnInit {
 
     if (configsAreEmpty) {
       this.currentDemistoEndpointInit = false;
-      this.currentDemistoEndpointName = undefined;
+      this.currentDemistoEndpointId = undefined;
     }
     else if (defaultDemistoEndpointIsDefined) {
-      this.defaultDemistoEndpointName = defaultEndpointResult.serverId;
+      this.defaultDemistoEndpointId = defaultEndpointResult.serverId;
     }
 
-    const currentEndpointStillDefined = this.currentDemistoEndpointName && this.currentDemistoEndpointName in this.demistoEndpoints; // make sure the currently selected Demisto endpoint hasn't been deleted
+    const currentEndpointStillDefined = this.currentDemistoEndpointId && this.currentDemistoEndpointId in this.demistoEndpoints; // make sure the currently selected Demisto endpoint hasn't been deleted
 
     if (!currentEndpointStillDefined) {
       // clear selected endpoint
-      this.currentDemistoEndpointName = undefined;
+      this.currentDemistoEndpointId = undefined;
     }
 
-    if (this.currentDemistoEndpointName) {
+    if (this.currentDemistoEndpointId) {
       // test the currently selected server
-      let testRes = await this.fetcherService.testDemistoEndpointById(this.currentDemistoEndpointName);
+      let testRes = await this.fetcherService.testDemistoEndpointById(this.currentDemistoEndpointId);
 
       this.currentDemistoEndpointInit = testRes.success;
     }
-
     this.buildDemistoEndpointItems();
   }
 
@@ -527,7 +539,7 @@ export class AppComponent implements OnInit {
         result = await this.fetcherService.testDemistoEndpointAdhoc({url, apiKey, trustAny});
       }
       else {
-        result = await this.fetcherService.testDemistoEndpointAdhoc({url, trustAny, serverId: this.selectedDemistoEndpointName});
+        result = await this.fetcherService.testDemistoEndpointAdhoc({url, trustAny, id: this.selectedDemistoEndpointId});
       }
       if (this.messagesClearTimeout) {
         clearTimeout(this.messagesClearTimeout);
@@ -1419,8 +1431,8 @@ export class AppComponent implements OnInit {
     */
     console.log('AppComponent: switchCurrentDemistoEndpoint(): serverId:', serverId);
 
-    const currentDemistoEndpointNameReselected = this.currentDemistoEndpointName === serverId;
-    const serverPreviouslySelected = this.currentDemistoEndpointName !== undefined;
+    const currentDemistoEndpointNameReselected = this.currentDemistoEndpointId === serverId;
+    const serverPreviouslySelected = this.currentDemistoEndpointId !== undefined;
     const incidentConfigIsLoaded = this.loadedIncidentConfigId !== undefined;
 
     const oldDemistoEndpointInit = this.currentDemistoEndpointInit;
@@ -1433,7 +1445,7 @@ export class AppComponent implements OnInit {
         testRes = await this.fetcherService.testDemistoEndpointById(serverId);
       }
       this.currentDemistoEndpointInit = testRes ? testRes.success : previousTestResult;
-      this.currentDemistoEndpointName = serverId;
+      this.currentDemistoEndpointId = serverId;
     }
     catch (error) {
       this.currentDemistoEndpointInit = false;
@@ -1449,7 +1461,7 @@ export class AppComponent implements OnInit {
 
       // Refresh Demisto Incident Types
       try {
-        this.fetchedIncidentTypes = await this.fetchIncidentTypes(this.currentDemistoEndpointName);
+        this.fetchedIncidentTypes = await this.fetchIncidentTypes(this.currentDemistoEndpointId);
       }
       catch (error) {
         console.error('AppComponent: switchCurrentDemistoEndpoint(): Caught error fetching Demisto incident types:', error);
@@ -1457,7 +1469,7 @@ export class AppComponent implements OnInit {
 
       try {
         // Refresh Demisto Incident Fields
-        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName);
+        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointId);
 
         if (incidentConfigIsLoaded && serverPreviouslySelected) {
           const message = `Do you want to attempt to keep your current field values and selections, or revert them to their saved state?`;
@@ -1492,8 +1504,8 @@ export class AppComponent implements OnInit {
 
 
   async onDemistoEndpointSelected() {
-    console.log('AppComponent: onDemistoEndpointSelected(): selectedDemistoEndpointName:', this.selectedDemistoEndpointName);
-    await this.switchCurrentDemistoEndpoint(this.selectedDemistoEndpointName);
+    console.log('AppComponent: onDemistoEndpointSelected(): selectedDemistoEndpointName:', this.selectedDemistoEndpointId);
+    await this.switchCurrentDemistoEndpoint(this.selectedDemistoEndpointId);
     this.showDemistoEndpointOpenDialog = false;
   }
 
@@ -1547,10 +1559,10 @@ export class AppComponent implements OnInit {
 
 
   async onDeleteDemistoEndpointClicked() {
-    console.log(`AppComponent: onDeleteDemistoEndpointClicked(): ${this.demistoEndpointToDelete}`);
+    console.log(`AppComponent: onDeleteDemistoEndpointClicked(): ${this.demistoEndpointIdToDelete}`);
     this.showDemistoEndpointOpenDialog = false;
     this.showDeleteDemistoEndpointDialog = true;
-    this.demistoEndpointToDelete = this.selectedDemistoEndpointName;
+    this.demistoEndpointIdToDelete = this.selectedDemistoEndpointId;
   }
 
 
@@ -1561,21 +1573,21 @@ export class AppComponent implements OnInit {
     this.showDeleteDemistoEndpointDialog = false;
     let res;
     try {
-      res = await this.fetcherService.deleteDemistoEndpoint(this.demistoEndpointToDelete);
+      res = await this.fetcherService.deleteDemistoEndpoint(this.demistoEndpointIdToDelete);
       await this.refreshDemistoEndpoints();
 
       console.log('AppComponent: onDeleteDemistoEndpointConfirmed(): demistoEndpoints:', this.demistoEndpoints);
 
       // handle deletion of current Demisto endpoint
-      if (this.demistoEndpointToDelete === this.currentDemistoEndpointName) {
-        this.currentDemistoEndpointName = undefined;
+      if (this.demistoEndpointIdToDelete === this.currentDemistoEndpointId) {
+        this.currentDemistoEndpointId = undefined;
         this.currentDemistoEndpointInit = false;
         // default endpoint logic will be handled by the server and refreshDemistoEndpoints()
       }
     }
     catch (error) {
       //  do something if there's an error
-      console.error(`Caught error deleting ${this.demistoEndpointToDelete}`, res.error);
+      console.error(`Caught error deleting ${this.demistoEndpointIdToDelete}`, res.error);
     }
 
     if (!this.currentDemistoEndpointInit) {
@@ -1590,7 +1602,7 @@ export class AppComponent implements OnInit {
 
   async onSetDefaultDemistoEndpointClicked() {
     console.log('AppComponent: onSetDefaultDemistoEndpoint()');
-    await this.fetcherService.setDefaultDemistoEndpoint(this.selectedDemistoEndpointName);
+    await this.fetcherService.setDefaultDemistoEndpoint(this.selectedDemistoEndpointId);
     await this.refreshDemistoEndpoints();
   }
 
@@ -1604,16 +1616,16 @@ export class AppComponent implements OnInit {
 
 
   async onTestDemistoEndpointClicked() {
-    console.log('AppComponent: onTestDemistoEndpoint(): selectedDemistoEndpointName:', this.selectedDemistoEndpointName);
-    const success = await this.testDemistoEndpointById(this.selectedDemistoEndpointName);
-    if (this.selectedDemistoEndpointName === this.currentDemistoEndpointName) {
-      await this.switchCurrentDemistoEndpoint(this.selectedDemistoEndpointName, success);
+    console.log('AppComponent: onTestDemistoEndpointClicked(): selectedDemistoEndpointId:', this.selectedDemistoEndpointId);
+    const success = await this.testDemistoEndpointById(this.selectedDemistoEndpointId);
+    if (this.selectedDemistoEndpointId === this.currentDemistoEndpointId) {
+      await this.switchCurrentDemistoEndpoint(this.selectedDemistoEndpointId, success);
     }
     if (success) {
-      this.messagesReplace( [{ severity: 'success', summary: 'Success', detail: `XSOAR endpoint ${this.selectedDemistoEndpointName} test success`}] );
+      this.messagesReplace( [{ severity: 'success', summary: 'Success', detail: `XSOAR endpoint ${this.demistoEndpoints[this.selectedDemistoEndpointId].url} test success`}] );
     }
     else {
-      this.messagesReplace( [{ severity: 'error', summary: 'Failure', detail: `XSOAR endpoint ${this.selectedDemistoEndpointName} test failure`}] );
+      this.messagesReplace( [{ severity: 'error', summary: 'Failure', detail: `XSOAR endpoint ${this.demistoEndpoints[this.selectedDemistoEndpointId].url} test failure`}] );
     }
   }
 
@@ -1627,7 +1639,7 @@ export class AppComponent implements OnInit {
 
     // get Demisto server details and stick them in
     // newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny
-    const demistoServer = this.demistoEndpoints[this.selectedDemistoEndpointName];
+    const demistoServer = this.demistoEndpoints[this.selectedDemistoEndpointId];
     this.newDemistoServerUrl = demistoServer.url;
     this.newDemistoServerApiKey = '';
     this.newDemistoServerTrustAny = demistoServer.trustAny;
@@ -1641,22 +1653,22 @@ export class AppComponent implements OnInit {
     this.showNewDemistoEndpointDialog = false;
     this.showDemistoEndpointOpenDialog = true;
 
-    const oldSelectedDemistoApiName = this.selectedDemistoEndpointName;
+    const oldSelectedDemistoEndpointId = this.selectedDemistoEndpointId;
 
-    const currentDemistoEndpointUpdated = oldSelectedDemistoApiName === this.currentDemistoEndpointName;
+    const currentDemistoEndpointUpdated = oldSelectedDemistoEndpointId === this.currentDemistoEndpointId;
 
     let res: any;
     if (this.newDemistoServerApiKey === '') {
-      res = await this.fetcherService.updateDemistoEndpoint(this.selectedDemistoEndpointName, this.newDemistoServerUrl, this.newDemistoServerTrustAny );
+      res = await this.fetcherService.updateDemistoEndpoint(this.selectedDemistoEndpointId, this.newDemistoServerUrl, this.newDemistoServerTrustAny );
     }
     else {
-      res = await this.fetcherService.updateDemistoEndpoint(this.selectedDemistoEndpointName, this.newDemistoServerUrl, this.newDemistoServerTrustAny, this.newDemistoServerApiKey);
+      res = await this.fetcherService.updateDemistoEndpoint(this.selectedDemistoEndpointId, this.newDemistoServerUrl, this.newDemistoServerTrustAny, this.newDemistoServerApiKey);
     }
 
-    if (oldSelectedDemistoApiName === this.currentDemistoEndpointName) {
+    if (oldSelectedDemistoEndpointId === this.currentDemistoEndpointId) {
       // it's necessary to fix currentDemistoEndpointName if it has been edited
       // before running refreshDemistoEndpoints()
-      this.currentDemistoEndpointName = this.newDemistoServerUrl;
+      this.currentDemistoEndpointId = this.newDemistoServerUrl;
     }
 
     // refresh servers
@@ -1665,7 +1677,7 @@ export class AppComponent implements OnInit {
     if (currentDemistoEndpointUpdated && this.currentDemistoEndpointInit) {
       // Refresh Demisto Incident Fields, if current server is initialised
       try {
-        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointName);
+        await this.fetchIncidentFieldDefinitions(this.currentDemistoEndpointId);
 
         if (this.loadedIncidentConfigId) {
           const message = `Do you want to attempt to keep your current field values and selections, or reset them to their saved state?`;
@@ -1687,7 +1699,7 @@ export class AppComponent implements OnInit {
 
       // Refresh Demisto Incident Types
       try {
-        this.fetchedIncidentTypes = await this.fetchIncidentTypes(this.currentDemistoEndpointName);
+        this.fetchedIncidentTypes = await this.fetchIncidentTypes(this.currentDemistoEndpointId);
       }
       catch (error) {
         console.error('AppComponent: onDemistoEndpointUpdated(): Caught error fetching Demisto incident types:', error);
@@ -1783,8 +1795,8 @@ export class AppComponent implements OnInit {
 
   onLoadFromDemistoClicked() {
     this.showLoadFromDemistoDialog = true;
-    if (this.currentDemistoEndpointName !== '') {
-      this.demistoEndpointToLoadFrom = this.currentDemistoEndpointName;
+    if (this.currentDemistoEndpointId !== '') {
+      this.demistoEndpointToLoadFrom = this.currentDemistoEndpointId;
     }
     setTimeout( () => {
       // focus input element
