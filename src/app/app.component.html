@@ -267,7 +267,7 @@
 
         <span class="formLabel">Current XSOAR Server: </span>
 
-            <span class="formLabel" style="text-decoration: underline;">{{currentDemistoEndpointId ? demistoEndpoints[currentDemistoEndpointId].url : 'No server is selected'}}</span>
+            <span class="formLabel" style="text-decoration: underline; color: black;">{{currentDemistoEndpointId ? demistoEndpoints[currentDemistoEndpointId].url : 'No server is selected'}}</span>
 
       </div>
 
@@ -313,7 +313,7 @@
 
   <!-- Delete Demisto Endpoint Dialog -->
   <p-dialog
-    *ngIf="demistoEndpointIdToDelete"
+    *ngIf="demistoEndpointIdToDelete && demistoEndpoints[demistoEndpointIdToDelete]"
     header="Delete XSOAR Server"
     [(visible)]="showDeleteDemistoEndpointDialog"
     [modal]="true"
@@ -343,6 +343,7 @@
 
   <!-- New / Edit Demisto Endpoint Server Dialog -->
   <p-dialog
+    *ngIf="showNewDemistoEndpointDialog"
     [header]="newDemistoServerDialogMode === 'new' ? 'New XSOAR Server' : 'Edit XSOAR Server'"
     [(visible)]="showNewDemistoEndpointDialog"
     [modal]="true"
@@ -353,11 +354,22 @@
       <!--<div style="margin-bottom: .5em;" class="formLabel">Configuration Name</div>-->
 
       <div style="margin-top: 1.5em;">
+
         <span class="ui-float-label">
-          <input pInputText type="url" id="url" required [(ngModel)]="newDemistoServerUrl" name="url" class="inputDisplay">
+
+          <input
+            pInputText
+            type="url"
+            id="url"
+            required
+            [(ngModel)]="newDemistoServerUrl"
+            name="url"
+            class="inputDisplay">
           <label for="url">XSOAR Base URL</label>
+
         </span>
       </div>
+
 
       <div style="margin-top: 1.5em;">
         <span class="ui-float-label">
@@ -371,7 +383,9 @@
         <p-inputSwitch name="trustAny" [(ngModel)]="newDemistoServerTrustAny" [style]="{'vertical-align' : 'middle' }"></p-inputSwitch>
       </div>
 
-      <div style="margin-top: .5em;">{{newDemistoServerSaveDisabled ? 'This name is already taken' : '&nbsp;'}}</div>
+      <div style="margin-top: .5em; font-weight: bold; color: black;">
+        {{newDemistoServerSaveDisabled ? newDemistoServerSaveDisabledError : '&nbsp;'}}
+      </div>
 
       <div style="margin-top: .5em; float: right;">
 

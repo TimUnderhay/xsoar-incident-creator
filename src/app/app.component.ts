@@ -109,13 +109,44 @@ export class AppComponent implements OnInit {
   newDemistoServerUrl = '';
   newDemistoServerApiKey = '';
   newDemistoServerTrustAny = true;
+  newDemistoServerSaveDisabledError: string;
+  editingDemistoServerId: string; // the server id of the endpoint that's being edited
+
   get newDemistoServerSaveDisabled() {
+    this.newDemistoServerSaveDisabledError = undefined;
+
+    const nameExists = this.demistoEndpointUrls.includes(this.newDemistoServerUrl);
+    const nameExistsErrorMessage = 'This name is already taken';
+
+    const urlError = this.newDemistoServerUrl.match(/^https?:\/\//) ? false : true;
+    const urlErrorMessage = `The URL must start with 'https://' or 'http://'`;
+
     if (this.newDemistoServerDialogMode === 'new') {
-      return this.demistoEndpointUrls.includes(this.newDemistoServerUrl);
+      if (nameExists) {
+        this.newDemistoServerSaveDisabledError = nameExistsErrorMessage;
+        return true;
+      }
+      if (urlError) {
+        this.newDemistoServerSaveDisabledError = urlErrorMessage;
+        return true;
+      }
+      return false;
     }
+
     // edit mode
-    return this.demistoEndpoints[this.selectedDemistoEndpointId].url !== this.newDemistoServerUrl && this.demistoEndpointUrls.includes(this.newDemistoServerUrl);
+    if (urlError) {
+      this.newDemistoServerSaveDisabledError = urlErrorMessage;
+      return true;
+    }
+
+    const sameUrl = nameExists && this.demistoEndpoints[this.editingDemistoServerId].url === this.newDemistoServerUrl;
+    if (!nameExists || sameUrl) {
+      return false;
+    }
+    this.newDemistoServerSaveDisabledError = nameExistsErrorMessage;
+    return true;
   }
+
   newDemistoServerDialogMode: DemistoServerEditMode = 'new';
   get newEditTestButtonDisabled(): boolean {
     if (this.newDemistoServerDialogMode === 'new') {
@@ -1416,13 +1447,6 @@ export class AppComponent implements OnInit {
 
 
 
-  async testDemistoEndpointById(serverId: string): Promise<boolean> {
-    const testRes = await this.fetcherService.testDemistoEndpointById(serverId);
-    return testRes.success;
-  }
-
-
-
   async switchCurrentDemistoEndpoint(serverId: string, previousTestResult?): Promise<void> {
     /*
     Called from onDemistoEndpointSelected()
@@ -1547,6 +1571,7 @@ export class AppComponent implements OnInit {
     this.newDemistoServerUrl = '';
     this.newDemistoServerApiKey = '';
     this.newDemistoServerTrustAny = true;
+    this.editingDemistoServerId = undefined;
   }
 
 
@@ -1554,6 +1579,7 @@ export class AppComponent implements OnInit {
   onNewDemistoEndpointCanceled() {
     this.showNewDemistoEndpointDialog = false;
     this.showDemistoEndpointOpenDialog = true;
+    this.editingDemistoServerId = undefined;
   }
 
 
@@ -1617,22 +1643,36 @@ export class AppComponent implements OnInit {
 
   async onTestDemistoEndpointClicked() {
     console.log('AppComponent: onTestDemistoEndpointClicked(): selectedDemistoEndpointId:', this.selectedDemistoEndpointId);
-    const success = await this.testDemistoEndpointById(this.selectedDemistoEndpointId);
+    let success;
+    let error;
+    try {
+      const testRes = await this.fetcherService.testDemistoEndpointById(this.selectedDemistoEndpointId);
+      // let {success, error} = testRes;
+      success = testRes.success;
+      error = testRes.hasOwnProperty('error') ? testRes.error : undefined;
+    }
+    catch (err) {
+      console.error(`Caught error testing endpoint id ${this.selectedDemistoEndpointId}:`, err);
+      this.messagesReplace( [{ severity: 'error', summary: 'Failure', detail: `Internal error testing XSOAR endpoint ${this.demistoEndpoints[this.selectedDemistoEndpointId].url}: ${'message' in error ? error.message : error}`}] );
+      return;
+    }
+
     if (this.selectedDemistoEndpointId === this.currentDemistoEndpointId) {
       await this.switchCurrentDemistoEndpoint(this.selectedDemistoEndpointId, success);
     }
+
     if (success) {
       this.messagesReplace( [{ severity: 'success', summary: 'Success', detail: `XSOAR endpoint ${this.demistoEndpoints[this.selectedDemistoEndpointId].url} test success`}] );
     }
     else {
-      this.messagesReplace( [{ severity: 'error', summary: 'Failure', detail: `XSOAR endpoint ${this.demistoEndpoints[this.selectedDemistoEndpointId].url} test failure`}] );
+      this.messagesReplace( [{ severity: 'error', summary: 'Failure', detail: `XSOAR endpoint ${this.demistoEndpoints[this.selectedDemistoEndpointId].url} test failure: ${error}`}] );
     }
   }
 
 
 
   async onEditDemistoEndpointClicked() {
-    console.log('AppComponent: onEditDemistoEndpoint()');
+    console.log('AppComponent: onEditDemistoEndpointClicked()');
     this.newDemistoServerDialogMode = 'edit';
     this.showNewDemistoEndpointDialog = true;
     this.showDemistoEndpointOpenDialog = false;
@@ -1640,6 +1680,7 @@ export class AppComponent implements OnInit {
     // get Demisto server details and stick them in
     // newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny
     const demistoServer = this.demistoEndpoints[this.selectedDemistoEndpointId];
+    this.editingDemistoServerId = this.selectedDemistoEndpointId;
     this.newDemistoServerUrl = demistoServer.url;
     this.newDemistoServerApiKey = '';
     this.newDemistoServerTrustAny = demistoServer.trustAny;
@@ -1709,6 +1750,7 @@ export class AppComponent implements OnInit {
     this.newDemistoServerUrl = '';
     this.newDemistoServerApiKey = '';
     this.newDemistoServerTrustAny = true;
+    this.editingDemistoServerId = undefined;
   }
 
 

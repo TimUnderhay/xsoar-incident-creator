@@ -1,0 +1,29 @@
+{
+  "servers": [
+    {
+      "id": "45934f72-4f56-46bf-adb1-d28b19d6cebc",
+      "url": "https://demisto-dev.demistolab.local",
+      "apiKey": "rqi+9e0IF1KcikeVCQEDOk/aeUAwdrxEGEHLLy9iMJDAri2DdLyautZ9UySjYdgvRd6Ay/7YHUFHp7qY29NPEaTYHGt2GBsawFQ6FLh0Ynr/iDmcNGpeTkH4QUKM00cZylJ36++i9Suhl3CYRu+OUz8dpz2t0Oey32gSkTlwMS0oqc2X4lu2W7IkgUmmVB3WsDOkwrKaDGCNOkHMEY/umh9PHMdrggq1l3pheNgQRrJTXYlJJqnUHeRESyD/WX4/2neQPjzvyhs3DAQBUibUeEvLj7pa5NNEo1VW5iUiS45rUBexI0c/sgd0srMdZ9Rv4cZEuT/WV6hNGGEn+blEYg==",
+      "trustAny": true
+    },
+    {
+      "id": "3377f276-a628-43df-ab73-8b26ab10b88c",
+      "url": "https://demisto-dev",
+      "apiKey": "AoJQLqGLgc27r3LoNgowVGmwYkgxvoTso6SF3K5Txu34+ImUWI8OFmLX9XyPsH5fydh1zZwbeoZygurMLY51Ovwz0H2UyZv9pdDCnFwAcVezi+kgns6xx/YjRZ10CD0Pl5kBPK34xkBcPAqEWjsuT3+SNpA3DquzcBgdoaCnvuRVTGP1lk6mYwhSrnxkqwl+lnkmNkNBZaZYD29Qr6g6Y4NnYQKpTwT1+4LiLBvc5XxXHikClPR5CnC7zN8VjzqiqQNyOj1PvGp8C4sapLUv15SMB/ZYAISR6L4vnzjF8rJuJIIawA7gYRldtIgG/DmLNBcdYVqWoX3OziaF/lfpAg==",
+      "trustAny": true
+    },
+    {
+      "id": "bc720e56-25b3-42e8-b8c9-0ff5df014524",
+      "url": "https://demisto-55-beta",
+      "apiKey": "QeQGLk6rBZmEvi8YD1DRgUbHENYQ4ETL+jPQVHCVM+KMMAd+WhDkoSzuV5IrnAvGkJMoK/Plsgtpx9ho4wBJ2GQC9kT+komCd12Ze2DhV0NOX/7Svc/8gY0KliTurF9Q39QPdGa1oNGlySc/CSvgsK+FOMsq0pSOIVn0EjzULHWY61Wx2pQrJ80YxMoBi5sGmewPluUCs3/WKoMlBW7mV07W+aX0JgR7ZLUar6lg5uIwyb5gNKI7AXaeYbKxB93fUjqIwouspTYaXEN5D2ohHh9lNiegpPMIH2JfODvhMV0W/+OpnTh063I+lbV2CB1D+PKl2X/0wUr6wjFd/MX18w==",
+      "trustAny": true
+    },
+    {
+      "id": "bececc52-3dbe-4a07-8e73-593d4fcc8144",
+      "url": "https://ts.demisto.works",
+      "apiKey": "JvqpsWl3LQ5i4i3CINwZjXWtmfPIgXTEO52efzLDsr5TTLUg75FtHXqX9SnDjvpVUQHdZPn6PdrTefOMp0rtT441oMOIy3Hkmxm4Nl74GI7Zy45bar1vvakTg0zj/oEUZjp4OQUsTXYcu0otJgC92/OAh32Y3cUW47owgjV+md1h+ZG9Hax4mWR/arAzpb62GeYz36Pn81Ks1ugabtarYjS/84q6B9egwZ2R1F4h5wvoooozH5ST6A/U/Dj8m4ZCmrgrf4RcgX18VcyZOsbHhRSIRAdLsLq1UVkyaLWnI72yOWH8i5sylPwfp345KxzDeil42gWsZaqwVXGgWF2G4A==",
+      "trustAny": true
+    }
+  ],
+  "default": "45934f72-4f56-46bf-adb1-d28b19d6cebc"
+}

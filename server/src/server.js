@@ -561,6 +561,103 @@ app.get(apiPath + '/sampleIncident', async (req, res) => {
 
 /// XSOAR Endpoint Calls ///
 
+app.get(apiPath + '/demistoEndpoint', async (req, res) => {
+  // return all demisto API configs to the client, minus their apiKeys
+  const tmpDemistoApiConfigs = JSON.parse(JSON.stringify(demistoApiConfigs)); // poor man's deep copy
+  Object.values(tmpDemistoApiConfigs).forEach( apiConfig => {
+    delete apiConfig.apiKey;
+  });
+  res.status(200).json(tmpDemistoApiConfigs);
+});
+
+
+
+
+app.post(apiPath + '/demistoEndpoint', async (req, res) => {
+    // add a new XSOAR API server config
+    // will overwrite existing config for url
+
+    const body = req.body;
+    const requiredFields = ['url', 'apiKey', 'trustAny'];
+
+    try {
+      checkForRequiredFields(requiredFields, body);
+    }
+    catch(fieldName) {
+      res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+      return;
+    }
+
+    const {url, apiKey, trustAny} = body;
+    const id = uuidv4();
+
+    // remove any junk data
+    const config = {
+      id,
+      url,
+      apiKey,
+      trustAny
+    };
+
+    demistoApiConfigs[id] = config;
+    await saveApiConfig();
+    res.status(200).json({success: true, id});
+});
+
+
+
+app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
+    // saves XSOAR API config
+    // will overwrite existing config for url
+
+    const body = req.body;
+    const requiredFields = ['id', 'url', 'trustAny']; // 'apiKey' properyty may be omitted so that the apiKey can be fetched from existing config using 'id' property
+
+    try {
+      checkForRequiredFields(requiredFields, body);
+    }
+    catch(fieldName) {
+      return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+    }
+
+    const {id, url, trustAny} = body;
+    const apiKey = body.hasOwnProperty('apiKey') ? body.apiKey : getDemistoApiConfig(id).apiKey;
+    
+    // remove any junk data
+    const config = {
+      id,
+      url,
+      apiKey,
+      trustAny
+    };
+
+    demistoApiConfigs[id] = config;
+
+    await saveApiConfig();
+    res.status(200).json({success: true});
+});
+
+
+
+app.delete(apiPath + '/demistoEndpoint/:serverId', async (req, res) => {
+  // deletes a XSOAR server from the API config
+  const serverId = decodeURIComponent(req.params.serverId);
+  if (demistoApiConfigs.hasOwnProperty(serverId)) {
+    delete demistoApiConfigs[serverId];
+    if (!demistoApiConfigs.hasOwnProperty(defaultDemistoApiId)) {
+      // make sure default api is still defined.  If not, unset it
+      defaultDemistoApiId = undefined;
+    }
+    await saveApiConfig();
+    res.status(200).json({success: true});
+  }
+  else {
+    return returnError(`XSOAR server '${serverID}' was not found`, res);
+  }
+});
+
+
+
 app.post(apiPath + '/demistoEndpoint/test/adhoc', async (req, res) => {
   // Tests for good connectivity to Demisto server by fetching user settings.
   // Does not save settings.  Another call will handle that.
@@ -584,11 +681,11 @@ app.post(apiPath + '/demistoEndpoint/test/adhoc', async (req, res) => {
   }
 
   const {url, trustAny} = body;
-  const apiKey = body.hasOwnProperty('id') ? decrypt(getDemistoApiConfig(body.id).apiKey) : body.apiKey;
+  const apiKey = body.hasOwnProperty('id') ? getDemistoApiConfig(body.id).apiKey : body.apiKey;
 
   let testResult;
   try {
-    testResult = await testApi(url, apiKey, trustAny);
+    testResult = await testApi(url, decrypt(apiKey), trustAny);
     // console.debug('testResult:', testResult);
   }
   catch(error) {
@@ -698,103 +795,6 @@ app.get(apiPath + '/demistoEndpoint/default', async (req, res) => {
   else {
     res.status(200).json({defined: false});
   }
-});
-
-
-
-app.post(apiPath + '/demistoEndpoint', async (req, res) => {
-    // add a new XSOAR API server config
-    // will overwrite existing config for url
-
-    const body = req.body;
-    const requiredFields = ['url', 'apiKey', 'trustAny'];
-
-    try {
-      checkForRequiredFields(requiredFields, body);
-    }
-    catch(fieldName) {
-      res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
-      return;
-    }
-
-    const {url, apiKey, trustAny} = body;
-    const id = uuidv4();
-
-    // remove any junk data
-    config = {
-      id,
-      url,
-      apiKey,
-      trustAny
-    };
-
-    demistoApiConfigs[url] = config;
-    await saveApiConfig();
-    res.status(200).json({success: true, id});
-});
-
-
-
-app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
-    // saves XSOAR API config
-    // will overwrite existing config for url
-
-    const body = req.body;
-    const requiredFields = ['id', 'url', 'trustAny']; // 'apiKey' properyty may be omitted so that the apiKey can be fetched from existing config using 'id' property
-
-    try {
-      checkForRequiredFields(requiredFields, body);
-    }
-    catch(fieldName) {
-      return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
-    }
-
-    const {id, url, trustAny} = body;
-    const apiKey = body.hasOwnProperty('apiKey') ? body.apiKey : getDemistoApiConfig(id).apiKey;
-    
-    // remove any junk data
-    const config = {
-      id,
-      url,
-      apiKey,
-      trustAny
-    };
-
-    demistoApiConfigs[id] = config;
-
-    await saveApiConfig();
-    res.status(200).json({success: true});
-});
-
-
-
-app.delete(apiPath + '/demistoEndpoint/:serverId', async (req, res) => {
-  // deletes a XSOAR server from the API config
-  const serverId = decodeURIComponent(req.params.serverId);
-  if (demistoApiConfigs.hasOwnProperty(serverId)) {
-    delete demistoApiConfigs[serverId];
-    if (!demistoApiConfigs.hasOwnProperty(defaultDemistoApiId)) {
-      // make sure default api is still defined.  If not, unset it
-      defaultDemistoApiId = undefined;
-    }
-    await saveApiConfig();
-    res.status(200).json({success: true});
-  }
-  else {
-    return returnError(`XSOAR server '${serverID}' was not found`, res);
-  }
-});
-
-
-
-
-app.get(apiPath + '/demistoEndpoint', async (req, res) => {
-  // return all demisto API configs to the client, minus their apiKeys
-  const tmpDemistoApiConfigs = JSON.parse(JSON.stringify(demistoApiConfigs)); // poor man's deep copy
-  Object.values(tmpDemistoApiConfigs).forEach( apiConfig => {
-    delete apiConfig.apiKey;
-  });
-  res.status(200).json(tmpDemistoApiConfigs);
 });
 
 
