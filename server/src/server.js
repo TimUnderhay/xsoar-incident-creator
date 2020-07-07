@@ -1686,11 +1686,6 @@ app.post(apiPath + '/attachment/update', async (req, res) => {
   sanitisedConfig.size = oldConfig.size;
   sanitisedConfig.detectedType = oldConfig.detectedType;
 
-  if (oldConfig.filename !== sanitisedConfig.filename) {
-    // filename has changed.  Rename it.
-    await fs.promises.rename(`${attachmentsDir}/${id}_${oldConfig.filename}`, `${attachmentsDir}/${id}_${sanitisedConfig.filename}`);
-  }
-
   // console.log('sanitisedConfig:', sanitisedConfig);
 
   attachmentsConfig[id] = sanitisedConfig;
