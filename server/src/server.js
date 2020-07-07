@@ -241,7 +241,8 @@ function saveApiConfig() {
 
 
 function saveAttachmentsConfig() {
-  return fs.promises.writeFile(attachmentsFile, JSON.stringify(attachmentsConfig, null, 2), { encoding: 'utf8', mode: 0o660} );
+  const tempAttachmentsConfig = Object.values(attachmentsConfig);
+  return fs.promises.writeFile(attachmentsFile, JSON.stringify(tempAttachmentsConfig, null, 2), { encoding: 'utf8', mode: 0o660} );
 }
 
 
@@ -284,7 +285,7 @@ async function removeAttachmentFromIncidents(attachmentId) {
 function uploadAttachmentToDemisto(serverId, incidentId, incidentFieldName, attachmentId, filename, last, mediaFile = undefined, comment = undefined) {
 
   const originalAttachment = attachmentsConfig[attachmentId];
-  const diskFilename = `${attachmentsDir}/${attachmentId}_${originalAttachment.filename}`;
+  const diskFilename = `${attachmentsDir}/${attachmentId}`;
 
   const demistoServerConfig = getDemistoApiConfig(serverId);
   
@@ -303,7 +304,7 @@ function uploadAttachmentToDemisto(serverId, incidentId, incidentFieldName, atta
   }
   
   const options = {
-    url: `${serverId}/incident/upload/${incidentId}`,
+    url: `${demistoServerConfig.url}/incident/upload/${incidentId}`,
     method: 'POST',
     headers: {
       Authorization: decrypt(demistoServerConfig.apiKey),
@@ -1553,7 +1554,7 @@ app.get(apiPath + '/attachment/:id', async (req, res) => {
   }
   const attachmentConfig = attachmentsConfig[id];
   const filename = attachmentConfig.filename;
-  const diskfilename = `${attachmentsDir}/${id}_${filename}`;
+  const diskfilename = `${attachmentsDir}/${id}`;
   res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
   res.type('application/octet-stream'); // just make it a generic download
   res.download(diskfilename, filename);
@@ -1582,7 +1583,7 @@ app.post(apiPath + '/attachment', multipartUploadHandler.single('attachment'), a
   const multerPath = fileObject.path;
   const filename = fileObject.originalname;
   const comment = 'comment' in body ? body.comment : '';
-  const diskfilename = `${id}_${filename}`;
+  const diskfilename = `${id}`;
   const size = fileObject.size;
   const mediaFile = body.mediaFile === 'true' ? true : false;
 
@@ -1906,7 +1907,10 @@ function loadAttachmentsConfig() {
   }
   else {
     try {
-      attachmentsConfig = JSON.parse(fs.readFileSync(attachmentsFile, 'utf8'));
+      const loadedConfig = JSON.parse(fs.readFileSync(attachmentsFile, 'utf8'));
+      for (const config of loadedConfig) {
+        attachmentsConfig[config.id] = config;
+      }
     }
     catch (error) {
       console.error(`Error parsing ${attachmentsFile}:`, error);

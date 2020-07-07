@@ -360,6 +360,7 @@ export class FetcherService {
 
 
   setDefaultIncidentJsonFile(incidentConfigId, jsonConfigId): Promise<any> {
+    console.log('incidentConfigId, jsonConfigId:', incidentConfigId, jsonConfigId);
     const headers = this.buildHeaders();
     const config: IncidentJsonFileConfig = {
       incidentConfigId,

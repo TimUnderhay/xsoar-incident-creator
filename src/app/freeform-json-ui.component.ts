@@ -18,6 +18,7 @@ import { DemistoIncidentImportResult } from './types/demisto-incident-import-res
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { FileAttachmentConfig, FileAttachmentConfigs, AttachmentFieldConfig, FileAttachmentUIConfig, FileToPush } from './types/file-attachment';
+import { DemistoEndpoints } from './types/demisto-endpoints';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -58,6 +59,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   @Input() currentDemistoEndpointId: string;
   @Input() currentDemistoEndpointInit: boolean;
   @Input() fetchedIncidentFieldDefinitions: FetchedIncidentFieldDefinitions; // the fields taken from Demisto
+  @Input() demistoEndpoints: DemistoEndpoints;
 
   _fetchedIncidentTypes: FetchedIncidentType[];
   fetchedIncidentTypeNames: string[];
@@ -1880,7 +1882,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       incidentType: this.selectedIncidentType
     };
     if (this.defaultJsonConfigName) {
-      incidentConfig.defaultJsonId = this.defaultJsonConfigName;
+      incidentConfig.defaultJsonId = this.defaultJsonConfigId;
     }
     return incidentConfig;
   }
@@ -1888,16 +1890,16 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
   async onIncidentSaveClicked() {
-    // console.log('FreeformJsonUIComponent(): onSaveClicked()');
+    // console.log('FreeformJsonUIComponent(): onIncidentSaveClicked()');
     const incidentConfig = this.buildSavedIncidentConfig();
-    console.log('FreeformJsonUIComponent: onSaveClicked(): incidentConfig:', incidentConfig);
+    console.log('FreeformJsonUIComponent: onIncidentSaveClicked(): incidentConfig:', incidentConfig);
     try {
       await this.fetcherService.saveUpdatedIncidentConfiguration(incidentConfig);
       this.messageWithAutoClear.emit({severity: 'success', summary: 'Successful', detail: `Configuration '${this.loadedIncidentConfigName}' has been saved`});
       this.savedIncidentConfigurationsChanged.emit();
     }
     catch (error) {
-      console.error('FreeformJsonUIComponent: onSaveClicked(): caught error saving field config:', error);
+      console.error('FreeformJsonUIComponent: onIncidentSaveClicked(): caught error saving field config:', error);
       return;
     }
   }
@@ -1978,7 +1980,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     const serverId = this.currentDemistoEndpointId;
     const result = await this.fetcherService.createInvestigation(incidentId, serverId);
     if (result.success) {
-      const url = `${serverId}/#/incident/${incidentId}`;
+      const url = `${this.demistoEndpoints[serverId].url}/#/incident/${incidentId}`;
       window.open(url, '_blank');
     }
     else if ('error' in result) {
