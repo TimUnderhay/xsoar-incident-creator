@@ -1382,6 +1382,35 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
+  onEditJsonClicked() {
+    console.log('FreeformJsonUIComponent: onEditJsonClicked()');
+
+    let config: DynamicDialogConfig = {
+      header: `JSON Config ${this.loadedJsonConfigName ? '\'' + this.loadedJsonConfigName + '\'' : undefined }'`,
+      closable: true,
+      closeOnEscape: true,
+      data: {
+        value: this.json,
+        readOnly: false,
+        showResetValues: true
+      },
+      width: '95%',
+      height: '90%'
+    };
+    const dialogRef = this.dialogService.open(JsonEditorComponent, config);
+    dialogRef.onClose.subscribe( value => this.onEditJsonAccepted(value) );
+  }
+
+
+
+  onEditJsonAccepted(newJson?: object) {
+    if (newJson) {
+      this.json = newJson;
+    }
+  }
+
+
+
   onDownloadJsonClicked() {
     console.log('FreeformJsonUIComponent: onDownloadJsonClicked()');
     const filename = this.loadedJsonConfigName !== undefined ? this.loadedJsonConfigName : `untitled.json`;
@@ -1532,11 +1561,11 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     try {
       const jsonConfig: JSONConfig = {
         id: this.loadedJsonConfigId,
-        name: this.jsonSaveAsConfigName,
+        name: this.loadedJsonConfigName,
         json: this.json
       };
       await this.fetcherService.saveUpdatedFreeformJSONConfiguration(jsonConfig);
-      this.messageWithAutoClear.emit({severity: 'success', summary: 'Successful', detail: `JSON configuration '${this.jsonSaveAsConfigName}' has been saved`});
+      this.messageWithAutoClear.emit({severity: 'success', summary: 'Successful', detail: `JSON configuration '${this.loadedJsonConfigName}' has been saved`});
     }
     catch (error) {
       console.error('FreeformJsonUIComponent: onJsonSaveAsAccepted(): caught error saving JSON config:', error);
@@ -1982,7 +2011,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   onViewIncidentJSONClicked(incidentId: number, serverId: string) {
     console.log('FreeformJsonUIComponent: onViewIncidentJSONClicked()');
 
-    let config: DynamicDialogConfig = {
+    const config: DynamicDialogConfig = {
       header: `JSON of XSOAR Incident ${incidentId} for '${serverId}'`,
       closable: true,
       closeOnEscape: true,

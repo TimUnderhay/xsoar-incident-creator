@@ -23,14 +23,31 @@
     style="width: 100%; flex-grow: 1;"></ace-editor>
 
   <div class="editJsonButtonGroup">
+
     <vertical-center>
+
       <div [class.failure]="!canSubmit">{{canSubmit ? 'Valid' : 'Invalid'}} JSON</div>
+
     </vertical-center>
 
     <div>
-      <p-button *ngIf="!readOnly" type="button" label="Accept" (onClick)="onAccept()" [disabled]="!canSubmit"></p-button>
-      <p-button type="button" [label]="readOnly ? 'Close' : 'Cancel'" (onClick)="onCancel()"></p-button>
+
+      <p-button
+        *ngIf="!readOnly"
+        type="button"
+        label="Accept"
+        (onClick)="onAccept()"
+        [disabled]="!canSubmit">
+      </p-button>
+      
+      <p-button
+        type="button"
+        [label]="readOnly ? 'Close' : 'Cancel'"
+        (onClick)="onCancel()">
+      </p-button>
+
     </div>
+
   </div>
 
 </div>

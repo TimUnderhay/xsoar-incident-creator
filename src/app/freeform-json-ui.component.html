@@ -236,7 +236,7 @@
           <p-button
             label="Save"
             (onClick)="onJsonSaveClicked()"
-            [disabled]="!json">
+            [disabled]="!json || !loadedJsonConfigId">
           </p-button>
 
           <!-- Save As Button -->
@@ -262,15 +262,26 @@
           </p-button>
 
           <!-- View JSON Button -->
-          <button pButton
+          <button
+            pButton
             type="button"
             label="View"
             (click)="onViewJsonClicked()"
             [disabled]="!json">
           </button>
 
+          <!-- Edit JSON Button -->
+          <button
+            pButton
+            type="button"
+            label="Edit"
+            (click)="onEditJsonClicked()"
+            [disabled]="!json">
+          </button>
+
           <!-- Download JSON Button -->
-          <button pButton
+          <button
+            pButton
             type="button"
             label="Download"
             (click)="onDownloadJsonClicked()"

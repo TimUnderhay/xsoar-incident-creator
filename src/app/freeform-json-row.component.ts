@@ -457,7 +457,7 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
       width: '95%',
       height: '90%'
     };
-    let dialogRef = this.dialogService.open(JsonEditorComponent, config);
+    const dialogRef = this.dialogService.open(JsonEditorComponent, config);
     dialogRef.onClose.subscribe( closeValue => this.onDialogClosed(closeValue) );
   }
 
@@ -476,7 +476,7 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
       width: '95%',
       height: '90%'
     };
-    let dialogRef = this.dialogService.open(JsonEditorComponent, config);
+    const dialogRef = this.dialogService.open(JsonEditorComponent, config);
     dialogRef.onClose.subscribe( value => this.onDialogClosed(value) );
   }
 

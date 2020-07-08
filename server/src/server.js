@@ -529,7 +529,7 @@ app.get(apiPath + '/whoami', (req, res) => {
 
 app.get(apiPath + '/publicKey', (req, res) => {
   // sends the internal public key
-  res.json( { publicKey: internalPubKey } );
+  res.status(200).json( { publicKey: internalPubKey } );
 });
 
 
@@ -549,7 +549,7 @@ app.get(apiPath + '/sampleIncident', async (req, res) => {
   try {
     // parse file contents
     const parsedData = JSON.parse(data);
-    res.json(parsedData);
+    res.status(200).json(parsedData);
     return;
   }
   catch (error) {
@@ -576,7 +576,6 @@ app.get(apiPath + '/demistoEndpoint', async (req, res) => {
 
 app.post(apiPath + '/demistoEndpoint', async (req, res) => {
     // add a new XSOAR API server config
-    // will overwrite existing config for url
 
     const body = req.body;
     const requiredFields = ['url', 'apiKey', 'trustAny'];
@@ -602,14 +601,13 @@ app.post(apiPath + '/demistoEndpoint', async (req, res) => {
 
     demistoApiConfigs[id] = config;
     await saveApiConfig();
-    res.status(200).json({success: true, id});
+    res.status(201).json({success: true, id});
 });
 
 
 
 app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
     // saves XSOAR API config
-    // will overwrite existing config for url
 
     const body = req.body;
     const requiredFields = ['id', 'url', 'trustAny']; // 'apiKey' properyty may be omitted so that the apiKey can be fetched from existing config using 'id' property
@@ -701,21 +699,21 @@ app.post(apiPath + '/demistoEndpoint/test/adhoc', async (req, res) => {
     // since this is a test, we don't want to return a 500 if it fails.  Status code should be normal
     if (error && statusCode) {
       console.info(`XSOAR server test failed with code ${statusCode}:`, error);
-      return res.json({ success: false, statusCode, error });
+      return res.status(200).json({ success: false, statusCode, error });
     }
     else if (error && !statusCode) {
       console.info(`XSOAR server test failed:`, error);
-      return res.json({ success: false, error });
+      return res.status(200).json({ success: false, error });
     }
     else {
       console.info('XSOAR server test failed.  Unspecified error');
-      return res.json({ success: false, error: 'unspecified' });
+      return res.status(200).json({ success: false, error: 'unspecified' });
     }
   }
 
   console.log(`Logged into XSOAR as user '${testResult.result.body.username}'`);
   console.log(`Successfully tested XSOAR URL '${url}'`);
-  return res.json( { success: true, statusCode: 200 } );
+  return res.status(200).json( { success: true, statusCode: 200 } );
 });
 
 
@@ -744,22 +742,22 @@ app.get(apiPath + '/demistoEndpoint/test/:serverId', async (req, res) => {
     // since this is a test, we don't want to return a 500 if it fails.  Status code should be normal
     if (error && statusCode) {
       console.info(`XSOAR server test failed with code ${statusCode}:`, error);
-      res.json({ success: false, statusCode, error });
+      res.status(200).json({ success: false, statusCode, error });
     }
     else if (error && !statusCode) {
       console.info(`XSOAR server test failed:`, error);
-      res.json({ success: false, error });
+      res.status(200).json({ success: false, error });
     }
     else {
       console.info('XSOAR server test failed.  Unspecified error');
-      res.json({ success: false, error: 'unspecified' });
+      res.status(200).json({ success: false, error: 'unspecified' });
     }
     return;
   }
 
   console.log(`Logged into XSOAR as user '${testResult.result.body.username}'`);
   console.log(`Successfully tested XSOAR URL '${serverId}'`);
-  return res.json( { success: true, statusCode: 200 } );
+  return res.status(200).json( { success: true, statusCode: 200 } );
   
 });
 
@@ -805,7 +803,7 @@ app.get(apiPath + '/incidentFields/:serverId', async (req, res) => {
   const serverId = decodeURIComponent(req.params.serverId);
   const fields = await getIncidentFields(serverId);
   incident_fields[serverId] = fields;
-  res.json( {id: serverId, incident_fields: fields} );
+  res.status(200).json( {id: serverId, incident_fields: fields} );
 } );
 
 
@@ -814,7 +812,7 @@ app.get(apiPath + '/incidentType/:serverId', async (req, res) => {
   // Retrieves the list of incident types from XSOAR
   const serverId = decodeURIComponent(req.params.serverId);
   const incident_types = await getIncidentTypes(serverId);
-  res.json( {id: serverId, incident_types} );
+  res.status(200).json( {id: serverId, incident_types} );
 } );
 
 
@@ -822,7 +820,7 @@ app.get(apiPath + '/incidentType/:serverId', async (req, res) => {
 app.post(apiPath + '/createDemistoIncident', async (req, res) => {
   // This method will create an XSOAR incident, per the body supplied by the client
 
-  let currentUser = req.headers.authorization;
+  const currentUser = req.headers.authorization;
 
   const body = req.body;
   let demistoServerConfig;
@@ -836,8 +834,7 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
 
   // console.debug(body);
 
-  let result;
-  let options = {
+  const options = {
     url: demistoServerConfig.url + '/incident',
     method: 'POST',
     headers: {
@@ -850,7 +847,8 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
     json: true,
     body: body
   };
-
+  
+  let result;
   try {
     // send request to XSOAR
     result = await request( options );
@@ -872,13 +870,12 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
       return returnError(
         `Caught error opening XSOAR incident: ${error.message}`,
         res,
-        500,
+        502,
         {
           success: false,
           statusCode: null,
           error: error.message
-        },
-        503
+        }
       );
     }
     else {
@@ -895,9 +892,9 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
     }
   }
 
-  let incidentId = result.body.id;
+  const incidentId = result.body.id;
   // send results to client
-  res.json( { id: incidentId, success: true, statusCode: result.statusCode, statusMessage: result.statusMessage } );
+  res.status(201).json( { id: incidentId, success: true, statusCode: result.statusCode, statusMessage: result.statusMessage } );
   // console.debug(result);
   console.log(`User ${currentUser} created XSOAR incident with id ${incidentId}`);
 } );
@@ -969,15 +966,24 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
   if (result.body) {
     const incidentId = result.body.id;
     // send results to client
-    res.json( { id: incidentId, success: true, statusCode: result.statusCode, statusMessage: result.statusMessage } );
-    // console.debug(result);
+    // console.debug(res);
     console.log(`User ${currentUser} created XSOAR incident with id ${incidentId}`);
+    res.status(201).json( {
+      id: incidentId,
+      success: true,
+      statusCode: result.statusCode,
+      statusMessage: result.statusMessage
+    } );
   }
 
   else {
     // this can happen if an incident didn't get created, possibly due to preprocessing rules
     const error = `XSOAR did not create an incident based off of the request.  It could be caused by pre-processing rules dropping the incident`
-    res.json( {success: false, statusCode: result.statusCode, statusMessage: error});
+    res.status(200).json( {
+      success: false,
+      statusCode: result.statusCode,
+      statusMessage: error
+    } );
   }
 
 } );
@@ -1019,14 +1025,16 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
   try {
     // send request to XSOAR
     result = await request( options );
-    res.json({success: true});
+    res.status(201).json({success: true});
   }
   catch (error) {
     if ('error' in error && error.error.error.startsWith('Investigation already exists for incident')) {
-      return res.json({success: true});
+      return res.status(200).json({success: true});
     }
     console.error('Error sending request to XSOAR:', 'error' in error ? error.error : error.message);
-    res.json({success: false, error: 'message' in error ? error.message : error.error});
+    res.status(200).json( {
+      success: false,
+      error: 'message' in error ? error.message : error.error});
   }
 } );
 
@@ -1074,13 +1082,13 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
     result = await request( options );
 
     if ('body' in result && 'total' in result.body && result.body.total === 0) {
-      return res.json({
+      return res.status(200).json({
         success: false,
         error: `Query returned 0 results`
       });
     }
     else {
-      return res.json({
+      return res.status(200).json({
         success: true,
         incident: result.body.data[0]
       });
@@ -1089,9 +1097,9 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
   }
   catch (error) {
     if ('message' in error) {
-      return res.json({success: false, error: error.message});
+      return res.status(200).json({success: false, error: error.message});
     }
-    return res.json({success: false, error: error});
+    return res.status(200).json({success: false, error: error});
   }
 } );
 
@@ -1166,7 +1174,7 @@ app.post(apiPath + '/json/update', async (req, res) => {
   freeJsonConfig[id] = entry;
   await saveFreeJsonConfig();
 
-  res.status(201).json({success: true}); // send 'created'
+  res.status(200).json({success: true}); // send 'created'
 } );
 
 
@@ -1643,8 +1651,6 @@ app.delete(apiPath + '/attachment/:id', async (req, res) => {
     await saveAttachmentsConfig();
     await removeAttachmentFromIncidents(id); 
     return res.status(200).json({id, success: true});
-
-    
   }
   else {
     const error = `Attachment ID '${id}' not found`;
@@ -1723,7 +1729,7 @@ app.post(apiPath + '/attachment/push', async (req, res) => {
     const comment = 'comment' in attachment ? attachment.comment : undefined;
 
     result = await uploadAttachmentToDemisto(attachment.serverId, attachment.incidentId, attachment.incidentFieldName, attachment.attachmentId, attachment.filename, attachment.last, mediaFile, comment);
-    return res.status(200).json({success: true});
+    return res.status(201).json({success: true});
   }
   catch (error) {
     console.error(error);
