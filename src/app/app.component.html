@@ -81,21 +81,21 @@
           [disabled]="savedIncidentConfigurationsLen === 0">
         </p-button>
 
-        <!-- Import Mapped Config -->
-        <p-button
-          label="Import"
-          (onClick)="onImportConfigClicked()"
-          [disabled]="!currentDemistoEndpointInit"
-          pTooltip="Import an exported incident mapping configuration"
-          showDelay="750">
-        </p-button>
-        
         <!-- Load From XSOAR -->
         <p-button
           label="XSOAR Import"
           (onClick)="onLoadFromDemistoClicked()"
           [disabled]="!currentDemistoEndpointInit"
           pTooltip="Import an incident directly from XSOAR"
+          showDelay="750">
+        </p-button>
+
+        <!-- Import Mapped Config -->
+        <p-button
+          label="Import"
+          (onClick)="onImportConfigClicked()"
+          [disabled]="!currentDemistoEndpointInit"
+          pTooltip="Import an exported incident mapping configuration"
           showDelay="750">
         </p-button>
         
@@ -769,7 +769,7 @@
               type="url"
               id="url"
               required
-              [(ngModel)]="demistoIncidentToLoad"
+              [(ngModel)]="demistoIncidentIdToLoad"
               name="url"
               class="inputDisplay">
 

@@ -19,6 +19,7 @@ import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { FileAttachmentConfig, FileAttachmentConfigs, FileToPush } from './types/file-attachment';
 import { FileUpload } from 'primeng/fileupload';
 import { JSONConfigRef, JSONConfigRefs } from './types/json-config';
+import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -168,10 +169,10 @@ export class AppComponent implements OnInit {
 
   // Import from Demisto dialog
   showLoadFromDemistoDialog = false;
-  demistoIncidentToLoad = '';
+  demistoIncidentIdToLoad = '';
   demistoEndpointToLoadFrom = '';
   get importFromDemistoAcceptDisabled(): boolean {
-    return this.demistoEndpointToLoadFrom === '' || this.demistoIncidentToLoad.match(/^\d+$/) === null;
+    return this.demistoEndpointToLoadFrom === '' || this.demistoIncidentIdToLoad.match(/^\d+$/) === null;
   }
 
   // fieldMappingSelection Box
@@ -1867,18 +1868,42 @@ export class AppComponent implements OnInit {
 
 
   async loadFromDemisto() {
-    console.log('AppComponent: loadFromDemistoAccepted()');
-    this.showJsonMappingUI = true;
-    this.loadDefaultChosenFields = false;
-    this.loadedIncidentConfigName = undefined;
-    this.loadedIncidentConfigId = undefined;
-    this.changeDetector.detectChanges();
+    console.log('AppComponent: loadFromDemisto()');
 
-    const res = await this.freeformJsonUIComponent.loadFromDemisto(this.demistoIncidentToLoad, this.demistoEndpointToLoadFrom);
-    if (res) {
-      this.demistoEndpointToLoadFrom = '';
-      this.demistoIncidentToLoad = '';
+    let importResult: DemistoIncidentImportResult;
+    try {
+      importResult = await this.fetcherService.demistoIncidentImport(this.demistoIncidentIdToLoad, this.demistoEndpointToLoadFrom);
+      console.log('AppComponent: loadFromDemisto(): importResult:', importResult);
     }
+    catch (error) {
+      if ('message' in error) {
+        error = error.message;
+      }
+      this.messagesReplace( [{ severity: 'error', summary: 'Error', detail: `Error thrown pulling XSOAR incident ID ${this.demistoIncidentIdToLoad}: ${error}`}] );
+    }
+
+    const demistoEndpointName = this.demistoEndpoints[this.demistoEndpointToLoadFrom].url;
+
+    if (importResult.success) {
+      this.showJsonMappingUI = true;
+      this.loadDefaultChosenFields = false;
+      this.loadedIncidentConfigName = undefined;
+      this.loadedIncidentConfigId = undefined;
+      this.changeDetector.detectChanges();
+
+      this.freeformJsonUIComponent.onIncidentLoadedFromDemisto(importResult, this.demistoIncidentIdToLoad, demistoEndpointName);
+      this.demistoEndpointToLoadFrom = '';
+      this.demistoIncidentIdToLoad = '';
+    }
+
+    else if (importResult.error === `Query returned 0 results`) {
+      this.messagesReplace( [{ severity: 'error', summary: 'Failure', detail: `Incident ID ${this.demistoIncidentIdToLoad} was not found on XSOAR server '${demistoEndpointName}'`}] );
+    }
+
+    else {
+      this.messagesReplace( [{ severity: 'error', summary: 'Error', detail: `Error returned fetching XSOAR incident ${this.demistoIncidentIdToLoad}: ${importResult.error}`}] );
+    }
+
   }
 
 

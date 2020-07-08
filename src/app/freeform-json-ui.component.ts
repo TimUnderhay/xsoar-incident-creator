@@ -1814,53 +1814,26 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   /// Import Incident From XSOAR ///
 
-  async loadFromDemisto(demistoIncidentIdToLoad: string, demistoEndpointToLoadFrom: string): Promise<boolean> {
-    console.log('FreeformJsonUIComponent: loadFromDemisto()');
+  // async loadFromDemisto(demistoIncidentIdToLoad: string, demistoEndpointToLoadFrom: string): Promise<boolean> {
+  async onIncidentLoadedFromDemisto(importResult: DemistoIncidentImportResult, demistoIncidentIdToLoad: string, demistoEndpointName: string) {
+    console.log('FreeformJsonUIComponent: onIncidentLoadedFromDemisto()');
 
-    const demistoEndpointNameToLoadFrom = this.demistoEndpoints[demistoEndpointToLoadFrom].url;
+    this.json = importResult.incident;
+    this.incidentJson = undefined;
+    const incidentType = 'type' in importResult.incident ? importResult.incident.type : undefined;
+    this.buildChosenFieldsFromDemisto(this.json);
+    this.buildIncidentFieldOptions(incidentType);
+    this.messageWithAutoClear.emit( { severity: 'success', summary: 'Success', detail: `Incident ${demistoIncidentIdToLoad} was successfully loaded from '${demistoEndpointName}'`} );
+    this.loadedIncidentConfigId = undefined;
+    this.loadedIncidentConfigName = undefined;
+    this.createInvestigation = true;
+    this.loadedJsonConfigId = undefined;
+    this.loadedJsonConfigName = undefined;
+    this.defaultJsonConfigId = undefined;
+    this.defaultJsonConfigName = undefined;
 
-    let importResult: DemistoIncidentImportResult;
-    try {
-      importResult = await this.fetcherService.demistoIncidentImport(demistoIncidentIdToLoad, demistoEndpointToLoadFrom);
-    }
-
-    catch (error) {
-      if ('message' in error) {
-        error = error.message;
-      }
-      this.messagesReplace.emit( [{ severity: 'error', summary: 'Error', detail: `Error thrown pulling XSOAR incident ID ${demistoIncidentIdToLoad}: ${error}`}] );
-      return false;
-    }
-
-    console.log('FreeformJsonUIComponent: loadFromDemisto(): importResult:', importResult);
-
-    if (importResult.success) {
-      this.json = importResult.incident;
-      this.incidentJson = undefined;
-      const incidentType = 'type' in importResult.incident ? importResult.incident.type : undefined;
-      this.buildChosenFieldsFromDemisto(this.json);
-      this.buildIncidentFieldOptions(incidentType);
-      this.messageWithAutoClear.emit( { severity: 'success', summary: 'Success', detail: `Incident ${demistoIncidentIdToLoad} was successfully loaded from '${demistoEndpointNameToLoadFrom}'`} );
-      this.loadedIncidentConfigId = undefined;
-      this.loadedIncidentConfigName = undefined;
-      this.createInvestigation = true;
-      this.loadedJsonConfigId = undefined;
-      this.loadedJsonConfigName = undefined;
-      this.defaultJsonConfigId = undefined;
-      this.defaultJsonConfigName = undefined;
-
-      this.selectedIncidentType = incidentType;
-      this.setSelectedIncidentTypeIsAvailable();
-    }
-
-    else if (importResult.error === `Query returned 0 results`) {
-      this.messagesReplace.emit( [{ severity: 'error', summary: 'Failure', detail: `Incident ID ${demistoIncidentIdToLoad} was not found on XSOAR server '${demistoEndpointNameToLoadFrom}'`}] );
-    }
-
-    else {
-      this.messagesReplace.emit( [{ severity: 'error', summary: 'Error', detail: `Error returned fetching XSOAR incident ${demistoIncidentIdToLoad}: ${importResult.error}`}] );
-    }
-    return true;
+    this.selectedIncidentType = incidentType;
+    this.setSelectedIncidentTypeIsAvailable();
   }
 
   /// End Import Incident From XSOAR ///
