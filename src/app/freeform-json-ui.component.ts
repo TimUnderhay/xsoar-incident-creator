@@ -1814,19 +1814,21 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   /// Import Incident From XSOAR ///
 
-  async loadFromDemisto(demistoIncidentToLoad: string, demistoEndpointToLoadFrom: string): Promise<boolean> {
+  async loadFromDemisto(demistoIncidentIdToLoad: string, demistoEndpointToLoadFrom: string): Promise<boolean> {
     console.log('FreeformJsonUIComponent: loadFromDemisto()');
+
+    const demistoEndpointNameToLoadFrom = this.demistoEndpoints[demistoEndpointToLoadFrom].url;
 
     let importResult: DemistoIncidentImportResult;
     try {
-      importResult = await this.fetcherService.demistoIncidentImport(demistoIncidentToLoad, demistoEndpointToLoadFrom);
+      importResult = await this.fetcherService.demistoIncidentImport(demistoIncidentIdToLoad, demistoEndpointToLoadFrom);
     }
 
     catch (error) {
       if ('message' in error) {
         error = error.message;
       }
-      this.messagesReplace.emit( [{ severity: 'error', summary: 'Error', detail: `Error thrown pulling XSOAR incident ${demistoIncidentToLoad}: ${error}`}] );
+      this.messagesReplace.emit( [{ severity: 'error', summary: 'Error', detail: `Error thrown pulling XSOAR incident ID ${demistoIncidentIdToLoad}: ${error}`}] );
       return false;
     }
 
@@ -1838,7 +1840,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       const incidentType = 'type' in importResult.incident ? importResult.incident.type : undefined;
       this.buildChosenFieldsFromDemisto(this.json);
       this.buildIncidentFieldOptions(incidentType);
-      this.messageWithAutoClear.emit( { severity: 'success', summary: 'Success', detail: `Incident ${demistoIncidentToLoad} was successfully loaded from ${demistoEndpointToLoadFrom}`} );
+      this.messageWithAutoClear.emit( { severity: 'success', summary: 'Success', detail: `Incident ${demistoIncidentIdToLoad} was successfully loaded from '${demistoEndpointNameToLoadFrom}'`} );
       this.loadedIncidentConfigId = undefined;
       this.loadedIncidentConfigName = undefined;
       this.createInvestigation = true;
@@ -1852,11 +1854,11 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     else if (importResult.error === `Query returned 0 results`) {
-      this.messagesReplace.emit( [{ severity: 'error', summary: 'Failure', detail: `Incident ${demistoIncidentToLoad} was not found on XSOAR server ${demistoEndpointToLoadFrom}`}] );
+      this.messagesReplace.emit( [{ severity: 'error', summary: 'Failure', detail: `Incident ID ${demistoIncidentIdToLoad} was not found on XSOAR server '${demistoEndpointNameToLoadFrom}'`}] );
     }
 
     else {
-      this.messagesReplace.emit( [{ severity: 'error', summary: 'Error', detail: `Error returned fetching XSOAR incident ${demistoIncidentToLoad}: ${importResult.error}`}] );
+      this.messagesReplace.emit( [{ severity: 'error', summary: 'Error', detail: `Error returned fetching XSOAR incident ${demistoIncidentIdToLoad}: ${importResult.error}`}] );
     }
     return true;
   }
