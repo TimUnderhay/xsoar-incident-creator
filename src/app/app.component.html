@@ -74,6 +74,13 @@
           showDelay="750">
         </p-button>
 
+        <!-- Delete Incident -->
+        <p-button
+          label="Delete"
+          (onClick)="onDeleteIncidentConfigClicked()"
+          [disabled]="savedIncidentConfigurationsLen === 0">
+        </p-button>
+
         <!-- Import Mapped Config -->
         <p-button
           label="Import"
@@ -106,13 +113,6 @@
           pTooltip="Import an incident from a JSON file"
           showDelay="750">
         </p-fileUpload>
-
-        <!-- Delete Incident -->
-        <p-button
-          label="Delete Incidents"
-          (onClick)="onDeleteConfigClicked()"
-          [disabled]="savedIncidentConfigurationsLen === 0">
-        </p-button>
 
         <!-- JSON Groups -->
         <p-button
@@ -172,7 +172,7 @@
       (messageAdd)="messageAdd($event)"
       (messagesReplace)="messagesReplace($event)"
       (messageWithAutoClear)="messageWithAutoClear($event)"
-      (freeformJsonConfigurationsChanged)="getSavedJsonConfigurations()"
+      (freeformJsonConfigurationsChanged)="onFreeformJsonConfigurationsChanged()"
       (reloadFieldDefinitions)="fetchIncidentFieldDefinitions($event)"
       [fileAttachmentConfigs]="fileAttachmentConfigs"
       [fileAttachmentConfigsList]="fileAttachmentConfigsList"
@@ -414,7 +414,7 @@
 
         <p-button
           label="Cancel"
-          (onClick)="onNewDemistoEndpointCanceled()">
+          (onClick)="onNewDemistoEndpointCancelled()">
         </p-button>
 
       </div>
@@ -443,7 +443,7 @@
         [options]="savedIncidentConfigItems"
         [(ngModel)]="selectedIncidentConfigIdToOpen"
         [style]="{'width':'100%'}"
-        (onDblClick)="onConfigOpened()"
+        (onDblClick)="onIncidentConfigOpened()"
         [filter]="true">
       </p-listbox>
 
@@ -451,12 +451,12 @@
 
         <p-button
           label="Open"
-          (onClick)="onConfigOpened()">
+          (onClick)="onIncidentConfigOpened()">
         </p-button>
 
         <p-button
           label="Cancel"
-          (onClick)="onOpenCanceled()">
+          (onClick)="onOpenCancelled()">
         </p-button>
 
       </div>
@@ -478,7 +478,7 @@
 
       <p-listbox
         [options]="savedIncidentConfigItems"
-        [(ngModel)]="selectedDeleteConfigs"
+        [(ngModel)]="selectedDeleteIncidentConfigs"
         [multiple]="true"
         [filter]="true"
         [checkbox]="true"
@@ -494,7 +494,7 @@
 
         <p-button
           label="Cancel"
-          (onClick)="onDeleteConfigCanceled()">
+          (onClick)="onDeleteIncidentConfigCancelled()">
         </p-button>
 
       </div>
@@ -649,7 +649,7 @@
 
         <p-button
           label="Cancel"
-          (onClick)="onBulkCreateCanceled()">
+          (onClick)="onBulkCreateCancelled()">
         </p-button>
 
       </div>
@@ -802,7 +802,7 @@
             [disabled]="importFromDemistoAcceptDisabled">
           </p-button>
 
-          <p-button label="Cancel" (onClick)="onLoadFromDemistoCanceled()"></p-button>
+          <p-button label="Cancel" (onClick)="onLoadFromDemistoCancelled()"></p-button>
 
         </div>
       </form>

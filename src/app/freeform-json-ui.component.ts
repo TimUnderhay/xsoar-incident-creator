@@ -139,9 +139,6 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   // Delete JSON Config dialog
   showDeleteJsonConfigDialog = false;
   selectedDeleteJsonConfigIds: string[] = [];
-  get selectedDeleteJsonConfigNames(): string[] {
-    return this.selectedDeleteJsonConfigIds.map(val => this.savedJsonConfigurationsObj[val].name);
-  }
 
   // JSON Open dialog
   showJsonOpenDialog = false;
@@ -214,6 +211,11 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
     if (utils.changedSimpleChange('fetchedIncidentFieldDefinitions', values)) {
       this.updateChosenFieldLocks(false);
+    }
+
+    if (utils.changedSimpleChange('loadedIncidentConfigId', values) && this.loadedIncidentConfigId === undefined) {
+      this.defaultJsonConfigId = undefined;
+      this.defaultJsonConfigName = undefined;
     }
   }
 
@@ -519,8 +521,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  onDeleteAllIncidentFielsdClicked() {
-    console.log(`FreeformJsonUIComponent: onDeleteAllIncidentFielsdClicked()`);
+  onDeleteAllIncidentFieldsClicked() {
+    console.log(`FreeformJsonUIComponent: onDeleteAllIncidentFieldsClicked()`);
     this.confirmationService.confirm({
       message: `Are you sure you want to delete all incident fields?`,
       accept: () => this.onAllIncidentFieldsRemoved(),
@@ -1143,7 +1145,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
   buildSavedFieldConfig(fields: IncidentFieldUI[]): IncidentFieldsConfig {
-    let res: IncidentFieldsConfig = {};
+    const savedFieldConfig: IncidentFieldsConfig = {};
     for (const field of fields) {
       const name = field.shortName;
       const newField: IncidentFieldConfig  = {
@@ -1168,9 +1170,9 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
           newField.attachmentConfig = this.FileAttachmentUIConfigToAttachmentFieldConfig(field.attachmentConfig);
         }
       }
-      res[name] = newField;
+      savedFieldConfig[name] = newField;
     }
-    return res;
+    return savedFieldConfig;
   }
 
 
@@ -1452,7 +1454,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   /// Upload JSON Config ///
 
-  onRawJsonUploaded(data: { files: File }, uploadRef) {
+  onFreeformJsonUploaded(data: { files: File }, uploadRef) {
     let file = data.files[0];
     console.log('FreeformJsonUIComponent: onFreeformJsonUploaded(): file:', file);
 
@@ -1513,8 +1515,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  onJsonOpenCanceled() {
-    console.log('FreeformJsonUIComponent: onJsonOpenCanceled()');
+  onJsonOpenCancelled() {
+    console.log('FreeformJsonUIComponent: onJsonOpenCancelled()');
     this.showJsonOpenDialog = false;
   }
 
@@ -1587,8 +1589,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  onJsonSaveAsCanceled() {
-    console.log('FreeformJsonUIComponent: onJsonSaveAsCanceled()');
+  onJsonSaveAsCancelled() {
+    console.log('FreeformJsonUIComponent: onJsonSaveAsCancelled()');
     this.showJsonSaveAsDialog = false;
     this.incidentSaveAsConfigName = '';
   }
@@ -1602,6 +1604,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   onJsonDeleteConfigClicked() {
     console.log('FreeformJsonUIComponent: onJsonDeleteConfigClicked()');
     this.showDeleteJsonConfigDialog = true;
+    this.selectedDeleteJsonConfigIds = [];
     setTimeout( () => {
       // focus input element
       // cannot use ViewChild due to way modal is inserted into the DOM
@@ -1611,8 +1614,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  onJsonDeleteConfigCanceled() {
-    console.log('FreeformJsonUIComponent: onJsonDeleteConfigCanceled()');
+  onJsonDeleteConfigCancelled() {
+    console.log('FreeformJsonUIComponent: onJsonDeleteConfigCancelled()');
     this.showDeleteJsonConfigDialog = false;
   }
 
@@ -1621,10 +1624,18 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   onJsonDeleteConfigAccepted() {
     console.log('FreeformJsonUIComponent: onJsonDeleteConfigAccepted()');
     this.showDeleteJsonConfigDialog = false;
-    const selectedDeleteJsonConfigNames = this.selectedDeleteJsonConfigNames;
-    let message = `Are you sure that you would like to delete the configuration${utils.sPlural(selectedDeleteJsonConfigNames)}: ${selectedDeleteJsonConfigNames.join(', ')} ?`;
+
+    const selectedDeleteJsonConfigNames = this.selectedDeleteJsonConfigIds.map(val => `'${this.savedJsonConfigurationsObj[val].name}'`);
+
+    let message = `Are you sure that you would like to delete the JSON configuration${utils.sPlural(selectedDeleteJsonConfigNames)}: ${selectedDeleteJsonConfigNames.join(', ')} ?`;
     if (this.selectedDeleteJsonConfigIds.includes(this.loadedJsonConfigId) ) {
-      message = `Are you sure you want to delete the ACTIVE JSON configuration '${this.loadedJsonConfigName}' ?`;
+      message = `Are you sure you want to delete the ACTIVE JSON configuration '${this.loadedJsonConfigName}'`;
+      if (selectedDeleteJsonConfigNames.length > 1) {
+        const i = selectedDeleteJsonConfigNames.indexOf(this.loadedJsonConfigName);
+        selectedDeleteJsonConfigNames.splice(i, 1);
+        message += `, as well as configuration${utils.sPlural(selectedDeleteJsonConfigNames)} ${selectedDeleteJsonConfigNames.join(', ')}`;
+      }
+      message += ' ?';
     }
     this.confirmationService.confirm( {
       header: `Confirm Deletion`,
@@ -1658,7 +1669,9 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       this.defaultJsonConfigName = undefined;
     }
 
-    this.messageWithAutoClear.emit({severity: 'success', summary: 'Successful', detail: `Configuration${utils.sPlural(this.selectedDeleteJsonConfigIds)} ${this.selectedDeleteJsonConfigIds.join(', ')} ${utils.werePlural(this.selectedDeleteJsonConfigIds)} successfully deleted`});
+    const deletedConfigNames = this.selectedDeleteJsonConfigIds.map( id => `'${this.savedJsonConfigurationsObj[id].name}'`);
+
+    this.messageWithAutoClear.emit({severity: 'success', summary: 'Successful', detail: `Configuration${utils.sPlural(deletedConfigNames)} ${deletedConfigNames.join(', ')} ${utils.werePlural(deletedConfigNames)} successfully deleted`});
 
     this.selectedDeleteJsonConfigIds = []; // reset selection
   }
@@ -1935,7 +1948,6 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   async onIncidentSaveAsAccepted() {
     console.log('FreeformJsonUIComponent: onIncidentSaveAsAccepted()');
 
-    let newIncidentConfigName: string;
     let newIncidentConfigId: string;
 
     const incidentConfig: IncidentConfig = {
@@ -1944,11 +1956,13 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
       createInvestigation: this.createInvestigation,
       incidentType: this.selectedIncidentType
     };
+    if (this.defaultJsonConfigId) {
+      incidentConfig.defaultJsonId = this.defaultJsonConfigId;
+    }
     try {
       const res = await this.fetcherService.saveNewIncidentConfiguration(incidentConfig);
       newIncidentConfigId = res.id;
       this.messageWithAutoClear.emit({severity: 'success', summary: 'Successful', detail: `Configuration '${this.incidentSaveAsConfigName}' has been saved`});
-      newIncidentConfigName = this.incidentSaveAsConfigName;
       this.incidentSaveAsConfigName = '';
     }
     catch (error) {
@@ -1963,8 +1977,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
-  onIncidentSaveAsCanceled() {
-    console.log('FreeformJsonUIComponent: onIncidentSaveAsCanceled()');
+  onIncidentSaveAsCancelled() {
+    console.log('FreeformJsonUIComponent: onIncidentSaveAsCancelled()');
     this.showIncidentSaveAsDialog = false;
     this.incidentSaveAsConfigName = '';
   }

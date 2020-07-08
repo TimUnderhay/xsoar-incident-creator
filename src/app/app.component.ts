@@ -83,7 +83,7 @@ export class AppComponent implements OnInit {
 
   // Delete dialog
   showDeleteDialog = false;
-  selectedDeleteConfigs: string[] = [];
+  selectedDeleteIncidentConfigs: string[] = [];
 
   // Open dialog
   showOpenDialog = false;
@@ -358,7 +358,17 @@ export class AppComponent implements OnInit {
 
 
 
+  async onFreeformJsonConfigurationsChanged() {
+    console.log('AppComponent: onFreeformJsonConfigurationsChanged()');
+    await this.getSavedIncidentConfigurations();
+    await this.getSavedJsonConfigurations();
+    await this.getSavedJsonGroupConfigurations();
+  }
+
+
+
   async getSavedJsonGroupConfigurations() {
+    console.log('AppComponent: getSavedJsonGroupConfigurations()');
     try {
       this.jsonGroupConfigurations = await this.fetcherService.getSavedJsonGroupConfigurations();
       console.log('AppComponent: getSavedJsonGroupConfigurations(): savedJsonConfigurations:', this.jsonGroupConfigurations);
@@ -688,8 +698,8 @@ export class AppComponent implements OnInit {
 
 
 
-  onConfigOpened(config?: IncidentConfig) {
-    console.log('AppComponent: onConfigOpened()');
+  onIncidentConfigOpened(config?: IncidentConfig) {
+    console.log('AppComponent: onIncidentConfigOpened()');
     this.showOpenDialog = false;
     this.showJsonMappingUI = true;
     this.loadDefaultChosenFields = false;
@@ -704,9 +714,10 @@ export class AppComponent implements OnInit {
 
 
 
-  onDeleteConfigClicked() {
-    console.log('AppComponent: onDeleteConfigClicked()');
+  onDeleteIncidentConfigClicked() {
+    console.log('AppComponent: onDeleteIncidentConfigClicked()');
     this.showDeleteDialog = true;
+    this.selectedDeleteIncidentConfigs = [];
     setTimeout( () => {
       // focus input element
       // cannot use ViewChild due to way modal is inserted into the DOM
@@ -716,8 +727,8 @@ export class AppComponent implements OnInit {
 
 
 
-  onDeleteConfigCanceled() {
-    console.log('AppComponent: onDeleteConfigCanceled()');
+  onDeleteIncidentConfigCancelled() {
+    console.log('AppComponent: onDeleteIncidentConfigCancelled()');
     this.showDeleteDialog = false;
   }
 
@@ -732,26 +743,29 @@ export class AppComponent implements OnInit {
   onDeleteIncidentConfigAccepted() {
     console.log('AppComponent: onDeleteIncidentConfigAccepted()');
     this.showDeleteDialog = false;
-    let message = `Are you sure that you would like to delete the configuration${utils.sPlural(this.selectedDeleteConfigs)}: ${this.selectedDeleteConfigs.join(', ')} ?`;
-    if (this.selectedDeleteConfigs.includes(this.loadedIncidentConfigId) ) {
+    let activeConfig = false;
+    const configNames = this.selectedDeleteIncidentConfigs.map( incidentId => this.savedIncidentConfigurations[incidentId].name);
+    let message = `Are you sure that you would like to delete the configuration${utils.sPlural(configNames)}: ${configNames.join(', ')} ?`;
+    if (this.selectedDeleteIncidentConfigs.includes(this.loadedIncidentConfigId) ) {
+      activeConfig = true;
       message = `Are you sure you want to delete the ACTIVE configuration '${this.loadedIncidentConfigName}' ?`;
     }
     this.confirmationService.confirm( {
       header: `Confirm Deletion`,
       message,
-      accept: () => this.onDeleteIncidentConfigConfirmed(),
+      accept: () => this.onDeleteIncidentConfigConfirmed(activeConfig),
       icon: 'pi pi-exclamation-triangle'
     });
   }
 
 
 
-  async onDeleteIncidentConfigConfirmed() {
+  async onDeleteIncidentConfigConfirmed(activeConfig: boolean) {
     console.log('AppComponent: onDeleteIncidentConfigConfirmed()');
 
     const selectedDeleteConfigNames: string[] = [];
 
-    this.selectedDeleteConfigs.forEach( async configId => {
+    this.selectedDeleteIncidentConfigs.forEach( async configId => {
       selectedDeleteConfigNames.push(this.savedIncidentConfigurations[configId].name);
       try {
         await this.fetcherService.deleteIncidentConfiguration(configId);
@@ -762,10 +776,7 @@ export class AppComponent implements OnInit {
       }
     });
 
-    // console.log('AppComponent: onDeleteIncidentConfigConfirmed(): selectedDeleteConfigs:', this.selectedDeleteConfigs);
-    // console.log('AppComponent: onDeleteIncidentConfigConfirmed(): loadedIncidentConfigName:', this.loadedIncidentConfigName);
-
-    if (this.selectedDeleteConfigs.includes(this.loadedIncidentConfigId)) {
+    if (activeConfig) {
       this.loadedIncidentConfigId = undefined;
       this.loadedIncidentConfigName = undefined;
     }
@@ -774,7 +785,7 @@ export class AppComponent implements OnInit {
     await this.getSavedIncidentConfigurations();
     this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration${utils.sPlural(selectedDeleteConfigNames)} ${selectedDeleteConfigNames.join(', ')} was successfully deleted`});
 
-    this.selectedDeleteConfigs = []; // reset selection
+    this.selectedDeleteIncidentConfigs = []; // reset selection
   }
 
 
@@ -791,7 +802,7 @@ export class AppComponent implements OnInit {
 
 
 
-  onOpenCanceled() {
+  onOpenCancelled() {
     console.log('AppComponent: onOpenCancelled()');
     this.showOpenDialog = false;
   }
@@ -1069,8 +1080,8 @@ export class AppComponent implements OnInit {
 
 
 
-  onBulkCreateCanceled() {
-    console.log('AppComponent: onBulkCreateCanceled()');
+  onBulkCreateCancelled() {
+    console.log('AppComponent: onBulkCreateCancelled()');
     this.showBulkCreateDialog = false;
   }
 
@@ -1576,7 +1587,7 @@ export class AppComponent implements OnInit {
 
 
 
-  onNewDemistoEndpointCanceled() {
+  onNewDemistoEndpointCancelled() {
     this.showNewDemistoEndpointDialog = false;
     this.showDemistoEndpointOpenDialog = true;
     this.editingDemistoServerId = undefined;
@@ -1849,7 +1860,7 @@ export class AppComponent implements OnInit {
 
 
 
-  onLoadFromDemistoCanceled() {
+  onLoadFromDemistoCancelled() {
     this.showLoadFromDemistoDialog = false;
   }
 
@@ -2379,7 +2390,7 @@ export class AppComponent implements OnInit {
     const idsMatch = this.loadedIncidentConfigId === this.mappingToImport.id;
 
     if (namesMatch || idsMatch) {
-      this.onConfigOpened(this.mappingToImport);
+      this.onIncidentConfigOpened(this.mappingToImport);
     }
   }
 

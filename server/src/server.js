@@ -1175,7 +1175,7 @@ app.delete(apiPath + '/json/:id', async (req, res) => {
   // delete a freeform JSON config
   const id = req.params.id;
   let saveGroups = false;
-  let saveIncidents = false;
+  let saveIncidentConfigs = false;
   if (freeJsonConfig.hasOwnProperty(id)) {
     const jsonName = freeJsonConfig[id].name;
     delete freeJsonConfig[id];
@@ -1203,7 +1203,7 @@ app.delete(apiPath + '/json/:id', async (req, res) => {
     if (saveGroups) {
       await saveJsonGroupsConfig();
     }
-    if (saveIncidents) {
+    if (saveIncidentConfigs) {
       await saveIncidentsConfig();
     }
     res.status(200).json({id, success: true});

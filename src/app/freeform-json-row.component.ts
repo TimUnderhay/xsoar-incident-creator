@@ -82,6 +82,7 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     this.fieldChange.emit(this.field);
   }
 
+  deleteFieldDisabled = false;
 
   // RxJS Subscriptions
   private subscriptions = new Subscription();
@@ -186,6 +187,8 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
     this.subscriptions.add( this.fetcherService.fieldMappingSelectionReceived.subscribe( (segment: Segment) => this.onFieldMappingSelectionReceived(segment) ));
 
     this.subscriptions.add( this.fetcherService.fieldMappingSelectionEnded.subscribe( () => this.onFieldMappingSelectionEnded() ));
+
+    this.deleteFieldDisabled = ['type'].includes(this.field.shortName);
   }
 
 
@@ -270,9 +273,12 @@ export class FreeformJsonRowComponent implements OnInit, OnChanges, OnDestroy {
 
 
   onDeleteFieldClicked() {
+    if (this.deleteFieldDisabled) {
+      return;
+    }
     console.log(`FreeformJsonRowComponent: onDeleteFieldClicked(): field: ${this.field.shortName}`);
     this.confirmationService.confirm({
-      message: `Are you sure you want to delete field ${this.field.shortName}?`,
+      message: `Are you sure you want to delete field '${this.field.shortName}'?`,
       accept: () => this.onDeleteFieldConfirmed(),
       icon: 'pi pi-exclamation-triangle'
     });

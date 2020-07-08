@@ -202,9 +202,10 @@
 
       <div
         class="pi pi-times enabledIcon"
+        [class.disabledIcon]="deleteFieldDisabled"
         style="margin-left: .1em; font-size: 2em;"
         (click)="onDeleteFieldClicked()"
-        pTooltip="Delete field"
+        [pTooltip]="deleteFieldDisabled ? undefined : 'Delete field'"
         showDelay="750">
       </div>
       

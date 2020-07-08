@@ -223,6 +223,10 @@ header {
   color: white;
 }
 
+.disabledIcon {
+  color: rgb(51, 51, 51);
+}
+
 .jmesPathError,
 .transformerError {
   color: red;
@@ -238,10 +242,6 @@ header {
     margin: .25em 0;
     flex-shrink: 0;
   }
-}
-
-.disabledIcon {
-  color: rgb(51, 51, 51);
 }
 
 .locked {

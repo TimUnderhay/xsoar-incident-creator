@@ -351,9 +351,9 @@ export class FetcherService {
 
 
 
-  deleteFreeformJSONConfiguration(name: string): Promise<any> {
+  deleteFreeformJSONConfiguration(id: string): Promise<any> {
     const headers = this.buildHeaders();
-    return this.http.delete(this.apiPath + `/json/${encodeURIComponent(name)}`, { headers } )
+    return this.http.delete(this.apiPath + `/json/${encodeURIComponent(id)}`, { headers } )
                     .toPromise();
   }
 
