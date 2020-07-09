@@ -384,7 +384,7 @@
     <div class="formLabel">Configuration to open</div>
 
     <p-listbox
-      [options]="freeformJsonConfigurationItems"
+      [options]="savedJsonConfigurationItems"
       [(ngModel)]="selectedJsonOpenConfig"
       [style]="{'width':'100%'}"
       (onDblClick)="onJsonConfigOpened()"
@@ -461,7 +461,7 @@
     <div class="formLabel">JSON Configurations to delete</div>
 
     <p-listbox
-      [options]="freeformJsonConfigurationItems"
+      [options]="savedJsonConfigurationItems"
       [(ngModel)]="selectedDeleteJsonConfigIds"
       [multiple]="true"
       [filter]="true"

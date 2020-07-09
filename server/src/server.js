@@ -10,6 +10,8 @@ const exec = util.promisify(require('child_process').exec);
 const mv = util.promisify(require('mv'));
 const fs = require('fs');
 
+const SchemaVersion = 1;
+
 // Directories
 const configDir = '../etc';
 const defsDir = `./definitions`; // contains static user definitions
@@ -145,14 +147,21 @@ function isArray(value) {
 
 
 function saveFreeJsonConfig() {
-  const savedJsonConfig = Object.values(freeJsonConfig);
-  return fs.promises.writeFile(freeJsonFile, JSON.stringify(savedJsonConfig, null, 2), { encoding: 'utf8', mode: 0o660});
+  const savedConfig = {
+    schema: SchemaVersion,
+    jsonConfigs: Object.values(freeJsonConfig)
+  };
+  return fs.promises.writeFile(freeJsonFile, JSON.stringify(savedConfig, null, 2), { encoding: 'utf8', mode: 0o660});
 }
 
 
 
 function saveJsonGroupsConfig() {
-  return fs.promises.writeFile(jsonGroupsFile, JSON.stringify(Object.values(jsonGroupsConfig), null, 2), { encoding: 'utf8', mode: 0o660});
+  const savedConfig = {
+    schema: SchemaVersion,
+    jsonGroups: Object.values(jsonGroupsConfig)
+  };
+  return fs.promises.writeFile(jsonGroupsFile, JSON.stringify(savedConfig, null, 2), { encoding: 'utf8', mode: 0o660});
 }
 
 
@@ -229,20 +238,26 @@ function removeEmptyValues(obj) {
 
 
 function saveApiConfig() {
-  const config = {
-    servers: Object.values(demistoApiConfigs)
+  const savedConfig = {
+    schema: SchemaVersion,
+    endpointConfig: {
+      servers: Object.values(demistoApiConfigs)
+    }
   };
   if (defaultDemistoApiId) {
-    config['default'] = defaultDemistoApiId;
+    savedConfig.endpointConfig['default'] = defaultDemistoApiId;
   }
-  return fs.promises.writeFile(apiCfgFile, JSON.stringify(config, null, 2), { encoding: 'utf8', mode: 0o660} );
+  return fs.promises.writeFile(apiCfgFile, JSON.stringify(savedConfig, null, 2), { encoding: 'utf8', mode: 0o660} );
 }
 
 
 
 function saveAttachmentsConfig() {
-  const tempAttachmentsConfig = Object.values(attachmentsConfig);
-  return fs.promises.writeFile(attachmentsFile, JSON.stringify(tempAttachmentsConfig, null, 2), { encoding: 'utf8', mode: 0o660} );
+  const savedConfig = {
+    schema: SchemaVersion,
+    attachments: Object.values(attachmentsConfig)
+  }
+  return fs.promises.writeFile(attachmentsFile, JSON.stringify(savedConfig, null, 2), { encoding: 'utf8', mode: 0o660} );
 }
 
 
@@ -457,8 +472,11 @@ async function getIncidentTypes(demistoUrl) {
 
 function saveIncidentsConfig() {
   calculateRequiresJson();
-  const savedIncidentsConfig = Object.values(incidentsConfig);
-  return fs.promises.writeFile(incidentsFile, JSON.stringify(savedIncidentsConfig, null, 2), { encoding: 'utf8', mode: 0o660});
+  const savedConfig = {
+    schema: SchemaVersion,
+    incidentConfigs: Object.values(incidentsConfig)
+  };
+  return fs.promises.writeFile(incidentsFile, JSON.stringify(savedConfig, null, 2), { encoding: 'utf8', mode: 0o660});
 }
 
 
@@ -1781,17 +1799,19 @@ async function loadDemistoApiConfigs() {
     console.log('No XSOAR API configuration file was found');
   }
   else {
-    const parsedApiConfig = JSON.parse(fs.readFileSync(apiCfgFile, 'utf8'));
+    const loadedConfig = JSON.parse(fs.readFileSync(apiCfgFile, 'utf8'));
+    const schema = loadedConfig.schema;
     // console.log(parsedApiConfig);
+    const endpointConfig = loadedConfig.endpointConfig;
 
-    for (const apiConfig of parsedApiConfig.servers) {
+    for (const apiConfig of endpointConfig.servers) {
       demistoApiConfigs[apiConfig.id] = apiConfig;
     }
 
     // identify the default demisto api config
     let demistoServerConfig;
-    if (parsedApiConfig.hasOwnProperty('default')) {
-      defaultDemistoApiId = parsedApiConfig.default;
+    if (endpointConfig.hasOwnProperty('default')) {
+      defaultDemistoApiId = endpointConfig.default;
       demistoServerConfig = getDemistoApiConfig(defaultDemistoApiId);
       console.log(`The default API config is '${demistoServerConfig.url}'`);
     }
@@ -1840,7 +1860,8 @@ function loadIncidentsConfig() {
   else {
     try {
       const loadedIncidentsConfig = JSON.parse(fs.readFileSync(incidentsFile, 'utf8'));
-      for (const config of loadedIncidentsConfig) {
+      const schema = loadedIncidentsConfig.schema;
+      for (const config of loadedIncidentsConfig.incidentConfigs) {
         incidentsConfig[config.id] = config;
       }
     }
@@ -1863,7 +1884,8 @@ function loadFreeJsonConfig() {
   else {
     try {
       const loadedConfig = JSON.parse(fs.readFileSync(freeJsonFile, 'utf8'));
-      for (const config of loadedConfig) {
+      const schema = loadedConfig.schema;
+      for (const config of loadedConfig.jsonConfigs) {
         freeJsonConfig[config.id] = config;
       }
     }
@@ -1886,8 +1908,9 @@ function loadJsonGroupsConfig() {
   else {
     try {
       const tmpJsonGroupsConfig = {};
-      const readConfig = JSON.parse(fs.readFileSync(jsonGroupsFile, 'utf8'));
-      for (const config of readConfig) {
+      const loadedConfig = JSON.parse(fs.readFileSync(jsonGroupsFile, 'utf8'));
+      const schema = loadedConfig.schema;
+      for (const config of loadedConfig.jsonGroups) {
         tmpJsonGroupsConfig[config.id] = config;
       }
       jsonGroupsConfig = tmpJsonGroupsConfig;
@@ -1909,7 +1932,8 @@ function loadAttachmentsConfig() {
   else {
     try {
       const loadedConfig = JSON.parse(fs.readFileSync(attachmentsFile, 'utf8'));
-      for (const config of loadedConfig) {
+      const schema = loadedConfig.schema;
+      for (const config of loadedConfig.attachments) {
         attachmentsConfig[config.id] = config;
       }
     }

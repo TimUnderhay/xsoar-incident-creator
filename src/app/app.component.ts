@@ -185,7 +185,7 @@ export class AppComponent implements OnInit {
   }
   set savedJsonConfigurations(value: JSONConfigRef[]) {
     this._savedJsonConfigurations = value;
-    this.savedJsonConfigurationItems = value.map( val => ({value: val.id, label: val.name} as SelectItem));
+    this.savedJsonConfigurationItems = value.map( val => ({value: val.id, label: val.name} as SelectItem)).sort();
     const savedJsonConfigurationsObj = {};
     for (const config of this._savedJsonConfigurations) {
       savedJsonConfigurationsObj[config.id] = config;

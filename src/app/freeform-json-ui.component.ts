@@ -100,6 +100,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   defaultJsonConfigName: string;
   @Input() savedJsonConfigurations: JSONConfigRef[];
   @Input() savedJsonConfigurationsObj: JSONConfigRefs;
+  @Input() savedJsonConfigurationItems: SelectItem[];
   @Output() freeformJsonConfigurationsChanged = new EventEmitter<void>();
 
   // Blacklisted field types
@@ -126,7 +127,6 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     { value: true, label: 'Enabled' },
     { value: false, label: 'Disabled' }
   ];
-  freeformJsonConfigurationItems: SelectItem[];
 
   // UI State
   displayIncidentFieldShortNames = true;
@@ -200,10 +200,6 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   ngOnChanges(values: SimpleChanges) {
     // console.log('FreeformJsonUIComponent: ngOnChanges(): values:', values);
-
-    if (utils.firstOrChangedSimpleChange('savedJsonConfigurations', values)) {
-      this.freeformJsonConfigurationItems = this.savedJsonConfigurations.map( config => ( { value: config.id, label: config.name } as SelectItem) ).sort();
-    }
 
     if (utils.firstOrChangedSimpleChange('fetchedIncidentTypes', values)) {
       this.buildIncidentTypeItems();
