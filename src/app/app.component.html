@@ -1,27 +1,31 @@
-<ng-container *ngIf="loggedInUser">
+<div class="appContainer">
 
-  <div class="formContainer">
+  <div style="position: absolute; right: 2em;">
+    v{{version}}
+  </div>
 
-    <div style="position: absolute; right: 2em;">
-      v{{version}}
-    </div>
+  <div class="appHeader">
 
-    <div class="appHeader">
+    <img src="/assets/incident_creator_logo.png" style="margin-top: 1em;">
 
-      <img src="/assets/incident_creator_logo.png" style="margin-top: 1em;">
-
-    </div>
+  </div>
 
 
-    <!--<div style="margin-top: 1em; margin-right: 1em; float: right;">Logged in as: <span style="font-weight: bold;"> {{loggedInUser.username}}</span></div>-->
+  <!--<div style="margin-top: 1em; margin-right: 1em; float: right;">Logged in as: <span style="font-weight: bold;"> {{loggedInUser.username}}</span></div>-->
 
-    
+  <div style="margin-top: 0; margin-bottom: 1em;">This app creates Cortex XSOAR incidents from JSON data.  The data can be either incident JSON imported from XSOAR or mapped from 3rd-party JSON sources.  The fields to be imported are selectable and editable.  These can be saved in configurations for easy retrieval.</div>
+  
+  <ng-container *ngIf="!loggedInUser; else loggedIn">
+
+    <h2>
+      Logged in user not yet obtained from API
+    </h2>
+  
+  </ng-container>
 
 
 
-    <div style="margin-top: 0; margin-bottom: 1em;">This app creates Cortex XSOAR incidents from JSON data.  The data can be either incident JSON imported from XSOAR or mapped from 3rd-party JSON sources.  The fields to be imported are selectable and editable.  These can be saved in configurations for easy retrieval.</div>
-
-
+  <ng-template #loggedIn>
 
     <!-- XSOAR Servers-->
     <p-card header="XSOAR Servers">
@@ -186,7 +190,9 @@
     
     <div>&nbsp;</div>
 
-  </div>
+  </ng-template>
+
+</div>
 
 
 
@@ -1409,23 +1415,11 @@
 
   </div>
 
-</ng-container>
 
-
-
-
-<ng-container *ngIf="!loggedInUser">
-
-  <div>
-    Logged in user not yet obtained from API
+  <!-- JSON Selection Mode Pop-up -->
+  <div
+    *ngIf="showFieldMappingSelectionBox"
+    class="fieldMappingSelection">
+    JSON field selection mode is active.<br><br>
+    To cancel, click outside of the JSON area.
   </div>
-
-</ng-container>
-
-
-<div
-  *ngIf="showFieldMappingSelectionBox"
-  class="fieldMappingSelection">
-  JSON field selection mode is active.<br><br>
-  To cancel, click outside of the JSON area.
-</div>
