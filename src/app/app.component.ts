@@ -20,6 +20,7 @@ import { FileAttachmentConfig, FileAttachmentConfigs, FileToPush } from './types
 import { FileUpload } from 'primeng/fileupload';
 import { JSONConfigRef, JSONConfigRefs } from './types/json-config';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
+import { version } from '../../package.json';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -48,6 +49,7 @@ export class AppComponent implements OnInit {
   @ViewChild('attachmentUploader') attachmentUploaderComponent: FileUpload;
 
   loggedInUser: User;
+  version = version;
 
   // Endpoint Properties
   demistoEndpoints: DemistoEndpoints;
@@ -324,6 +326,8 @@ export class AppComponent implements OnInit {
       catch (error) {
         console.error('AppComponent: ngOnInit(): Caught error fetching Demisto incident types:', error);
       }
+
+      console.log('version:', version);
     }
 
     const initPromises = [];
