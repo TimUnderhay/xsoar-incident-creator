@@ -215,8 +215,11 @@ export class AppComponent implements OnInit {
   jsonFileAndGroupConfigurationsItems: SelectItem[] = [];
   // tslint:disable-next-line:variable-name
   jsonGroupDialog_jsonGroupSelection: string;
-  showNewJsonConfigDialog = false;
+  showNewJsonGroupDialog = false;
+  showRenameJsonGroupDialog = false;
+  showRenameJsonConfigDialog = false;
   newJsonGroupConfigName: string;
+  renameJsonGroupConfigName: string;
   showJsonGroupDeleteDialog = false;
   jsonGroupDialogItems = {}; // temporary holder for group membership items in JSON Groups dialog
   // tslint:disable-next-line:variable-name
@@ -224,6 +227,10 @@ export class AppComponent implements OnInit {
   get newJsonGroupAcceptButtonDisabled(): boolean {
     const jsonGroupNames = Object.values(this.jsonGroupConfigurations).map( jsonGroup => jsonGroup.name );
     return jsonGroupNames.includes(this.newJsonGroupConfigName);
+  }
+  get renameJsonGroupAcceptButtonDisabled(): boolean {
+    const jsonGroupNames = Object.values(this.jsonGroupConfigurations).map( jsonGroup => jsonGroup.name );
+    return jsonGroupNames.includes(this.renameJsonGroupConfigName);
   }
 
   // File Attachments Config & UI
@@ -1022,7 +1029,8 @@ export class AppComponent implements OnInit {
 
       const bulkConfigToPush: BulkCreateConfigurationToPush = {
         incidentConfigId,
-        endpoints: bulkCreateSelection.endpoints.join(', ')
+        endpointIds: bulkCreateSelection.endpoints.join(', '),
+        endpointNames: bulkCreateSelection.endpoints.map(id => this.demistoEndpoints[id].url).join(', ')
       };
 
 
@@ -1950,6 +1958,10 @@ export class AppComponent implements OnInit {
 
 
 
+  /// JSON Groups ///
+
+
+
   refreshJsonGroupUIConfig() {
     console.log('AppComponent: refreshJsonGroupUIConfig()');
     console.log('AppComponent: refreshJsonGroupUIConfig(): jsonGroupConfigurationsItems:', this.jsonGroupConfigurationsItems);
@@ -1980,8 +1992,7 @@ export class AppComponent implements OnInit {
 
   async onNewJsonGroupClicked() {
     console.log('AppComponent: onNewJsonGroupClicked()');
-    this.showNewJsonConfigDialog = true;
-    // this.showJsonGroupsDialog = false;
+    this.showNewJsonGroupDialog = true;
     this.newJsonGroupConfigName = '';
     setTimeout( () =>
       document.getElementsByClassName('newJsonGroupConfigDialog')[0].getElementsByTagName('input')[0].focus()
@@ -1996,7 +2007,7 @@ export class AppComponent implements OnInit {
       name: this.newJsonGroupConfigName,
       jsonFileIds: []
     };
-    this.showNewJsonConfigDialog = false;
+    this.showNewJsonGroupDialog = false;
 
     try {
       const res = await this.fetcherService.saveNewJsonGroupConfiguration(newJsonGroupConfig);
@@ -2007,6 +2018,36 @@ export class AppComponent implements OnInit {
     }
     catch (error) {
       console.error('AppComponent: onNewJsonGroupAccepted(): Caught error saving JSON Groups configurations:', error);
+      return;
+    }
+  }
+
+
+
+  async onRenameJsonGroupClicked() {
+    console.log('AppComponent: onRenameJsonGroupClicked()');
+    this.showRenameJsonGroupDialog = true;
+    this.renameJsonGroupConfigName = this.jsonGroupConfigurations[this.jsonGroupDialog_jsonGroupSelection].name;
+    setTimeout( () =>
+      document.getElementsByClassName('renameJsonGroupConfigDialog')[0].getElementsByTagName('input')[0].focus()
+      , 100);
+  }
+
+
+
+  async onRenameJsonGroupAccepted() {
+    console.log('AppComponent: onRenameJsonGroupAccepted()');
+    const id = this.jsonGroupDialog_jsonGroupSelection;
+    const jsonGroupConfig = this.jsonGroupConfigurations[id];
+    jsonGroupConfig.name = this.renameJsonGroupConfigName;
+    this.showRenameJsonGroupDialog = false;
+
+    try {
+      const res = await this.fetcherService.saveUpdatedJsonGroupConfiguration(jsonGroupConfig);
+      await this.getSavedJsonGroupConfigurations();
+    }
+    catch (error) {
+      console.error('AppComponent: onRenameJsonGroupAccepted(): Caught error saving JSON Groups configurations:', error);
       return;
     }
   }
@@ -2064,6 +2105,10 @@ export class AppComponent implements OnInit {
     await this.getSavedJsonGroupConfigurations();
     this.showJsonGroupsDialog = false;
   }
+
+
+
+  /// END JSON Groups ///
 
 
 

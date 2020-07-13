@@ -603,7 +603,7 @@
 
         <div
           class="bulkIncidentsToPush"
-          style="margin-top: 1em;">
+          style="margin-top: 1em; margin-left: 2.5em;">
 
           <div *ngFor="let item of bulkConfigurationsToPush">
             
@@ -618,7 +618,6 @@
                   JSON Configs: 
               </span>
               
-              <!-- !!! Needs to be transformed to names !!! -->
               <span>{{item.jsonFileNames}}</span>
             
             </div>
@@ -630,7 +629,6 @@
                   JSON Groups: 
               </span>
               
-              <!-- !!! Needs to be transformed to names !!! -->
               <span>{{item.jsonGroupNames}}</span>
             
             </div>
@@ -642,7 +640,7 @@
                   Endpoints: 
               </span>
               
-              <span>{{item.endpoints}}</span>
+              <span>{{item.endpointNames}}</span>
             
             </div>
 
@@ -840,6 +838,14 @@
           styleClass="alignButton">
         </p-button>
 
+        <!-- Rename -->
+        <p-button
+          label="Rename"
+          (onClick)="onRenameJsonGroupClicked()"
+          [disabled]="!jsonGroupDialog_jsonGroupSelection"
+          styleClass="alignButton">
+        </p-button>
+
         <!-- Delete -->
         <p-button
           *ngIf="demistoEndpointsLen !== 0"
@@ -943,10 +949,10 @@
 
 
 
-  <!-- New JSON Group As Dialog -->
+  <!-- New JSON Group Dialog -->
   <p-dialog
     header="New JSON Group"
-    [(visible)]="showNewJsonConfigDialog"
+    [(visible)]="showNewJsonGroupDialog"
     [modal]="true"
     [style]="{width: '300px'}"
     styleClass="newJsonGroupConfigDialog">
@@ -966,7 +972,45 @@
 
         <p-button label="Save" (onClick)="onNewJsonGroupAccepted()" [disabled]="newJsonGroupAcceptButtonDisabled"></p-button>
 
-        <p-button label="Cancel" (onClick)="showNewJsonConfigDialog = false"></p-button>
+        <p-button label="Cancel" (onClick)="showNewJsonGroupDialog = false"></p-button>
+
+      </div>
+
+  </p-dialog>
+
+
+
+  <!-- Rename JSON Group Dialog -->
+  <p-dialog
+    header="Rename JSON Group"
+    [(visible)]="showRenameJsonGroupDialog"
+    [modal]="true"
+    [style]="{width: '300px'}"
+    styleClass="renameJsonGroupConfigDialog">
+
+      <div style="margin-bottom: .5em;" class="formLabel">New JSON Group Name</div>
+
+      <input
+        pInputText
+        #saveAsJsonInput
+        type="text"
+        [(ngModel)]="renameJsonGroupConfigName"
+        class="inputDisplay"/>
+
+      <div style="margin-top: .5em;">{{renameJsonGroupAcceptButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+
+      <div style="margin-top: .5em; float: right;">
+
+        <p-button
+          label="Save"
+          (onClick)="onRenameJsonGroupAccepted()"
+          [disabled]="newJsonGroupAcceptButtonDisabled">
+        </p-button>
+
+        <p-button
+          label="Cancel"
+          (onClick)="showRenameJsonGroupDialog = false">
+        </p-button>
 
       </div>
 

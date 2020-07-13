@@ -192,7 +192,8 @@ freeform-json-row,
   width: 100%;
 }
 
-header {
+header,
+.jsonDataHeader {
   color: rgb(118, 139, 161);
   font-weight: bold;
 }

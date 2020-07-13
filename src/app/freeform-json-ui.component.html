@@ -3,11 +3,27 @@
   *ngIf="loadedIncidentConfigName"
   header="Loaded Mapping Name">
   
-    <div style="margin-top: 1em;">
+    <div style="margin-top: 1em; display: flex;">
 
-      <span class="formLabel" style="font-size: 18px;">{{loadedIncidentConfigName}}</span>
+      <vertical-center>
+
+        <span class="formLabel" style="line-height: 1em; font-size: 1.3em;">
+          {{loadedIncidentConfigName}}&nbsp;
+        </span>
+
+      </vertical-center>
+
+      <vertical-center>
+        <span
+          class="pi pi-pencil"
+          style="font-size: 2em; color: white;"
+          (click)="onRenameIncidentConfigClicked()">
+        </span>
+      </vertical-center>
 
     </div>
+
+
 
 </p-card>
 
@@ -214,11 +230,26 @@
       <ng-template #menuBar>
 
         <!-- Loaded JSON Name -->
-        <header
+        <div
           *ngIf="loadedJsonConfigName"
-          style="margin: .25em 0 .25em 0;">
-            Loaded{{loadedJsonConfigName === defaultJsonConfigName ? ' (*Default)' : undefined}}: <span style="color: white">{{loadedJsonConfigName}}</span>
-        </header>
+          class="jsonDataHeader"
+          style="margin: .25em 0 .25em 0; display: flex; font-size: 1rem;">
+
+            <vertical-center>
+
+              Loaded{{loadedJsonConfigName === defaultJsonConfigName ? ' (*Default)' : undefined}}: <span style="color: white">{{loadedJsonConfigName}}</span>
+
+            </vertical-center>
+
+            <vertical-center>
+              <span
+                class="pi pi-pencil"
+                style="font-size: 1.5rem; color: white;"
+                (click)="onRenameJsonFileClicked()">
+              </span>
+            </vertical-center>
+
+          </div>
 
         <!-- Menu Bar -->
         <div>
@@ -750,7 +781,7 @@
 
     <!-- JSON Group Members Column -->
     <div
-      *ngIf="defaultJsonDialog_selectedJsonGroupId"
+      *ngIf="defaultJsonDialog_selectedJsonGroupId && jsonGroupConfigurations[defaultJsonDialog_selectedJsonGroupId]"
       class="bulkCreateContainerColumn">
 
       <div style="margin-bottom: 1em;">
@@ -758,7 +789,7 @@
         <span class="formLabel">
           Group Members
         </span>
-        
+
       </div>
 
       <div
@@ -788,5 +819,81 @@
     </p-button>
 
   </div>
+
+</p-dialog>
+
+
+
+<!-- Rename Incident Config Dialog -->
+<p-dialog
+  header="Rename Incident Config"
+  [(visible)]="showRenameIncidentConfigDialog"
+  [modal]="true"
+  [style]="{width: '300px'}"
+  styleClass="renameIncidentConfigDialog">
+
+    <div style="margin-bottom: .5em;" class="formLabel">New Incident Config Name</div>
+
+    <input
+      pInputText
+      #saveAsJsonInput
+      type="text"
+      [(ngModel)]="renameIncidentConfigName"
+      class="inputDisplay"/>
+
+    <div style="margin-top: .5em;">{{renameIncidentConfigAcceptButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+
+    <div style="margin-top: .5em; float: right;">
+
+      <p-button
+        label="Save"
+        (onClick)="onRenameIncidentConfigAccepted()"
+        [disabled]="renameIncidentConfigAcceptButtonDisabled">
+      </p-button>
+
+      <p-button
+        label="Cancel"
+        (onClick)="showRenameIncidentConfigDialog = false">
+      </p-button>
+
+    </div>
+
+</p-dialog>
+
+
+
+<!-- Rename JSON File Dialog -->
+<p-dialog
+  header="Rename JSON File"
+  [(visible)]="showRenameJsonFileDialog"
+  [modal]="true"
+  [style]="{width: '300px'}"
+  styleClass="renameJsonFileConfigDialog">
+
+    <div style="margin-bottom: .5em;" class="formLabel">New JSON File Name</div>
+
+    <input
+      pInputText
+      #saveAsJsonInput
+      type="text"
+      [(ngModel)]="renameJsonFileName"
+      class="inputDisplay"/>
+
+    <div style="margin-top: .5em;">{{renameJsonFileAcceptButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+
+    <div style="margin-top: .5em; float: right;">
+
+      <p-button
+        label="Save"
+        (onClick)="onRenameJsonFileAccepted()"
+        [disabled]="renameJsonFileAcceptButtonDisabled">
+      </p-button>
+
+      <p-button
+        label="Cancel"
+        (onClick)="showRenameJsonFileDialog = false">
+      </p-button>
+
+    </div>
 
 </p-dialog>

@@ -17,7 +17,8 @@ export interface BulkCreateConfigurationToPush {
   jsonGroupNames?: string;
   jsonFileIds?: string;
   jsonFileNames?: string;
-  endpoints: string;
+  endpointIds?: string;
+  endpointNames: string;
   incidentConfigId: string;
 }
 

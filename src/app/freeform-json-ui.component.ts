@@ -187,6 +187,20 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   // tslint:disable-next-line:variable-name
   defaultJsonDialog_selectedJsonGroupId: string;
 
+  // Rename Incident Config Dialog
+  showRenameIncidentConfigDialog = false;
+  renameIncidentConfigName: string;
+  get renameIncidentConfigAcceptButtonDisabled(): boolean {
+    return this.renameIncidentConfigName && Object.values(this.savedIncidentConfigurations).map(config => config.name).includes(this.renameIncidentConfigName);
+  }
+
+  // Rename Json File Dialog
+  showRenameJsonFileDialog = false;
+  renameJsonFileName: string;
+  get renameJsonFileAcceptButtonDisabled(): boolean {
+    return this.renameJsonFileName && Object.values(this.savedJsonConfigurationsObj).map(jsonConfig => jsonConfig.name).includes(this.renameJsonFileName);
+  }
+
   // RxJS Subscriptions
   private subscriptions = new Subscription();
 
@@ -1566,20 +1580,28 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   /// Save JSON ///
 
+
+
+  async saveJsonConfig() {
+    const jsonConfig: JSONConfig = {
+      id: this.loadedJsonConfigId,
+      name: this.loadedJsonConfigName,
+      json: this.json
+    };
+    await this.fetcherService.saveUpdatedFreeformJSONConfiguration(jsonConfig);
+  }
+
+
+
   async onJsonSaveClicked() {
     console.log('FreeformJsonUIComponent: onJsonSaveClicked()');
 
     try {
-      const jsonConfig: JSONConfig = {
-        id: this.loadedJsonConfigId,
-        name: this.loadedJsonConfigName,
-        json: this.json
-      };
-      await this.fetcherService.saveUpdatedFreeformJSONConfiguration(jsonConfig);
+      await this.saveJsonConfig();
       this.messageWithAutoClear.emit({severity: 'success', summary: 'Successful', detail: `JSON configuration '${this.loadedJsonConfigName}' has been saved`});
     }
     catch (error) {
-      console.error('FreeformJsonUIComponent: onJsonSaveAsAccepted(): caught error saving JSON config:', error);
+      console.error('FreeformJsonUIComponent: onJsonSaveClicked(): caught error saving JSON config:', error);
       return;
     }
 
@@ -1860,6 +1882,34 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
 
 
+  /// Rename Incident Config ///
+
+  onRenameIncidentConfigClicked() {
+    console.log('FreeformJsonUIComponent: onRenameIncidentConfigClicked()');
+    this.renameIncidentConfigName = this.loadedIncidentConfigName;
+    this.showRenameIncidentConfigDialog = true;
+    setTimeout( () =>
+      document.getElementsByClassName('renameIncidentConfigDialog')[0].getElementsByTagName('input')[0].focus()
+      , 100);
+  }
+
+
+
+  async onRenameIncidentConfigAccepted() {
+    console.log('FreeformJsonUIComponent: onRenameIncidentConfigAccepted()');
+    this.loadedIncidentConfigName = this.renameIncidentConfigName;
+    this.showRenameIncidentConfigDialog = false;
+    const incidentConfig = this.buildSavedIncidentConfig();
+    await this.fetcherService.saveUpdatedIncidentConfiguration(incidentConfig);
+    this.savedIncidentConfigurationsChanged.emit();
+  }
+
+  /// End Rename Incident Config ///
+
+
+
+
+
   /// Import Incident From XSOAR ///
 
   async onIncidentLoadedFromDemisto(importResult: DemistoIncidentImportResult, demistoIncidentIdToLoad: string, demistoEndpointName: string) {
@@ -2092,14 +2142,12 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     const updateDefaultJson = !defaultJsonIsSame && this.defaultJsonDialog_selectedJsonId;
     const clearDefaultJson = this.defaultJsonConfigId && !this.defaultJsonDialog_selectedJsonId;
     if (updateDefaultJson) {
-      console.log('got to 1');
       await this.fetcherService.setDefaultIncidentJsonFile(this.loadedIncidentConfigId, this.defaultJsonDialog_selectedJsonId);
       this.defaultJsonConfigId = this.defaultJsonDialog_selectedJsonId;
       this.defaultJsonConfigName = this.savedJsonConfigurationsObj[this.defaultJsonConfigId].name;
       incidentConfigChanged = true;
     }
     else if (clearDefaultJson) {
-      console.log('got to 2');
       await this.fetcherService.clearDefaultIncidentJsonFile(this.loadedIncidentConfigId);
       this.defaultJsonConfigId = undefined;
       this.defaultJsonConfigName = undefined;
@@ -2112,14 +2160,12 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     const updateDefaultJsonGroup = !defaultJsonGroupIsSame && this.defaultJsonDialog_selectedJsonGroupId;
     const clearDefaultJsonGroup = this.defaultJsonGroupId && !this.defaultJsonDialog_selectedJsonGroupId;
     if (updateDefaultJsonGroup) {
-      console.log('got to 3');
       await this.fetcherService.setDefaultIncidentJsonGroup(this.loadedIncidentConfigId, this.defaultJsonDialog_selectedJsonGroupId);
       this.defaultJsonGroupId = this.defaultJsonDialog_selectedJsonGroupId;
       this.defaultJsonGroupName = this.jsonGroupConfigurations[this.defaultJsonGroupId].name;
       incidentConfigChanged = true;
     }
     else if (clearDefaultJsonGroup) {
-      console.log('got to 4');
       await this.fetcherService.clearDefaultIncidentJsonGroup(this.loadedIncidentConfigId);
       this.defaultJsonGroupId = undefined;
       this.defaultJsonGroupName = undefined;
@@ -2132,5 +2178,36 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /// End JSON Defaults Dialog ///
+
+
+
+  /// Rename JSON File ///
+
+  onRenameJsonFileClicked() {
+    console.log('FreeformJsonUIComponent: onRenameJsonFileClicked()');
+    this.renameJsonFileName = this.loadedJsonConfigName;
+    this.showRenameJsonFileDialog = true;
+    setTimeout( () =>
+      document.getElementsByClassName('renameJsonFileConfigDialog')[0].getElementsByTagName('input')[0].focus()
+      , 100);
+  }
+
+
+
+  async onRenameJsonFileAccepted() {
+    console.log('loadedJsonConfigName: onRenameJsonFileAccepted()');
+    this.loadedJsonConfigName = this.renameJsonFileName;
+    this.showRenameJsonFileDialog = false;
+    try {
+      await this.saveJsonConfig();
+    }
+    catch (error) {
+      console.error('FreeformJsonUIComponent: onRenameJsonFileAccepted(): caught error saving JSON config:', error);
+      return;
+    }
+    this.freeformJsonConfigurationsChanged.emit();
+  }
+
+  /// End Rename JSON File ///
 
 }
