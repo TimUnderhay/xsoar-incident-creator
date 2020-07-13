@@ -83,13 +83,18 @@
           (onClick)="onIncidentExportClicked()">
         </p-button>
 
+        <!-- JSON Defaults -->
+        <p-button
+          label="JSON Defaults"
+          (onClick)="onJsonDefaultsClicked()">
+        </p-button>
+
         <!-- Short / Long Field Names -->
         <p-toggleButton
           name="shortFieldNames"
-          [onLabel]="'Long Names'"
-          offLabel="Short Names"
-          [(ngModel)]="displayIncidentFieldShortNames"
-          [disabled]="!currentDemistoEndpointInit">
+          [offLabel]="'Long Names'"
+          [onLabel]="'Short Names'"
+          [(ngModel)]="displayIncidentFieldShortNames">
         </p-toggleButton>
 
         <!-- Create Investigation Toggle -->
@@ -107,7 +112,6 @@
           label="Reload Definitions"
           name="createIncidentButton"
           (onClick)="onReloadFieldDefinitions()"
-          [disabled]="!currentDemistoEndpointInit"
           pTooltip="Reload the field definitions from XSOAR">
         </p-button>
 
@@ -636,6 +640,151 @@
     <p-button
       label="OK"
       (onClick)="showIncidentCreatedDialog = false">
+    </p-button>
+
+  </div>
+
+</p-dialog>
+
+
+
+<!-- Default JSON Dialog -->
+<p-dialog
+[header]="'Default JSON for Incident' + loadedIncidentConfigName"
+[(visible)]="showDefaultJsonDialog"
+[modal]="true"
+[style]="{minWidth: '50%', maxWidth: '75%', maxHeight: '75%'}">
+
+<div
+  *ngIf="jsonGroupConfigurationsItems.length !== 0"
+  class="bulkCreateContainer">
+  
+    <!-- Json Files Column -->
+    <div class="bulkCreateContainerColumn">
+
+      <div
+        *ngIf="!savedJsonConfigurationItems || (savedJsonConfigurationItems && savedJsonConfigurationItems.length === 0); else jsonFilesDefinedRef"
+        class="formLabel">
+          No JSON Files are defined
+      </div>
+
+      <ng-template #jsonFilesDefinedRef>
+
+        <div>
+
+          <span class="formLabel">
+            JSON Files
+          </span>
+
+          <div style="float: right;">
+
+            <span
+              (click)="defaultJsonDialog_selectedJsonId = undefined"
+              class="selectAllControl">
+                Select None
+            </span>
+
+          </div>
+
+        </div>
+
+        <p-listbox
+          *ngIf="savedJsonConfigurationItems"
+          [options]="savedJsonConfigurationItems"
+          [(ngModel)]="defaultJsonDialog_selectedJsonId"
+          [style]="{'width':'100%'}"
+          [multiple]="false"
+          [checkbox]="true"
+          [filter]="false"
+          [showToggleAll]="false">
+        </p-listbox>
+
+      </ng-template>
+
+    </div>
+
+
+    <!-- JSON Groups Column -->
+    <div class="bulkCreateContainerColumn">
+
+      <div
+        *ngIf="!jsonGroupConfigurationsItems || (jsonGroupConfigurationsItems && jsonGroupConfigurationsItems.length === 0); else jsonGroupsDefinedRef"
+        class="formLabel">
+          No JSON Groups are defined
+      </div>
+
+      <ng-template #jsonGroupsDefinedRef>
+
+        <div>
+
+          <span class="formLabel">
+            JSON Groups
+          </span>
+
+          <div style="float: right;">
+
+            <span
+              (click)="defaultJsonDialog_selectedJsonGroupId = undefined"
+              class="selectAllControl">
+                Select None
+            </span>
+
+          </div>
+
+        </div>
+
+        <p-listbox
+          *ngIf="jsonGroupConfigurationsItems"
+          [options]="jsonGroupConfigurationsItems"
+          [(ngModel)]="defaultJsonDialog_selectedJsonGroupId"
+          [style]="{'width':'100%'}"
+          [multiple]="false"
+          [checkbox]="true"
+          [filter]="false"
+          [showToggleAll]="false">
+        </p-listbox>
+
+      </ng-template>
+
+    </div>
+
+    <!-- JSON Group Members Column -->
+    <div
+      *ngIf="defaultJsonDialog_selectedJsonGroupId"
+      class="bulkCreateContainerColumn">
+
+      <div style="margin-bottom: 1em;">
+        
+        <span class="formLabel">
+          Group Members
+        </span>
+        
+      </div>
+
+      <div
+        *ngFor="let jsonFileId of jsonGroupConfigurations[defaultJsonDialog_selectedJsonGroupId].jsonFileIds"
+        style="color: black;">
+          
+          {{savedJsonConfigurationsObj[jsonFileId].name}}
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- Accept / Cancel Buttons -->
+  <div style="margin-top: .5em; float: right;">
+
+    <p-button
+      label="Accept Changes"
+      (onClick)="onJsonDefaultsAccepted()">
+    </p-button>
+
+    <p-button
+      label="Cancel"
+      (onClick)="onJsonDefaultsCanceled()">
     </p-button>
 
   </div>

@@ -170,14 +170,10 @@
       [demistoEndpoints]="demistoEndpoints"
       [demistoEndpointsItems]="demistoEndpointsItems"
       [currentDemistoEndpointId]="currentDemistoEndpointId"
-      [currentDemistoEndpointInit]="currentDemistoEndpointInit"
       [fetchedIncidentFieldDefinitions]="fetchedIncidentFieldDefinitions"
       [fetchedIncidentTypes]="fetchedIncidentTypes"
       [savedIncidentConfigurations]="savedIncidentConfigurations"
       (savedIncidentConfigurationsChanged)="onSavedIncidentConfigurationsChanged($event)"
-      [savedJsonConfigurations]="savedJsonConfigurations"
-      [savedJsonConfigurationsObj]="savedJsonConfigurationsObj"
-      [savedJsonConfigurationItems]="savedJsonConfigurationItems"
       (messageAdd)="messageAdd($event)"
       (messagesReplace)="messagesReplace($event)"
       (messageWithAutoClear)="messageWithAutoClear($event)"
@@ -185,7 +181,12 @@
       (reloadFieldDefinitions)="fetchIncidentFieldDefinitions($event)"
       [fileAttachmentConfigs]="fileAttachmentConfigs"
       [fileAttachmentConfigsList]="fileAttachmentConfigsList"
-      (fileAttachmentConfigsChanged)="onFileAttachmentConfigsChanged()">
+      (fileAttachmentConfigsChanged)="onFileAttachmentConfigsChanged()"
+      [savedJsonConfigurations]="savedJsonConfigurations"
+      [savedJsonConfigurationsObj]="savedJsonConfigurationsObj"
+      [savedJsonConfigurationItems]="savedJsonConfigurationItems"
+      [jsonGroupConfigurations]="jsonGroupConfigurations"
+      [jsonGroupConfigurationsItems]="jsonGroupConfigurationsItems">
     </freeform-json-ui>
     
     <div>&nbsp;</div>

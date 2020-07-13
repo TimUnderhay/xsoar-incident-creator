@@ -1203,7 +1203,6 @@ app.delete(apiPath + '/json/:id', async (req, res) => {
   let saveGroups = false;
   let saveIncidentConfigs = false;
   if (freeJsonConfig.hasOwnProperty(id)) {
-    const jsonName = freeJsonConfig[id].name;
     delete freeJsonConfig[id];
     
     for (const jsonGroup of Object.values(jsonGroupsConfig)) {
@@ -1219,7 +1218,7 @@ app.delete(apiPath + '/json/:id', async (req, res) => {
 
     for (const incidentConfig of Object.values(incidentsConfig)) {
       // remove deleted JSON as default file for incident configs
-      if (incidentConfig.defaultJsonId === id) {
+      if (incidentConfig.hasOwnProperty('defaultJsonId') && incidentConfig.defaultJsonId === id) {
         delete incidentConfig.defaultJsonId;
         saveIncidentConfigs = true;
       }
@@ -1236,7 +1235,7 @@ app.delete(apiPath + '/json/:id', async (req, res) => {
     return;
   }
   else {
-    const error = 'Resource not found';
+    const error = `JSON file with id '${id}' not found`;
     res.status(400).json({error, id, success: false});
     return;
   }
@@ -1305,8 +1304,12 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
     createInvestigation
   };
 
-  if ('defaultJsonId' in body) {
+  if (body.hasOwnProperty('defaultJsonId')) {
     entry.defaultJsonId = body.defaultJsonId;
+  }
+
+  if (body.hasOwnProperty('defaultJsonGroupId')) {
+    entry.defaultJsonGroupId = body.defaultJsonGroupId;
   }
 
   incidentsConfig[id] = entry;
@@ -1340,8 +1343,12 @@ app.post(apiPath + '/incidentConfig/update', async (req, res) => {
     createInvestigation: body.createInvestigation
   };
 
-  if ('defaultJsonId' in body) {
+  if (body.hasOwnProperty('defaultJsonId')) {
     updatedIncidentConfig.defaultJsonId = body.defaultJsonId;
+  }
+
+  if (body.hasOwnProperty('defaultJsonGroupId')) {
+    updatedIncidentConfig.defaultJsonGroupId = body.defaultJsonGroupId;
   }
 
   for (const config of Object.values(incidentsConfig)) {
@@ -1372,7 +1379,6 @@ app.post(apiPath + '/incidentConfig/defaultJson', async (req, res) => {
   catch(fieldName) {
     const error = `Invalid request: Required field '${fieldName}' was missing`;
     return returnError(error, res, 400);
-    // return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
   }
 
   const {incidentConfigId, jsonId} = body; // set jsonId to null to clear default
@@ -1386,13 +1392,53 @@ app.post(apiPath + '/incidentConfig/defaultJson', async (req, res) => {
   }
 
   const incidentConfig = incidentsConfig[incidentConfigId];
-  if (jsonId === null && 'defaultJsonId' in incidentConfig) {
+  if (jsonId === null && incidentConfig.hasOwnProperty('defaultJsonId')) {
     delete incidentConfig['defaultJsonId'];
     console.log(`Cleared default JSON config for incident config ${incidentConfig.name}`);
   }
   else if (jsonId !== null) {
     incidentConfig['defaultJsonId'] = jsonId;
     console.log(`Set default JSON config to ${jsonId} for incident config ${incidentConfig.name}`);
+  }
+
+  await saveIncidentsConfig();
+
+  res.status(200).json({success: true});; // send 'OK'
+} );
+
+
+
+app.post(apiPath + '/incidentConfig/defaultJsonGroup', async (req, res) => {
+  // update an existing incident config's default JSON Group
+  const body = req.body;
+  const requiredFields = ['incidentConfigId', 'jsonGroupId'];
+
+  try {
+    checkForRequiredFields(requiredFields, body);
+  }
+  catch(fieldName) {
+    const error = `Invalid request: Required field '${fieldName}' was missing`;
+    return returnError(error, res, 400);
+  }
+
+  const {incidentConfigId, jsonGroupId} = body; // set jsonId to null to clear default
+
+  if (!incidentsConfig.hasOwnProperty(incidentConfigId)) {
+    return res.status(400).json({error: `Incident config id ${incidentConfigId} is not defined`});
+  }
+
+  if (jsonGroupId !== null && !(jsonGroupsConfig.hasOwnProperty(jsonGroupId))) {
+    return res.status(400).json({error: `JSON Group config ${jsonGroupId} is not defined`});
+  }
+
+  const incidentConfig = incidentsConfig[incidentConfigId];
+  if (jsonGroupId === null && incidentConfig.hasOwnProperty('defaultJsonGroupId')) {
+    delete incidentConfig['defaultJsonGroupId'];
+    console.log(`Cleared default JSON Group config for incident config ${incidentConfig.name}`);
+  }
+  else if (jsonGroupId !== null) {
+    incidentConfig['defaultJsonGroupId'] = jsonGroupId;
+    console.log(`Set default JSON Group config to ${jsonGroupId} for incident config ${incidentConfig.name}`);
   }
 
   await saveIncidentsConfig();
@@ -1548,13 +1594,27 @@ app.get(apiPath + '/jsonGroup/all', async (req, res) => {
 app.delete(apiPath + '/jsonGroup/:id', async (req, res) => {
   // delete a JSON Group config
   const id = req.params.id;
+  let saveIncidentConfigs = false;
   if (jsonGroupsConfig.hasOwnProperty(id)) {
     delete jsonGroupsConfig[id];
     await saveJsonGroupsConfig();
+    
+    for (const incidentConfig of Object.values(incidentsConfig)) {
+      // remove deleted JSON group as default group for incident configs
+      if (incidentConfig.hasOwnProperty('defaultJsonGroupId') && incidentConfig.defaultJsonGroupId === id) {
+        delete incidentConfig.defaultJsonGroupId;
+        saveIncidentConfigs = true;
+      }
+    }
+
+    if (saveIncidentConfigs) {
+      await saveIncidentsConfig();
+    }
+
     return res.status(200).json({id, success: true});
   }
   else {
-    const error = `JSON Group '${id}' was not found`;
+    const error = `JSON Group with id '${id}' was not found`;
     return res.status(400).json({error, name, success: false});
   }
 } );

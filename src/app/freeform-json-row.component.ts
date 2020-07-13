@@ -1,5 +1,5 @@
 import { Component, OnInit, OnChanges, OnDestroy, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
-import { IncidentFieldUI, DateConfig } from './types/incident-fields';
+import { IncidentFieldUI, DateConfig } from './types/incident-field';
 import { SelectItem, ConfirmationService } from 'primeng/api';
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';

@@ -4,8 +4,8 @@ import { SelectItem, ConfirmationService } from 'primeng/api';
 import { PMessageOption } from './types/message-options';
 import { Listbox } from 'primeng/listbox';
 import { FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
-import { IncidentFieldUI, IncidentFieldsUI, DateConfig } from './types/incident-fields';
-import { FetchedIncidentType } from './types/fetched-incident-types';
+import { IncidentFieldUI, IncidentFieldsUI, DateConfig } from './types/incident-field';
+import { FetchedIncidentType } from './types/fetched-incident-type';
 import { FreeformJsonRowComponent } from './freeform-json-row.component';
 // import { SampleIncident } from './sample-json';
 import { Subscription } from 'rxjs';
@@ -18,7 +18,8 @@ import { DemistoIncidentImportResult } from './types/demisto-incident-import-res
 import { DialogService, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { JsonEditorComponent } from './json-editor/json-editor.component';
 import { FileAttachmentConfig, FileAttachmentConfigs, AttachmentFieldConfig, FileAttachmentUIConfig, FileToPush } from './types/file-attachment';
-import { DemistoEndpoints } from './types/demisto-endpoints';
+import { DemistoEndpoints } from './types/demisto-endpoint';
+import { JsonGroups } from './types/json-group';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -57,7 +58,6 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   @Input() loadedIncidentConfigName: string; // must clear when loaded from json or when current config is deleted
   @Input() loadedIncidentConfigId: string;
   @Input() currentDemistoEndpointId: string;
-  @Input() currentDemistoEndpointInit: boolean;
   @Input() fetchedIncidentFieldDefinitions: FetchedIncidentFieldDefinitions; // the fields taken from Demisto
   @Input() demistoEndpoints: DemistoEndpoints;
 
@@ -174,6 +174,19 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   incidentCreatedError: string;
   hasAnEnabledAttachmentField = false;
 
+  // JSON Groups
+  @Input() jsonGroupConfigurations: JsonGroups;
+  @Input() jsonGroupConfigurationsItems: SelectItem[];
+  defaultJsonGroupId: string;
+  defaultJsonGroupName: string;
+
+  // Default JSON / JSON Config Dialog
+  showDefaultJsonDialog = false;
+  // tslint:disable-next-line:variable-name
+  defaultJsonDialog_selectedJsonId: string;
+  // tslint:disable-next-line:variable-name
+  defaultJsonDialog_selectedJsonGroupId: string;
+
   // RxJS Subscriptions
   private subscriptions = new Subscription();
 
@@ -212,6 +225,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     if (utils.changedSimpleChange('loadedIncidentConfigId', values) && this.loadedIncidentConfigId === undefined) {
       this.defaultJsonConfigId = undefined;
       this.defaultJsonConfigName = undefined;
+      this.defaultJsonGroupId = undefined;
+      this.defaultJsonGroupName = undefined;
     }
   }
 
@@ -1796,15 +1811,23 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     this.createInvestigation = selectedConfig.createInvestigation;
     this.selectedIncidentType = selectedConfig.incidentType;
     this.setSelectedIncidentTypeIsAvailable();
-    let defaultJsonId;
-    if (selectedConfig.hasOwnProperty('defaultJsonId')) {
-      defaultJsonId = selectedConfig.defaultJsonId;
+
+    // json group
+    const defaultJsonGroupId = selectedConfig.hasOwnProperty('defaultJsonGroupId') ? selectedConfig.defaultJsonGroupId : undefined;
+    this.defaultJsonGroupId = undefined;
+    this.defaultJsonGroupName = undefined;
+    if (defaultJsonGroupId) {
+      this.defaultJsonGroupId = defaultJsonGroupId;
+      this.defaultJsonGroupName = this.jsonGroupConfigurations[defaultJsonGroupId].name;
+    }
+
+    // json file
+    const defaultJsonId = selectedConfig.hasOwnProperty('defaultJsonId') ? selectedConfig.defaultJsonId : undefined;
+    this.defaultJsonConfigId = undefined;
+    this.defaultJsonConfigName = undefined;
+    if (defaultJsonId) {
       this.defaultJsonConfigId = defaultJsonId;
       this.defaultJsonConfigName = this.savedJsonConfigurationsObj[defaultJsonId].name;
-    }
-    else {
-      this.defaultJsonConfigId = undefined;
-      this.defaultJsonConfigName = undefined;
     }
 
     this.incidentJson = undefined;
@@ -1839,7 +1862,6 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   /// Import Incident From XSOAR ///
 
-  // async loadFromDemisto(demistoIncidentIdToLoad: string, demistoEndpointToLoadFrom: string): Promise<boolean> {
   async onIncidentLoadedFromDemisto(importResult: DemistoIncidentImportResult, demistoIncidentIdToLoad: string, demistoEndpointName: string) {
     console.log('FreeformJsonUIComponent: onIncidentLoadedFromDemisto()');
 
@@ -1856,6 +1878,8 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     this.loadedJsonConfigName = undefined;
     this.defaultJsonConfigId = undefined;
     this.defaultJsonConfigName = undefined;
+    this.defaultJsonGroupId = undefined;
+    this.defaultJsonGroupName = undefined;
 
     this.selectedIncidentType = incidentType;
     this.setSelectedIncidentTypeIsAvailable();
@@ -1875,7 +1899,10 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     this.selectedIncidentType = (json as any).type;
     this.setSelectedIncidentTypeIsAvailable();
     this.createInvestigation = true;
+    this.defaultJsonConfigId = undefined;
     this.defaultJsonConfigName = undefined;
+    this.defaultJsonGroupId = undefined;
+    this.defaultJsonGroupName = undefined;
   }
 
   /// End Upload Incident JSON ///
@@ -2031,5 +2058,79 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /// End Incident Created Dialog ///
+
+
+
+  /// JSON Defaults Dialog ///
+
+  onJsonDefaultsClicked() {
+    console.log('FreeformJsonUIComponent: onJsonDefaultsClicked()');
+    this.showDefaultJsonDialog = true;
+
+    this.defaultJsonDialog_selectedJsonId = this.defaultJsonConfigId ? this.defaultJsonConfigId : undefined;
+
+    this.defaultJsonDialog_selectedJsonGroupId = this.defaultJsonGroupId ? this.defaultJsonGroupId : undefined;
+  }
+
+
+
+  onJsonDefaultsCanceled() {
+    console.log('FreeformJsonUIComponent: onJsonDefaultsCanceled()');
+    this.showDefaultJsonDialog = false;
+  }
+
+
+
+  async onJsonDefaultsAccepted() {
+    console.log('FreeformJsonUIComponent: onJsonDefaultsAccepted()');
+    console.log('FreeformJsonUIComponent: defaultJsonDialog_selectedJsonId:', this.defaultJsonDialog_selectedJsonId);
+    this.showDefaultJsonDialog = false;
+    let incidentConfigChanged = false;
+
+    // JSON File
+    const defaultJsonIsSame = this.defaultJsonConfigId && this.defaultJsonConfigId === this.defaultJsonDialog_selectedJsonId;
+    const updateDefaultJson = !defaultJsonIsSame && this.defaultJsonDialog_selectedJsonId;
+    const clearDefaultJson = this.defaultJsonConfigId && !this.defaultJsonDialog_selectedJsonId;
+    if (updateDefaultJson) {
+      console.log('got to 1');
+      await this.fetcherService.setDefaultIncidentJsonFile(this.loadedIncidentConfigId, this.defaultJsonDialog_selectedJsonId);
+      this.defaultJsonConfigId = this.defaultJsonDialog_selectedJsonId;
+      this.defaultJsonConfigName = this.savedJsonConfigurationsObj[this.defaultJsonConfigId].name;
+      incidentConfigChanged = true;
+    }
+    else if (clearDefaultJson) {
+      console.log('got to 2');
+      await this.fetcherService.clearDefaultIncidentJsonFile(this.loadedIncidentConfigId);
+      this.defaultJsonConfigId = undefined;
+      this.defaultJsonConfigName = undefined;
+      incidentConfigChanged = true;
+    }
+
+    // JSON Group
+    console.log('FreeformJsonUIComponent: defaultJsonDialog_selectedJsonGroupId:', this.defaultJsonDialog_selectedJsonGroupId);
+    const defaultJsonGroupIsSame = this.defaultJsonGroupId && this.defaultJsonGroupId === this.defaultJsonDialog_selectedJsonGroupId;
+    const updateDefaultJsonGroup = !defaultJsonGroupIsSame && this.defaultJsonDialog_selectedJsonGroupId;
+    const clearDefaultJsonGroup = this.defaultJsonGroupId && !this.defaultJsonDialog_selectedJsonGroupId;
+    if (updateDefaultJsonGroup) {
+      console.log('got to 3');
+      await this.fetcherService.setDefaultIncidentJsonGroup(this.loadedIncidentConfigId, this.defaultJsonDialog_selectedJsonGroupId);
+      this.defaultJsonGroupId = this.defaultJsonDialog_selectedJsonGroupId;
+      this.defaultJsonGroupName = this.jsonGroupConfigurations[this.defaultJsonGroupId].name;
+      incidentConfigChanged = true;
+    }
+    else if (clearDefaultJsonGroup) {
+      console.log('got to 4');
+      await this.fetcherService.clearDefaultIncidentJsonGroup(this.loadedIncidentConfigId);
+      this.defaultJsonGroupId = undefined;
+      this.defaultJsonGroupName = undefined;
+      incidentConfigChanged = true;
+    }
+
+    if (incidentConfigChanged) {
+      this.savedIncidentConfigurationsChanged.emit();
+    }
+  }
+
+  /// End JSON Defaults Dialog ///
 
 }

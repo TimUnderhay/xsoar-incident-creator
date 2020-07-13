@@ -1,5 +1,5 @@
 import { SimpleChanges } from '@angular/core';
-import { IncidentFieldUI } from './types/incident-fields';
+import { IncidentFieldUI } from './types/incident-field';
 import { FileAttachmentUIConfig, FileAttachmentConfig } from './types/file-attachment';
 
 export function isJsonValid(value: any) {

@@ -1,4 +1,4 @@
-import { FieldType } from './incident-fields';
+import { FieldType } from './incident-field';
 
 // For fields fetched from Demisto
 export interface FetchedIncidentField {

@@ -1,11 +1,11 @@
 import { Component, OnInit, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { FetcherService } from './fetcher-service';
-import { DemistoEndpoints } from './types/demisto-endpoints';
+import { DemistoEndpoints } from './types/demisto-endpoint';
 import { User } from './types/user';
-import { DemistoEndpointTestResult, DemistoEndpointTestResults } from './types/demisto-endpoint-status';
+import { DemistoEndpointTestResult, DemistoEndpointTestResults } from './types/demisto-endpoint';
 import { SelectItem, ConfirmationService } from 'primeng/api';
-import { IncidentFieldUI, DateConfig } from './types/incident-fields';
-import { FetchedIncidentType } from './types/fetched-incident-types';
+import { IncidentFieldUI, DateConfig } from './types/incident-field';
+import { FetchedIncidentType } from './types/fetched-incident-type';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from './types/fetched-incident-field';
 import { IncidentConfig, IncidentConfigs, IncidentCreationConfig } from './types/incident-config';
 import { PMessageOption } from './types/message-options';
@@ -200,7 +200,6 @@ export class AppComponent implements OnInit {
 
   // JSON Groups Config & UI
   _jsonGroupConfigurations: JsonGroups = {};
-  jsonGroupConfigurationsByName: JsonGroups = {};
   get jsonGroupConfigurations(): JsonGroups {
     return this._jsonGroupConfigurations;
   }
@@ -209,11 +208,6 @@ export class AppComponent implements OnInit {
     this.jsonGroupConfigurationsItems = Object.values(values).map( jsonConfig => ({
       value: jsonConfig.id,
       label: jsonConfig.name} as SelectItem) );
-    const jsonGroupConfigurationsByName = {};
-    for (const jsonGroup of Object.values(values)) {
-      jsonGroupConfigurationsByName[jsonGroup.name] = jsonGroup;
-    }
-    this.jsonGroupConfigurationsByName = jsonGroupConfigurationsByName;
     this.buildJsonFileAndGroupConfigurationsItems();
   }
   showJsonGroupsDialog = false;
@@ -1059,12 +1053,20 @@ export class AppComponent implements OnInit {
     // console.log('AppComponent: buildBulkCreateGroups(): jsonGroupConfigurationsItems:', this.jsonGroupConfigurationsItems);
 
     const selections: BulkCreateSelections = {};
-    for (const incidentConfig of Object.values(this.savedIncidentConfigItems)) {
-      const incidentConfigId = incidentConfig.value;
-      selections[incidentConfigId] = {
+    for (const incidentConfig of Object.values(this.savedIncidentConfigurations)) {
+      const id = incidentConfig.id;
+      const selection = {
         jsonSelections: [],
         endpoints: []
       };
+
+      if (incidentConfig.hasOwnProperty('defaultJsonId')) {
+        selection.jsonSelections.push(`j_${incidentConfig.defaultJsonId}`);
+      }
+      if (incidentConfig.hasOwnProperty('defaultJsonGroupId')) {
+        selection.jsonSelections.push(`g_${incidentConfig.defaultJsonGroupId}`);
+      }
+      selections[id] = selection;
     }
     this.bulkCreateSelections = selections;
   }

@@ -1,4 +1,4 @@
-import { FieldType, MappingMethod, DateConfig } from './incident-fields';
+import { FieldType, MappingMethod, DateConfig } from './incident-field';
 import { AttachmentFieldConfig } from './file-attachment';
 
 // These interfaces deal with saved incident configurations
@@ -11,6 +11,7 @@ export interface IncidentConfig {
   createInvestigation: boolean;
   incidentType: string;
   defaultJsonId?: string; // the json file id to load when opening incident
+  defaultJsonGroupId?: string; // the json file id to load when opening incident
   requiresJson?: boolean; // returned by the server
 }
 
@@ -38,9 +39,15 @@ export interface IncidentFieldsConfig {
 }
 
 export interface IncidentJsonFileConfig {
-  // for API call to set default JSON name for an incident config
+  // for API call to set default JSON id for an incident config
   incidentConfigId: string; // the incident config ID
   jsonId: string | null; // the json config id -- set to null to clear
+}
+
+export interface IncidentJsonGroupConfig {
+  // for API call to set default JSON group for an incident config
+  incidentConfigId: string; // the incident config ID
+  jsonGroupId: string | null; // the json config id -- set to null to clear
 }
 
 export interface IncidentCreationConfig {

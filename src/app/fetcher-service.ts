@@ -1,16 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpHeaders, HttpClient } from '@angular/common/http';
 import { User } from './types/user';
-import { DemistoEndpointTestResult } from './types/demisto-endpoint-status';
+import { DefaultDemistoEndpoint, DemistoEndpointTestResult } from './types/demisto-endpoint';
 import { FetchedIncidentField } from './types/fetched-incident-field';
-import { FetchedIncidentType } from './types/fetched-incident-types';
-import { IncidentConfig, IncidentConfigs, IncidentJsonFileConfig, IncidentCreationConfig } from './types/incident-config';
-import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoints';
-import { DefaultDemistoEndpoint } from './types/default-demisto-endpoint';
+import { FetchedIncidentType } from './types/fetched-incident-type';
+import { IncidentConfig, IncidentConfigs, IncidentJsonFileConfig, IncidentJsonGroupConfig, IncidentCreationConfig } from './types/incident-config';
+import { DemistoEndpoint, DemistoEndpoints } from './types/demisto-endpoint';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
 import * as JSEncrypt from 'jsencrypt';
 import { Subject, Observable } from 'rxjs';
-import { IncidentFieldUI } from './types/incident-fields';
+import { IncidentFieldUI } from './types/incident-field';
 import { Segment } from './ngx-json-viewer/ngx-json-viewer.component';
 import { JSONConfig, JSONConfigRef } from './types/json-config';
 import { JsonGroup, JsonGroups } from './types/json-group';
@@ -416,6 +415,31 @@ export class FetcherService {
   deleteJsonGroupConfiguration(id: string): Promise<any> {
     const headers = this.buildHeaders();
     return this.http.delete(this.apiPath + `/jsonGroup/${encodeURIComponent(id)}`, { headers } )
+                    .toPromise();
+  }
+
+
+
+  setDefaultIncidentJsonGroup(incidentConfigId, jsonGroupId): Promise<any> {
+    console.log('incidentConfigId, jsonGroupId:', incidentConfigId, jsonGroupId);
+    const headers = this.buildHeaders();
+    const config: IncidentJsonGroupConfig = {
+      incidentConfigId,
+      jsonGroupId
+    };
+    return this.http.post(this.apiPath + '/incidentConfig/defaultJsonGroup', config, { headers } )
+                    .toPromise();
+  }
+
+
+
+  clearDefaultIncidentJsonGroup(incidentConfigId): Promise<any> {
+    const headers = this.buildHeaders();
+    const config: IncidentJsonGroupConfig = {
+      incidentConfigId,
+      jsonGroupId: null
+    };
+    return this.http.post(this.apiPath + '/incidentConfig/defaultJsonGroup', config, { headers } )
                     .toPromise();
   }
 

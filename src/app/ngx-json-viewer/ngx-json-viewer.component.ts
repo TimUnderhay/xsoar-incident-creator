@@ -1,7 +1,7 @@
 // based on https://github.com/hivivo/ngx-json-viewer
 
 import { Component, OnChanges, Input, SimpleChanges, ChangeDetectorRef } from '@angular/core';
-import { FieldType } from '../types/incident-fields';
+import { FieldType } from '../types/incident-field';
 import * as utils from '../utils';
 import { FetcherService } from '../fetcher-service';
 

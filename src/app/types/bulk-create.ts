@@ -1,5 +1,5 @@
-import { FetchedIncidentType } from './fetched-incident-types';
-import { DemistoEndpointTestResults } from './demisto-endpoint-status';
+import { FetchedIncidentType } from './fetched-incident-type';
+import { DemistoEndpointTestResults } from './demisto-endpoint';
 import { FetchedIncidentFieldDefinitions } from './fetched-incident-field';
 
 export interface BulkCreateResult extends Object {
