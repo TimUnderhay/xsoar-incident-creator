@@ -16,7 +16,7 @@
       <vertical-center>
         <span
           class="pi pi-pencil"
-          style="font-size: 2em; color: white;"
+          style="font-size: 2em; color: white; cursor: pointer;"
           (click)="onRenameIncidentConfigClicked()">
         </span>
       </vertical-center>
@@ -244,7 +244,7 @@
             <vertical-center>
               <span
                 class="pi pi-pencil"
-                style="font-size: 1.5rem; color: white;"
+                style="font-size: 1.5rem; color: white; cursor: pointer;"
                 (click)="onRenameJsonFileClicked()">
               </span>
             </vertical-center>
@@ -623,7 +623,9 @@
     
       </div>
 
-      <div style="font-size: 1.25em; font-weight: bolder; margin-top: 1em;">
+      <div 
+        *ngIf="showIncidentJsonInCreateResults"
+        style="font-size: 1.25em; font-weight: bolder; margin-top: 1em;">
         
         Incident JSON <span
           *ngIf="hasAnEnabledAttachmentField"

@@ -1207,7 +1207,7 @@ export class AppComponent implements OnInit {
 
         // Skip this server if the incident type isn't defined
         console.log('AppComponent: bulkCreateWorkLoop(): serverIncidentTypeNames:', serverIncidentTypeNames);
-        console.log('AppComponent: bulkCreateWorkLoop(): serverIncidentTypeNames[serverId]:', serverIncidentTypeNames[serverId]);
+        console.log(`AppComponent: bulkCreateWorkLoop(): serverIncidentTypeNames[${serverId}]:`, serverIncidentTypeNames[serverId]);
         let incidentTypeFieldDefined = serverIncidentTypeNames[serverId].includes(incidentConfig.incidentType) ? true : false;
         if (!incidentTypeFieldDefined) {
           const error = `Incident type '${incidentConfig.incidentType}' is not defined on XSOAR server`;
@@ -1463,7 +1463,7 @@ export class AppComponent implements OnInit {
     console.log('AppComponent: onClickDemistoInvestigateUrl(): id:', incidentId);
     const result = await this.fetcherService.createInvestigation(incidentId, serverId);
     if (result.success) {
-      const url = `${serverId}/#/incident/${incidentId}`;
+      const url = `${this.demistoEndpoints[serverId].url}/#/incident/${incidentId}`;
       window.open(url, '_blank');
     }
     else if ('error' in result) {
@@ -2149,7 +2149,7 @@ export class AppComponent implements OnInit {
     const incidentJson = this.bulkCreateIncidentJson[serverId][incidentId];
 
     let config: DynamicDialogConfig = {
-      header: `JSON of XSOAR Incident ${incidentId} for '${serverId}'`,
+      header: `JSON of XSOAR Incident ${incidentId} on '${this.demistoEndpoints[serverId].url}'`,
       closable: true,
       closeOnEscape: true,
       data: {

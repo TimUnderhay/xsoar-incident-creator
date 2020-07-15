@@ -170,6 +170,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   // Incident Created Dialog
   showIncidentCreatedDialog = false;
+  showIncidentJsonInCreateResults = false;
   incidentCreatedId: number;
   incidentCreatedError: string;
   hasAnEnabledAttachmentField = false;
@@ -771,6 +772,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
       if (success) {
         this.showIncidentCreatedDialog = true;
+        this.showIncidentJsonInCreateResults = true;
         this.incidentCreatedId = incidentId;
         this.incidentCreatedError = undefined;
         // this.messagesReplace.emit( [{ severity: 'success', summary: 'Success', detail: `XSOAR incident created with id ${incidentId}`}] );
@@ -1764,7 +1766,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
       console.log('FreeformJsonUIComponent: onCreateIncidentFromJson(): incident:', incident);
 
-      let res = await this.fetcherService.createDemistoIncidentFromJson(incident);
+      const res = await this.fetcherService.createDemistoIncidentFromJson(incident);
       // console.log('FreeformJsonUIComponent: onCreateIncidentFromJson(): res:', res);
 
       if (!res.success) {
@@ -1772,8 +1774,10 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
         this.messageAdd.emit( { severity: 'error', summary: 'Failure', detail: resultMessage} );
       }
       else {
-        const resultMessage = `XSOAR incident created from raw JSON with id ${res.id} on server '${endpoint}'`;
-        this.messageAdd.emit( { severity: 'success', summary: 'Success', detail: resultMessage} );
+        const incidentId = res.id;
+        this.showIncidentCreatedDialog = true;
+        this.showIncidentJsonInCreateResults = false;
+        this.incidentCreatedId = incidentId;
       }
 
     }
@@ -2085,7 +2089,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     console.log('FreeformJsonUIComponent: onViewIncidentJSONClicked()');
 
     const config: DynamicDialogConfig = {
-      header: `JSON of XSOAR Incident ${incidentId} for '${serverId}'`,
+      header: `JSON of XSOAR Incident ${incidentId} on '${this.demistoEndpoints[serverId].url}'`,
       closable: true,
       closeOnEscape: true,
       data: {
