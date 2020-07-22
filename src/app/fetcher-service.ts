@@ -249,7 +249,6 @@ export class FetcherService {
 
   createDemistoIncident( config: IncidentCreationConfig ): Promise<any> {
     const headers = this.buildHeaders(this.currentUser.username);
-    console.log('FetcherService: createDemistoIncident(): Current User: ', this.currentUser.username);
     return this.http.post(this.apiPath + '/createDemistoIncident', config, { headers } )
                     .toPromise();
   }
@@ -258,7 +257,6 @@ export class FetcherService {
 
   createDemistoIncidentFromJson( json: any ): Promise<any> {
     const headers = this.buildHeaders(this.currentUser.username);
-    console.log('FetcherService: createDemistoIncidentFromJson(): Current User: ', this.currentUser.username);
     return this.http.post(this.apiPath + '/createDemistoIncidentFromJson', json, { headers } )
                     .toPromise();
   }
@@ -294,11 +292,10 @@ export class FetcherService {
 
 
 
-  createInvestigation(incidentId, serverId): Promise<any> {
+  createInvestigation(incidentId, serverId, version = 1): Promise<any> {
     const headers = this.buildHeaders();
-    return this.http.post(this.apiPath + '/createInvestigation', {incidentId, serverId}, { headers } )
+    return this.http.post(this.apiPath + '/createInvestigation', {incidentId, version, serverId}, { headers } )
                     .toPromise();
-                    // .then( (value: any) => value.success);
   }
 
 

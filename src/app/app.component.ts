@@ -1333,6 +1333,7 @@ export class AppComponent implements OnInit {
 
             if (res.success) {
               const incidentId = res.id;
+              let dbVersion = 1;
 
               if (filesToPush.length !== 0) {
                 // now upload files to XSOAR
@@ -1341,6 +1342,7 @@ export class AppComponent implements OnInit {
                   let result;
                   try {
                     result = await this.fetcherService.uploadFileToDemistoIncident(fileToPush);
+                    dbVersion = result.version;
                     console.log('AppComponent: bulkCreateWorkLoop(): attachment upload result:', result);
                   }
                   catch (error) {
@@ -1355,7 +1357,7 @@ export class AppComponent implements OnInit {
                 bulkCreateIncidentJson[serverId] = {};
               }
               bulkCreateIncidentJson[serverId][incidentId] = newIncident;
-              this.bulkCreateResults.push({configId, serverId, success: true, skippedFields, incidentId, jsonFile});
+              this.bulkCreateResults.push({configId, serverId, success: true, skippedFields, incidentId, jsonFile, dbVersion});
             }
 
             else {
@@ -1459,9 +1461,9 @@ export class AppComponent implements OnInit {
 
 
 
-  async onClickDemistoInvestigateUrl(incidentId: number, serverId: string) {
+  async onClickDemistoInvestigateUrl(incidentId: number, dbVersion: number, serverId: string) {
     console.log('AppComponent: onClickDemistoInvestigateUrl(): id:', incidentId);
-    const result = await this.fetcherService.createInvestigation(incidentId, serverId);
+    const result = await this.fetcherService.createInvestigation(incidentId, serverId, dbVersion);
     if (result.success) {
       const url = `${this.demistoEndpoints[serverId].url}/#/incident/${incidentId}`;
       window.open(url, '_blank');

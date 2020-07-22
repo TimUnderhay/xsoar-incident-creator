@@ -18,6 +18,9 @@ if [ ! $? -eq 0 ]; then
   exit 1
 fi
 
+# copy ace editor files to assets dir
+npm run fixdeps
+
 # build client
 npm run build
 if [ ! $? -eq 0 ]; then
@@ -25,7 +28,7 @@ if [ ! $? -eq 0 ]; then
   exit 1
 fi
 
-docker pull node:lts-alpine
+docker pull node:lts-alpine # fetch latest image
 
 # build docker image
 docker build --no-cache=true -t ${IMAGE_NAME}:${VERSION} -t ${IMAGE_NAME}:latest .

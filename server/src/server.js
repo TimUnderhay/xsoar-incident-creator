@@ -317,6 +317,8 @@ function uploadAttachmentToDemisto(serverId, incidentId, incidentFieldName, atta
   if (comment) {
     formData.fileComment = comment;
   }
+
+  // console.log('uploadAttachmentToDemisto(): formData:', formData);
   
   const options = {
     url: `${demistoServerConfig.url}/incident/upload/${incidentId}`,
@@ -328,6 +330,7 @@ function uploadAttachmentToDemisto(serverId, incidentId, incidentFieldName, atta
     rejectUnauthorized: !demistoServerConfig.trustAny,
     resolveWithFullResponse: true,
     formData,
+    json: true,
     timeout: 2000
   }
   return request(options);  // request returns a promise
@@ -1010,7 +1013,20 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
 
 app.post(apiPath + '/createInvestigation', async (req, res) => {
   // creates a demisto investigation (as opposed to an incident)
-  const incidentId = `${req.body.incidentId}`; // coerce id into a string
+
+  const body = req.body;
+  const requiredFields = ['incidentId', 'version'];
+
+  try {
+    checkForRequiredFields(requiredFields, body);
+  }
+  catch(fieldName) {
+    res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
+    return;
+  }
+
+  // get version
+  const {incidentId, version} = body;
 
   let demistoServerConfig;
   try {
@@ -1021,9 +1037,9 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
     return returnError(`'serverId' field not present in body`, res, 500, { success: false, statusCode: 500, error });
   }
 
-  const body = {
-    id: incidentId,
-    version: 1
+  const requestBody = {
+    id: `${incidentId}`,
+    version
   };
 
   let result;
@@ -1038,7 +1054,7 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
     rejectUnauthorized: !demistoServerConfig.trustAny,
     resolveWithFullResponse: true,
     json: true,
-    body
+    body: requestBody
   };
   try {
     // send request to XSOAR
@@ -1807,7 +1823,7 @@ app.post(apiPath + '/attachment/push', async (req, res) => {
     const comment = 'comment' in attachment ? attachment.comment : undefined;
 
     result = await uploadAttachmentToDemisto(attachment.serverId, attachment.incidentId, attachment.incidentFieldName, attachment.attachmentId, attachment.filename, attachment.last, mediaFile, comment);
-    return res.status(201).json({success: true});
+    return res.status(201).json({success: true, version: result.body.version});
   }
   catch (error) {
     console.error(error);

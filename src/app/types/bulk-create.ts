@@ -10,6 +10,7 @@ export interface BulkCreateResult extends Object {
   incidentId?: number;
   serverId: string;
   jsonFile?: string;
+  dbVersion?: number;
 }
 
 export interface BulkCreateConfigurationToPush {

@@ -172,6 +172,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
   showIncidentCreatedDialog = false;
   showIncidentJsonInCreateResults = false;
   incidentCreatedId: number;
+  incidentCreatedVersion: number;
   incidentCreatedError: string;
   hasAnEnabledAttachmentField = false;
 
@@ -739,6 +740,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     if (res.success) {
 
       let success = true;
+      let dbVersion;
 
       const incidentId = res.id;
 
@@ -751,6 +753,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
           let result;
           try {
             result = await this.fetcherService.uploadFileToDemistoIncident(fileToPush);
+            dbVersion = result.version;
             this.messageAdd.emit({ severity: 'success', summary: 'Success', detail: `Uploaded ${fileToPush.filename}`});
           }
           catch (error) {
@@ -774,6 +777,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
         this.showIncidentCreatedDialog = true;
         this.showIncidentJsonInCreateResults = true;
         this.incidentCreatedId = incidentId;
+        this.incidentCreatedVersion = dbVersion;
         this.incidentCreatedError = undefined;
         // this.messagesReplace.emit( [{ severity: 'success', summary: 'Success', detail: `XSOAR incident created with id ${incidentId}`}] );
       }
@@ -2070,10 +2074,10 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
 
   /// Incident Created Dialog ///
 
-  async onClickDemistoInvestigateUrl(incidentId: number) {
+  async onClickDemistoInvestigateUrl(incidentId: number, version) {
     console.log('FreeformJsonUIComponent: onClickDemistoInvestigateUrl(): id:', incidentId);
     const serverId = this.currentDemistoEndpointId;
-    const result = await this.fetcherService.createInvestigation(incidentId, serverId);
+    const result = await this.fetcherService.createInvestigation(incidentId, serverId, version);
     if (result.success) {
       const url = `${this.demistoEndpoints[serverId].url}/#/incident/${incidentId}`;
       window.open(url, '_blank');

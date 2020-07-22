@@ -710,7 +710,7 @@
             <a
               *ngIf="result.hasOwnProperty('incidentId')"
               href="javascript:void(0)"
-              (click)="onClickDemistoInvestigateUrl(result.incidentId, result.serverId)">
+              (click)="onClickDemistoInvestigateUrl(result.incidentId, result.dbVersion, result.serverId)">
                 {{result.incidentId}}
             </a>
 
