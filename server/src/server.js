@@ -1,6 +1,5 @@
 'use strict';
 
-console.log('XSOAR Incident Creator server is starting');
 
 ////////////////////// Config and Imports //////////////////////
 
@@ -9,6 +8,15 @@ const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 const mv = util.promisify(require('mv'));
 const fs = require('fs');
+
+try {
+  var Version = JSON.parse(fs.readFileSync('../package.json', { encoding: 'utf8' })).version;
+}
+catch (error) {
+  var Version = JSON.parse(fs.readFileSync('../../package.json', { encoding: 'utf8' })).version;
+}
+const BuildNumber = JSON.parse(fs.readFileSync('../build.json', { encoding: 'utf8' })).buildNumber;
+console.log(`XSOAR Incident Creator server version ${Version}${BuildNumber === 0 ? '' : ' build ' + BuildNumber} is starting`);
 
 const SchemaVersion = 1;
 
@@ -777,7 +785,7 @@ app.get(apiPath + '/demistoEndpoint/test/:serverId', async (req, res) => {
   }
 
   console.log(`Logged into XSOAR as user '${testResult.result.body.username}'`);
-  console.log(`Successfully tested XSOAR URL '${serverId}'`);
+  console.log(`Successfully tested XSOAR URL '${url}'`);
   return res.status(200).json( { success: true, statusCode: 200 } );
   
 });
@@ -1738,8 +1746,7 @@ app.delete(apiPath + '/attachment/:id', async (req, res) => {
   // delete an attachment config
   const id = req.params.id;
   if (id in attachmentsConfig) {
-    const attachmentConfig = attachmentsConfig[id];
-    const filename = `${id}_${attachmentConfig.filename}`;
+    const filename = `${id}`;
     await deleteFileAttachment(filename);
     delete attachmentsConfig[id];
     await saveAttachmentsConfig();

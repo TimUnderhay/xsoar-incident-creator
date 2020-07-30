@@ -424,4 +424,15 @@ body p-fileupload {
   flex: 1;
 }
 
+.createInvestigationDisabled {
+  .ui-button {
+    background-color: #dadada;
+    border-bottom-color: #dadada;
+    border-left-color: #dadada;
+    border-right-color: #dadada;
+    border-top-color: #dadada;
+    color: #333333;
+  }
+}
+
 @import './app/ngx-json-viewer/ngx-json-viewer.component.scss';

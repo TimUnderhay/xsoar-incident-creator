@@ -118,6 +118,7 @@
           [onLabel]="'Create Investigation On'"
           offLabel="Create Investigation Off"
           [(ngModel)]="createInvestigation"
+          [class.createInvestigationDisabled]="!createInvestigation"
           pTooltip="If enabled, this option will cause an investigation to be created along with a new incident.  This means that any playbook associated with the case type will be automatically executed, if the underlying incident type is configured to do so."
           showDelay="750">
         </p-toggleButton>

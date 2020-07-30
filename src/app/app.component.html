@@ -1,7 +1,7 @@
 <div class="appContainer">
 
-  <div style="position: absolute; right: 2em;">
-    v{{version}}
+  <div style="position: absolute; right: 1em; font-weight: bold;">
+    v{{version}}{{buildNumber === 0 ? "" : " build " + buildNumber}}
   </div>
 
   <div class="appHeader">
@@ -934,7 +934,7 @@
       <div style="margin-top: .5em; float: right;">
 
         <p-button
-          label="Accept Changes"
+          label="Ok"
           (onClick)="onAcceptJsonGroupChanges()">
         </p-button>
 

@@ -22,6 +22,7 @@ set -o xtrace \
 && cd ${DSTDIR} \
 && mv -f server/package-prod.json ./package.json \
 && rm -f server/package.json \
+&& [[ -d server/etc ]] || mkdir server/etc \
 && rm -rf server/etc/* \
 && npm install
 

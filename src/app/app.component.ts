@@ -21,6 +21,7 @@ import { FileUpload } from 'primeng/fileupload';
 import { JSONConfigRef, JSONConfigRefs } from './types/json-config';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
 import { version } from '../../package.json';
+import { buildNumber } from '../../build.json';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
@@ -50,6 +51,7 @@ export class AppComponent implements OnInit {
 
   loggedInUser: User;
   version = version;
+  buildNumber = buildNumber;
 
   // Endpoint Properties
   demistoEndpoints: DemistoEndpoints;
@@ -301,7 +303,7 @@ export class AppComponent implements OnInit {
       console.log('AppComponent: ngOnInit(): LoggedInUser:', this.loggedInUser);
     }
     catch (err) {
-      console.log('AppComponent: ngOnInit(): Caught error fetching logged in user:', err);
+      console.error('AppComponent: ngOnInit(): Caught error fetching logged in user:', err);
     }
 
     // Encryption
@@ -789,7 +791,7 @@ export class AppComponent implements OnInit {
 
     // fetch incident configs
     await this.getSavedIncidentConfigurations();
-    this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration${utils.sPlural(selectedDeleteConfigNames)} ${selectedDeleteConfigNames.join(', ')} was successfully deleted`});
+    this.messageWithAutoClear({severity: 'success', summary: 'Successful', detail: `Configuration${utils.sPlural(selectedDeleteConfigNames)} ${selectedDeleteConfigNames.join(', ')} ${utils.werePlural(selectedDeleteConfigNames)} successfully deleted`});
 
     this.selectedDeleteIncidentConfigs = []; // reset selection
   }
