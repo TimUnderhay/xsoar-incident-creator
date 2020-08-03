@@ -12,6 +12,13 @@ This web application will create incidents in Cortex XSOAR (aka 'Demisto') over 
 
 ![Screenshot of the app](content/importer1.png)
 
+## Security (or rather, lack of security)
+- No front-end user security / login functionality is provided, so this is potentially a back-door into XSOAR if left on the network for other users to use.  See note on how **NOT** to use this app.
+
+## How NOT to Use
+
+- Due to the last two bullet points, this is not intended for usage amongst multiple users.  It is **strongly** recommended that you run it **ONLY** on your local workstation, for personal use.
+
 ## Warranty and Support
 
 There is no warranty or official support for this project.  Issues will be addressed on a best-effort basis.  Use at your own risk.
@@ -30,13 +37,6 @@ There is no warranty or official support for this project.  Issues will be addre
 - It uses JSON files as simple databases.  Modifying them by hand may make the app unusable.
 - UI doesn't yet use responsive layout, so it may look bad on small screens.
 
-## Security (or Rather, Lack of Security)
-- No front-end user security / login functionality is provided, so this is potentially a back-door into XSOAR if left on the network for other users to use.  See note on how **NOT** to use this app.
-
-## How NOT to Use
-
-- Due to the last two bullet points, this is not intended for usage amongst multiple users.  It is **strongly** recommended that you run it **ONLY** on your local workstation, for personal use.
-
 ## Importing an Incident from XSOAR
 
 Use the `XSOAR Import` button to easily load an existing incident's fields from XSOAR.  Note that this will not download file attachments from the incident.  That must be done separately.
@@ -54,7 +54,7 @@ The incident creator allows for JSON data taken from any JSON file to be utilise
 
 ## JMESPath Expressions
 
-The incident creator uses the GorillaStack implementation of JMESPath.  For information and documentation on expression usage, have a look at `https://gorillastack-jmespath.netlify.app/`.
+The incident creator uses the GorillaStack implementation of JMESPath.  For information and documentation on expression usage, have a look at https://gorillastack-jmespath.netlify.app/.
 
 ## Uploading JSON Data
 
@@ -99,15 +99,15 @@ This will be reflected in the below command line examples.
 
 ## Running a temporary container:
 
-Mac/Linux: `docker run -p 127.0.0.1:4002:4002 -ti --rm -v ~/xsoar-incident-creator:/opt/xsoar/xsoar-incident-creator/server/etc tundisto/xsoar-incident-creator:latest`
+**Mac/Linux:** `docker run -p 127.0.0.1:4002:4002 -ti --rm -v ~/xsoar-incident-creator:/opt/xsoar/xsoar-incident-creator/server/etc tundisto/xsoar-incident-creator:latest`
 
-Windows: `docker run -p 127.0.0.1:4002:4002 -ti --rm -v c:\Users\myUsername\Documents\xsoar-incident-creator:/opt/xsoar/xsoar-incident-creator/server/etc xsoar-incident-creator:dev`
+**Windows:** `docker run -p 127.0.0.1:4002:4002 -ti --rm -v c:\Users\myUsername\Documents\xsoar-incident-creator:/opt/xsoar/xsoar-incident-creator/server/etc xsoar-incident-creator:dev`
 
 ## Creating a container:
 
-Mac/Linux: `docker create -p 127.0.0.1:4002:4002 --name xsoar-incident-creator -v ~/xsoar-incident-creator:/opt/xsoar/xsoar-incident-creator/server/etc tundisto/xsoar-incident-creator:latest`
+**Mac/Linux:** `docker create -p 127.0.0.1:4002:4002 --name xsoar-incident-creator -v ~/xsoar-incident-creator:/opt/xsoar/xsoar-incident-creator/server/etc tundisto/xsoar-incident-creator:latest`
 
-Windows: `docker create -p 127.0.0.1:4002:4002 --name xsoar-incident-creator -v c:\Users\myUsername\xsoar-incident-creator:/opt/xsoar/xsoar-incident-creator/server/etc tundisto/xsoar-incident-creator:latest`
+**Windows:** `docker create -p 127.0.0.1:4002:4002 --name xsoar-incident-creator -v c:\Users\myUsername\xsoar-incident-creator:/opt/xsoar/xsoar-incident-creator/server/etc tundisto/xsoar-incident-creator:latest`
 
 ### Starting the container:
 
