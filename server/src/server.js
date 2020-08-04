@@ -341,12 +341,12 @@ function uploadAttachmentToDemisto(serverId, incidentId, incidentFieldName, atta
     json: true,
     timeout: 2000
   }
-  return request(options);  // request returns a promise
+  return request( addHttpProxy(options, serverId) );  // request returns a promise
 }
 
 
 
-async function testApi(url, apiKey, trustAny) {
+async function testApi(url, apiKey, trustAny, proxy) {
   const options = {
     url: url + '/user',
     method: 'GET',
@@ -359,6 +359,9 @@ async function testApi(url, apiKey, trustAny) {
     resolveWithFullResponse: true,
     json: true,
     timeout: 2000
+  }
+  if (proxy) {
+    options.proxy = proxy;
   }
   try {
     const result = await request( options );
@@ -392,7 +395,6 @@ function getDemistoApiConfig(serverId) {
 
 async function getIncidentFields(serverId) {
   // This method will get incident field definitions from a XSOAR server
-
   const demistoServerConfig = getDemistoApiConfig(serverId);
 
   console.log(`Fetching incident fields from '${demistoServerConfig.url}'`);
@@ -413,7 +415,7 @@ async function getIncidentFields(serverId) {
 
   try {
     // send request to XSOAR
-    result = await request( options );
+    result = await request( addHttpProxy(options, serverId) );
 
     // 'result' contains non-incident fields, as well, so let's make a version containing only incident fields
     let fields = result.body.reduce( (result, field) => {
@@ -440,10 +442,10 @@ async function getIncidentFields(serverId) {
 
 
 
-async function getIncidentTypes(demistoUrl) {
-// This method will get incident type definitions from a XSOAR server
+async function getIncidentTypes(serverId) {
+// This method will get incident type definitions from an XSOAR server
 
-  let demistoServerConfig = getDemistoApiConfig(demistoUrl);
+  const demistoServerConfig = getDemistoApiConfig(serverId);
 
   console.log(`Fetching incident types from '${demistoServerConfig.url}'`);
 
@@ -463,7 +465,7 @@ async function getIncidentTypes(demistoUrl) {
 
   try {
     // send request to XSOAR
-    result = await request( options );
+    result = await request( addHttpProxy(options, serverId) );
 
     // console.log(fields);
 
@@ -547,6 +549,16 @@ function sanitiseObjectFromValidKeyList(validKeys, obj) {
 
 
 
+function addHttpProxy(requestOptions, serverId) {
+  const demistoServerConfig = getDemistoApiConfig(serverId);
+  if (demistoServerConfig.hasOwnProperty('proxy')) {
+    requestOptions.proxy = demistoServerConfig.proxy;
+  }
+  return requestOptions;
+}
+
+
+
 ////////////////////// API //////////////////////
 
 app.get(apiPath + '/whoami', (req, res) => {
@@ -617,7 +629,7 @@ app.post(apiPath + '/demistoEndpoint', async (req, res) => {
       return;
     }
 
-    const {url, apiKey, trustAny} = body;
+    const {url, apiKey, trustAny, proxy} = body;
     const id = uuidv4();
 
     // remove any junk data
@@ -627,6 +639,10 @@ app.post(apiPath + '/demistoEndpoint', async (req, res) => {
       apiKey,
       trustAny
     };
+
+    if (proxy) {
+      config.proxy = proxy;
+    }
 
     demistoApiConfigs[id] = config;
     await saveApiConfig();
@@ -648,7 +664,7 @@ app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
       return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
     }
 
-    const {id, url, trustAny} = body;
+    const {id, url, trustAny, proxy} = body;
     const apiKey = body.hasOwnProperty('apiKey') ? body.apiKey : getDemistoApiConfig(id).apiKey;
     
     // remove any junk data
@@ -658,6 +674,10 @@ app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
       apiKey,
       trustAny
     };
+
+    if (proxy) {
+      config.proxy = proxy;
+    }
 
     demistoApiConfigs[id] = config;
 
@@ -708,12 +728,12 @@ app.post(apiPath + '/demistoEndpoint/test/adhoc', async (req, res) => {
     return returnError(error, res, 400);
   }
 
-  const {url, trustAny} = body;
+  const {url, trustAny, proxy} = body;
   const apiKey = body.hasOwnProperty('id') ? getDemistoApiConfig(body.id).apiKey : body.apiKey;
 
   let testResult;
   try {
-    testResult = await testApi(url, decrypt(apiKey), trustAny);
+    testResult = await testApi(url, decrypt(apiKey), trustAny, proxy);
     // console.debug('testResult:', testResult);
   }
   catch(error) {
@@ -752,11 +772,11 @@ app.get(apiPath + '/demistoEndpoint/test/:serverId', async (req, res) => {
   // Does not save settings.  Another call will handle that.
 
   const serverId = decodeURIComponent(req.params.serverId);
-  const {url, apiKey, trustAny} = getDemistoApiConfig(serverId);
+  const {url, apiKey, trustAny, proxy} = getDemistoApiConfig(serverId);
   let testResult;
 
   try {
-    testResult = await testApi(url, decrypt(apiKey), trustAny);
+    testResult = await testApi(url, decrypt(apiKey), trustAny, proxy);
   }
   catch(error) {
     return returnError(`Error testing XSOAR URL: ${url}: ${error}`, res);
@@ -853,8 +873,9 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
 
   const body = req.body;
   let demistoServerConfig;
+  let serverId;
   try {
-    const serverId = body.serverId;
+    serverId = body.serverId;
     demistoServerConfig = getDemistoApiConfig(serverId);
   }
   catch {
@@ -874,13 +895,13 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
     rejectUnauthorized: !demistoServerConfig.trustAny,
     resolveWithFullResponse: true,
     json: true,
-    body: body
+    body
   };
   
   let result;
   try {
     // send request to XSOAR
-    result = await request( options );
+    result = await request( addHttpProxy(options, serverId) );
   }
   catch (error) {
     if ( error && 'response' in error && error.response && 'statusCode' in error.response && error.statusCode !== null) {
@@ -947,8 +968,9 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
   
   const json = body.json;
   let demistoServerConfig;
+  let serverId;
   try {
-    const serverId = body.serverId;
+    serverId = body.serverId;
     demistoServerConfig = getDemistoApiConfig(serverId);
   }
   catch(error) {
@@ -974,7 +996,7 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
 
   try {
     // send request to XSOAR
-    result = await request( options );
+    result = await request( addHttpProxy(options, serverId) );
     // console.log('result:', result);
   }
   catch (error) {
@@ -1037,8 +1059,9 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
   const {incidentId, version} = body;
 
   let demistoServerConfig;
+  let serverId;
   try {
-    const serverId = req.body.serverId;
+    serverId = req.body.serverId;
     demistoServerConfig = getDemistoApiConfig(serverId);
   }
   catch {
@@ -1066,7 +1089,7 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
   };
   try {
     // send request to XSOAR
-    result = await request( options );
+    result = await request( addHttpProxy(options, serverId) );
     res.status(201).json({success: true});
   }
   catch (error) {
@@ -1088,8 +1111,9 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
     const incidentId = `${req.body.incidentId}`; // coerce id into a string
 
     let demistoServerConfig;
+    let serverId;
     try {
-      const serverId = req.body.serverId;
+      serverId = req.body.serverId;
       demistoServerConfig = getDemistoApiConfig(serverId);
     }
     catch {
@@ -1121,7 +1145,7 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
     };
 
     // send request to XSOAR
-    result = await request( options );
+    result = await request( addHttpProxy(options, serverId) );
 
     if ('body' in result && 'total' in result.body && result.body.total === 0) {
       return res.status(200).json({
@@ -1906,7 +1930,8 @@ async function loadDemistoApiConfigs() {
       // test API communication
       let testResult;
       try {
-        testResult = await testApi(demistoServerConfig.url, decrypt(demistoServerConfig.apiKey), demistoServerConfig.trustAny);
+        const {url, apiKey, trustAny, proxy} = demistoServerConfig;
+        testResult = await testApi(url, decrypt(apiKey), trustAny, proxy);
       }
       catch (error) {
         if ('message' in error && error.message.startsWith('Error during decryption')) {

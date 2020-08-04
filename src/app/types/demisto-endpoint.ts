@@ -3,10 +3,11 @@ export interface DemistoEndpoint {
   url: string;
   apiKey?: string;
   trustAny: boolean;
+  proxy?: string;
 }
 
 export interface DemistoEndpoints {
-  [index: string]: DemistoEndpoint;
+  [serverId: string]: DemistoEndpoint;
 }
 
 export interface DemistoEndpointTestResult {

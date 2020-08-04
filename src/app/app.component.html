@@ -386,14 +386,46 @@
 
       <div style="margin-top: 1.5em;">
         <span class="ui-float-label">
-          <input pInputText type="password" id="apiKey" required [(ngModel)]="newDemistoServerApiKey" name="apiKey" size="50" autocomplete="off" class="inputDisplay" standalone>
+          <input
+            pInputText
+            type="password"
+            id="apiKey"
+            required
+            [(ngModel)]="newDemistoServerApiKey"
+            name="apiKey"
+            size="50"
+            autocomplete="off"
+            class="inputDisplay"
+            standalone>
           <label for="apiKey">API Key</label>
+        </span>
+      </div>
+
+
+      <div style="margin-top: 1.5em;">
+        <span class="ui-float-label">
+          <input
+            pInputText
+            type="url"
+            id="proxy"
+            required
+            [(ngModel)]="newDemistoServerProxy"
+            name="proxy"
+            size="50"
+            autocomplete="off"
+            class="inputDisplay"
+            standalone>
+          <label for="proxy">HTTP Proxy</label>
         </span>
       </div>
 
       <div style="margin-top: 1.5em;">
         <span class="formLabel">Trust Any Certificate&nbsp;&nbsp;</span>
-        <p-inputSwitch name="trustAny" [(ngModel)]="newDemistoServerTrustAny" [style]="{'vertical-align' : 'middle' }"></p-inputSwitch>
+        <p-inputSwitch
+          name="trustAny"
+          [(ngModel)]="newDemistoServerTrustAny"
+          [style]="{'vertical-align' : 'middle' }">
+        </p-inputSwitch>
       </div>
 
       <div style="margin-top: .5em; font-weight: bold; color: black;">
@@ -405,22 +437,23 @@
         <!-- Test Button -->
         <p-button
           label="Test"
-          (onClick)="testDemistoEndpointAdHoc(newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny)"
+          (onClick)="testDemistoEndpointAdHoc(newDemistoServerUrl, newDemistoServerApiKey, newDemistoServerTrustAny, newDemistoServerProxy)"
           [disabled]="newEditTestButtonDisabled">
         </p-button>
 
         <!-- Save Button -->
-        <p-button label="Save"
+        <p-button
           *ngIf="newDemistoServerDialogMode === 'new'"
+          label="Save"
           (onClick)="onNewDemistoEndpointSaved()"
           [disabled]="!newDemistoServerUrl || !newDemistoServerApiKey || newDemistoServerSaveDisabled">
         </p-button>
 
         <!-- Update Button -->
         <p-button
-          label="Update"
           *ngIf="newDemistoServerDialogMode === 'edit'"
-          (onClick)="onDemistoEndpointUpdated(newDemistoServerUrl)"
+          label="Update"
+          (onClick)="onDemistoEndpointUpdated()"
           [disabled]="!newDemistoServerUrl || newDemistoServerSaveDisabled">
         </p-button>
 

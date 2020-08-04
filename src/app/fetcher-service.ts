@@ -166,11 +166,14 @@ export class FetcherService {
 
 
 
-  createDemistoEndpoint(url, apiKey, trustAny): Promise<DemistoEndpointTestResult> {
+  createDemistoEndpoint(url, apiKey, trustAny, proxy): Promise<DemistoEndpointTestResult> {
     const headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
-    let body = { url, apiKey: this.encrypt(apiKey), trustAny };
+    const body = { url, apiKey: this.encrypt(apiKey), trustAny };
+    if (proxy !== '') {
+      body['proxy'] = proxy;
+    }
     return this.http.post(this.apiPath + '/demistoEndpoint', body, { headers } )
                     .toPromise()
                     .then( res => res as DemistoEndpointTestResult );
@@ -178,13 +181,20 @@ export class FetcherService {
 
 
 
-  updateDemistoEndpoint(id, url, trustAny, apiKey?): Promise<DemistoEndpointTestResult> {
+  updateDemistoEndpoint(id, url, trustAny, proxy, apiKey?): Promise<DemistoEndpointTestResult> {
     const headers = new HttpHeaders( {
       Accept: 'application/json'
     } );
-    const body = { url, trustAny, id };
+    const body = {
+      url,
+      trustAny,
+      id
+    };
     if (apiKey) {
       body['apiKey'] = this.encrypt(apiKey);
+    }
+    if (proxy !== '') {
+     body['proxy']  = proxy;
     }
     return this.http.post(this.apiPath + '/demistoEndpoint/update', body, { headers } )
                     .toPromise()
