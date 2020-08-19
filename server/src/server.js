@@ -104,7 +104,10 @@ function randomElement(list) {
 const devMode = process.argv.includes('--dev');
 
 // REST client
-const request = require('request-promise-native');
+const axios = require('axios').default;
+const Https = require('https');
+const HttpsProxyAgent = require('https-proxy-agent');
+const FormData = require('form-data');
 
 // Express
 const express = require('express');
@@ -312,59 +315,70 @@ function uploadAttachmentToDemisto(serverId, incidentId, incidentFieldName, atta
 
   const demistoServerConfig = getDemistoApiConfig(serverId);
   
-  const formData = {
+  /*const formData = {
     id: incidentId,
     field: incidentFieldName,
     file: fs.createReadStream(diskFilename),
     fileName: filename,
     last: `${last}`
-  };
+  };*/
+  const form = new FormData();
+  form.append('id', incidentId);
+  form.append('field', incidentFieldName);
+  form.append('file', fs.createReadStream(diskFilename));
+  form.append('fileName', fileName);
+  form.append('last', `${last}`);
+  
   if (mediaFile) {
-    formData.showMediaFile = `${mediaFile}`;
+    // formData.showMediaFile = `${mediaFile}`;
+    form.append('showMediaFile', `${mediaFile}`);
   }
   if (comment) {
-    formData.fileComment = comment;
+    // formData.fileComment = comment;
+    form.append('fileComment', comment);
   }
 
   // console.log('uploadAttachmentToDemisto(): formData:', formData);
   
   const options = {
     url: `${demistoServerConfig.url}/incident/upload/${incidentId}`,
-    method: 'POST',
+    method: 'post',
     headers: {
       Authorization: decrypt(demistoServerConfig.apiKey),
       Accept: 'application/json'
     },
-    rejectUnauthorized: !demistoServerConfig.trustAny,
-    resolveWithFullResponse: true,
-    formData,
-    json: true,
+    data: form,
     timeout: 2000
   }
-  return request( addHttpProxy(options, serverId) );  // request returns a promise
+  return axios( addHttpProxy(options, serverId) );
 }
 
 
 
 async function testApi(url, apiKey, trustAny, proxy) {
   const options = {
-    url: url + '/user',
-    method: 'GET',
+    url: `${url}/user`,
+    method: 'get',
     headers: {
       Authorization: apiKey,
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    rejectUnauthorized: !trustAny,
-    resolveWithFullResponse: true,
-    json: true,
     timeout: 2000
   }
+
   if (proxy) {
-    options.proxy = proxy;
+    const proxyOptions = splitUrlToProxy(proxy);
+    proxyOptions.rejectUnauthorized = !trustAny;
+    options.httpsAgent = new HttpsProxyAgent(proxyOptions);
   }
+  else {
+    options.httpsAgent = new Https.Agent({rejectUnauthorized: !trustAny});
+  }
+
   try {
-    const result = await request( options );
+    // console.log('options:', options);
+    const result = await axios( options );
     return { success: true, result }
   }
   catch(error) {
@@ -372,14 +386,15 @@ async function testApi(url, apiKey, trustAny, proxy) {
     const res = {
       success: false
     };
-    if ('response' in error && error.response !== undefined && 'statusMessage' in error.response) {
-      res['error'] = error.response.statusMessage
+    if (error.hasOwnProperty('response') && error.response !== undefined && 'statusMessage' in error.response) {
+      console.log('got to 1');
+      res.error = error.response.statusMessage
     }
     else if ('message' in error) {
-      res['error'] = error.message;
+      res.error = error.message;
     }
     if ('statusCode' in error) {
-      res['statusCode'] = error.statusCode;
+      res.statusCode = error.statusCode;
     }
     return res;
   }
@@ -402,23 +417,20 @@ async function getIncidentFields(serverId) {
   let result;
   const options = {
     url: demistoServerConfig.url + '/incidentfields',
-    method: 'GET',
+    method: 'get',
     headers: {
       Authorization: decrypt(demistoServerConfig.apiKey),
       Accept: 'application/json',
       'Content-Type': 'application/json'
-    },
-    rejectUnauthorized: !demistoServerConfig.trustAny,
-    resolveWithFullResponse: true,
-    json: true
+    }
   }
 
   try {
     // send request to XSOAR
-    result = await request( addHttpProxy(options, serverId) );
+    result = await axios( addHttpProxy(options, serverId) );
 
     // 'result' contains non-incident fields, as well, so let's make a version containing only incident fields
-    let fields = result.body.reduce( (result, field) => {
+    let fields = result.data.reduce( (result, field) => {
       // console.log(field)
       if ('id' in field && field.id.startsWith('incident_')) {
         result.push(field)
@@ -452,25 +464,22 @@ async function getIncidentTypes(serverId) {
   let result;
   let options = {
     url: demistoServerConfig.url + '/incidenttype',
-    method: 'GET',
+    method: 'get',
     headers: {
       Authorization: decrypt(demistoServerConfig.apiKey),
       Accept: 'application/json',
       'Content-Type': 'application/json'
-    },
-    rejectUnauthorized: !demistoServerConfig.trustAny,
-    resolveWithFullResponse: true,
-    json: true
+    }
   }
 
   try {
     // send request to XSOAR
-    result = await request( addHttpProxy(options, serverId) );
+    result = await axios( addHttpProxy(options, serverId) );
 
     // console.log(fields);
 
     console.log(`Successfully fetched incident types from '${demistoServerConfig.url}'`);
-    return result.body;
+    return result.data;
   }
   catch (error) {
     if ('message' in error) {
@@ -549,10 +558,27 @@ function sanitiseObjectFromValidKeyList(validKeys, obj) {
 
 
 
+function splitUrlToProxy(url) {
+  let remainder = url.split('://')[1];
+  let [host, port] = remainder.split(':');
+  port = port ? Number(port) : 80;
+  return {
+    host,
+    port
+  }
+}
+
+
+
 function addHttpProxy(requestOptions, serverId) {
   const demistoServerConfig = getDemistoApiConfig(serverId);
   if (demistoServerConfig.hasOwnProperty('proxy')) {
-    requestOptions.proxy = demistoServerConfig.proxy;
+    const proxyOptions = splitUrlToProxy(demistoServerConfig.proxy);
+    proxyOptions.rejectUnauthorized = !demistoServerConfig.trustAny;
+    requestOptions.httpsAgent = new HttpsProxyAgent(proxyOptions);
+  }
+  else {
+    requestOptions.httpsAgent = new Https.Agent({rejectUnauthorized: !demistoServerConfig.trustAny});
   }
   return requestOptions;
 }
@@ -760,7 +786,7 @@ app.post(apiPath + '/demistoEndpoint/test/adhoc', async (req, res) => {
     }
   }
 
-  console.log(`Logged into XSOAR as user '${testResult.result.body.username}'`);
+  console.log(`Logged into XSOAR as user '${testResult.result.data.username}'`);
   console.log(`Successfully tested XSOAR URL '${url}'`);
   return res.status(200).json( { success: true, statusCode: 200 } );
 });
@@ -804,7 +830,7 @@ app.get(apiPath + '/demistoEndpoint/test/:serverId', async (req, res) => {
     return;
   }
 
-  console.log(`Logged into XSOAR as user '${testResult.result.body.username}'`);
+  console.log(`Logged into XSOAR as user '${testResult.result.data.username}'`);
   console.log(`Successfully tested XSOAR URL '${url}'`);
   return res.status(200).json( { success: true, statusCode: 200 } );
   
@@ -886,22 +912,19 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
 
   const options = {
     url: demistoServerConfig.url + '/incident',
-    method: 'POST',
+    method: 'post',
     headers: {
       Authorization: decrypt(demistoServerConfig.apiKey),
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    rejectUnauthorized: !demistoServerConfig.trustAny,
-    resolveWithFullResponse: true,
-    json: true,
-    body
+    data: body
   };
   
   let result;
   try {
     // send request to XSOAR
-    result = await request( addHttpProxy(options, serverId) );
+    result = await axios( addHttpProxy(options, serverId) );
   }
   catch (error) {
     if ( error && 'response' in error && error.response && 'statusCode' in error.response && error.statusCode !== null) {
@@ -942,7 +965,7 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
     }
   }
 
-  const incidentId = result.body.id;
+  const incidentId = result.data.id;
   // send results to client
   res.status(201).json( { id: incidentId, success: true, statusCode: result.statusCode, statusMessage: result.statusMessage } );
   // console.debug(result);
@@ -980,23 +1003,20 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
   // console.debug(body);
 
   let result;
-  let options = {
+  const options = {
     url: demistoServerConfig.url + '/incident/json',
-    method: 'POST',
+    method: 'post',
     headers: {
       Authorization: decrypt(demistoServerConfig.apiKey),
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    rejectUnauthorized: !demistoServerConfig.trustAny,
-    resolveWithFullResponse: true,
-    json: true,
-    body: json
+    data: json
   };
 
   try {
     // send request to XSOAR
-    result = await request( addHttpProxy(options, serverId) );
+    result = await axios( addHttpProxy(options, serverId) );
     // console.log('result:', result);
   }
   catch (error) {
@@ -1012,10 +1032,10 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
     return;
   }
 
-  // console.log('result body:', result.body);
+  // console.log('result body:', result.data);
 
-  if (result.body) {
-    const incidentId = result.body.id;
+  if (result.data) {
+    const incidentId = result.data.id;
     // send results to client
     // console.debug(res);
     console.log(`User ${currentUser} created XSOAR incident with id ${incidentId}`);
@@ -1076,20 +1096,17 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
   let result;
   const options = {
     url: demistoServerConfig.url + '/incident/investigate',
-    method: 'POST',
+    method: 'post',
     headers: {
       Authorization: decrypt(demistoServerConfig.apiKey),
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    rejectUnauthorized: !demistoServerConfig.trustAny,
-    resolveWithFullResponse: true,
-    json: true,
-    body: requestBody
+    data: requestBody
   };
   try {
     // send request to XSOAR
-    result = await request( addHttpProxy(options, serverId) );
+    result = await axios( addHttpProxy(options, serverId) );
     res.status(201).json({success: true});
   }
   catch (error) {
@@ -1130,7 +1147,7 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
     };
 
     let result;
-    let options = {
+    const options = {
       url: demistoServerConfig.url + '/incidents/search',
       method: 'POST',
       headers: {
@@ -1138,16 +1155,13 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
         Accept: 'application/json',
         'Content-Type': 'application/json'
       },
-      rejectUnauthorized: !demistoServerConfig.trustAny,
-      resolveWithFullResponse: true,
-      json: true,
-      body: body
+      data: body
     };
 
     // send request to XSOAR
-    result = await request( addHttpProxy(options, serverId) );
+    result = await axios( addHttpProxy(options, serverId) );
 
-    if ('body' in result && 'total' in result.body && result.body.total === 0) {
+    if ('body' in result && 'total' in result.data && result.data.total === 0) {
       return res.status(200).json({
         success: false,
         error: `Query returned 0 results`
@@ -1156,10 +1170,10 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
     else {
       return res.status(200).json({
         success: true,
-        incident: result.body.data[0]
+        incident: result.data.data[0]
       });
     }
-    // console.log('result:', result.body);
+    // console.log('result:', result.data);
   }
   catch (error) {
     if ('message' in error) {
@@ -1854,7 +1868,7 @@ app.post(apiPath + '/attachment/push', async (req, res) => {
     const comment = 'comment' in attachment ? attachment.comment : undefined;
 
     result = await uploadAttachmentToDemisto(attachment.serverId, attachment.incidentId, attachment.incidentFieldName, attachment.attachmentId, attachment.filename, attachment.last, mediaFile, comment);
-    return res.status(201).json({success: true, version: result.body.version});
+    return res.status(201).json({success: true, version: result.data.version});
   }
   catch (error) {
     console.error(error);
@@ -1928,10 +1942,11 @@ async function loadDemistoApiConfigs() {
       console.log('Testing default XSOAR API server API communication');
 
       // test API communication
-      let testResult;
+      let testResult, url, apiKey, trustAny, proxy;
       try {
-        const {url, apiKey, trustAny, proxy} = demistoServerConfig;
+        ({url, apiKey, trustAny, proxy} = demistoServerConfig);
         testResult = await testApi(url, decrypt(apiKey), trustAny, proxy);
+        // console.log(testResult);
       }
       catch (error) {
         if ('message' in error && error.message.startsWith('Error during decryption')) {
@@ -1944,14 +1959,17 @@ async function loadDemistoApiConfigs() {
       }
 
       if (testResult.success) {
-        console.log(`Logged into XSOAR as user '${testResult.result.body.username}'`);
+        console.log(`Logged into XSOAR as user '${testResult.result.data.username}'`);
         console.log('XSOAR API is initialised');
 
         // fetch incident fields
         incident_fields = await getIncidentFields(defaultDemistoApiId);
       }
       else {
-        console.error(`XSOAR API initialisation failed with URL ${defaultDemistoApiId} with trustAny = ${demistoApiConfigs[defaultDemistoApiId].trustAny}.`);
+        console.error(`XSOAR API initialisation failed with URL ${url} with trustAny = ${demistoApiConfigs[defaultDemistoApiId].trustAny}.`);
+        if (testResult.hasOwnProperty('error')) {
+          console.error('Error:', testResult.error);
+        }
       }
     }
   }
@@ -2193,7 +2211,7 @@ function initSSL() {
 
   sslCert = fs.readFileSync(certFile, { encoding: 'utf8' });
   privKey = fs.readFileSync(privKeyFile, { encoding: 'utf8' });
-  server = require('https').createServer({
+  server = Https.createServer({
     key: privKey,
     cert: sslCert,
   }, app);

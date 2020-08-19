@@ -302,7 +302,9 @@ export class AppComponent implements OnInit {
 
 
   async ngOnInit() {
+    console.log(`version: ${version} build ${buildNumber}`);
     console.log('AppComponent: ngOnInit()');
+
     // Take Subscriptions
     this.subscriptions.add(this.fetcherService.fieldMappingSelectionActive.subscribe( () => this.onFieldMappingSelectionActive() ));
 
@@ -343,7 +345,6 @@ export class AppComponent implements OnInit {
         console.error('AppComponent: ngOnInit(): Caught error fetching Demisto incident types:', error);
       }
 
-      console.log('version:', version);
     }
 
     const initPromises = [];

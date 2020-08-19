@@ -7,9 +7,11 @@
   },
   "private": true,
   "dependencies": {
+    "axios": "^0.19.0",
     "body-parser": "^1.19.0",
     "express": "^4.17.1",
     "express-http-proxy": "^1.6.0",
+    "https-proxy-agent": "^2.2.4",
     "multer": "^1.4.2",
     "mv": "^2.1.1",
     "node-rsa": "^1.0.7",
