@@ -16,12 +16,14 @@
   <div
     class="fieldLabel"
     [class.locked]="field.locked">
+
       <span
         *ngIf="field.locked"
         class="pi pi-info-circle"
         style="color: white; line-height: 14px; vertical-align: middle;"
         [pTooltip]="field.locked ? field.lockedReason : undefined">
       </span> 
+
       {{displayShortNames ? field.shortName : (field.longName ? field.longName : field.shortName)}}
       
   </div>
@@ -226,7 +228,12 @@
     <div style="flex-basis: auto; flex-grow: 1;">
 
       <!-- objects -->
-      <span *ngIf="valueType === 'object'; else text" (click)="onEditJSONClicked()" class="editJsonLink">View JSON</span>
+      <span
+        *ngIf="valueType === 'object'; else text"
+        (click)="onEditJSONClicked()"
+        class="editJsonLink">
+          View JSON
+      </span>
 
       <ng-template #text>
 
@@ -325,7 +332,9 @@
             class="fieldColour">
               Transformed: 
           </span>
+
           {{transformedValue}}
+
       </div>
 
       <!-- Resolved Object Value -->
@@ -467,10 +476,12 @@
         </vertical-center>
 
         <div>
+
           <p-selectButton
             [options]="datePrecisionItems"
             [(ngModel)]="selectedDatePrecision">
           </p-selectButton>
+
         </div>
 
       </ng-container>
@@ -483,11 +494,13 @@
         </div>
 
         <div>
+
           <p-checkbox
             [binary]="true"
             name="auto"
             [(ngModel)]="dateAutoParse">
           </p-checkbox>
+
         </div>
 
         <!-- Formatter -->
@@ -498,6 +511,7 @@
         <div style="display: flex; flex-direction: row;">
 
           <div style="flex-grow: 1;">
+
             <input
               pInputText
               id="date-formatter"
@@ -506,6 +520,7 @@
               [(ngModel)]="dateFormatter"
               [disabled]="dateAutoParse"
               class="inputDisplay">
+
           </div>
 
           <vertical-center>

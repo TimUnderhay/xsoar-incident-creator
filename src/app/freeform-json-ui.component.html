@@ -14,11 +14,13 @@
       </vertical-center>
 
       <vertical-center>
+
         <span
           class="pi pi-pencil"
           style="font-size: 2em; color: white; cursor: pointer;"
           (click)="onRenameIncidentConfigClicked()">
         </span>
+
       </vertical-center>
 
     </div>
@@ -40,6 +42,7 @@
       <div style="margin-top: 0; display: flex; flex-direction: row;">
 
         <vertical-center>
+
           <span class="fieldLabel">
               
             Source Incident Type:
@@ -48,8 +51,11 @@
               style="line-height: 14px; vertical-align: middle; font-size: 2em;"
               pTooltip="This controls which fields are available to be added.  If its value is changed, some fields may become locked if they are not associated with the newly-selected incident type">
             </i>
+
             &nbsp;&nbsp;
+
           </span>
+
         </vertical-center>
 
         <div style="flex-grow: 1;">
@@ -77,7 +83,11 @@
       <div class="incidentButtonBar">
         
         <!-- Add Field Button -->
-        <p-button type="button" label="Add Field" (onClick)="onAddIncidentFieldClicked()"></p-button>
+        <p-button
+          type="button"
+          label="Add Field"
+          (onClick)="onAddIncidentFieldClicked()">
+        </p-button>
 
         <!-- Save -->
         <p-button
@@ -187,9 +197,11 @@
           </freeform-json-row>
 
         </ng-container>
+
       </div>
 
     </p-card>
+
   </div>
 
 
@@ -243,11 +255,13 @@
             </vertical-center>
 
             <vertical-center>
+
               <span
                 class="pi pi-pencil"
                 style="font-size: 1.5rem; color: white; cursor: pointer;"
                 (click)="onRenameJsonFileClicked()">
               </span>
+
             </vertical-center>
 
           </div>
@@ -531,17 +545,35 @@
   [style]="{width: '300px'}"
   styleClass="saveAsDialog">
 
-    <div style="margin-bottom: .5em;" class="formLabel">Incident Name</div>
+    <div
+      style="margin-bottom: .5em;"
+      class="formLabel">
+        Incident Name
+    </div>
 
-    <input pInputText #saveAsInput type="text" [(ngModel)]="incidentSaveAsConfigName" class="inputDisplay"/>
+    <input
+      pInputText
+      #saveAsInput
+      type="text"
+      [(ngModel)]="incidentSaveAsConfigName"
+      class="inputDisplay"/>
 
-    <div style="margin-top: .5em;">{{incidentSaveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+    <div style="margin-top: .5em;">
+      {{incidentSaveAsOkayButtonDisabled ? 'This name is already in use' : '&nbsp;'}}
+    </div>
 
     <div style="margin-top: .5em; float: right;">
 
-      <p-button label="Save" (onClick)="onIncidentSaveAsAccepted()" [disabled]="incidentSaveAsOkayButtonDisabled"></p-button>
+      <p-button
+        label="Save"
+        (onClick)="onIncidentSaveAsAccepted()"
+        [disabled]="incidentSaveAsOkayButtonDisabled">
+      </p-button>
 
-      <p-button label="Cancel" (onClick)="onIncidentSaveAsCancelled()"></p-button>
+      <p-button
+        label="Cancel"
+        (onClick)="onIncidentSaveAsCancelled()">
+      </p-button>
 
     </div>
 
@@ -559,8 +591,10 @@
 
     <div>
 
-      <div class="formLabel" style="margin-bottom: .5em;">
-        Incidents created using this method will go through incident classification & mapping under the "Demisto REST API" integration in the dropdown in Settings -> Integrations -> Classification & Mapping.  The '/incident/json' XSOAR API call is used for this.
+      <div
+        class="formLabel"
+        style="margin-bottom: .5em;">
+          Incidents created using this method will go through incident classification & mapping under the "Demisto REST API" integration in the dropdown in Settings -> Integrations -> Classification & Mapping.  The '/incident/json' XSOAR API call is used for this.
       </div>
 
       <div class="formLabel">
@@ -684,144 +718,142 @@
 
 <!-- Default JSON Dialog -->
 <p-dialog
-[header]="'Default JSON for Incident' + loadedIncidentConfigName"
-[(visible)]="showDefaultJsonDialog"
-[modal]="true"
-[style]="{minWidth: '50%', maxWidth: '75%', maxHeight: '75%'}">
+  [header]="'Default JSON for Incident' + loadedIncidentConfigName"
+  [(visible)]="showDefaultJsonDialog"
+  [modal]="true"
+  [style]="{minWidth: '50%', maxWidth: '75%', maxHeight: '75%'}">
 
-<div
-  *ngIf="jsonGroupConfigurationsItems.length !== 0"
-  class="bulkCreateContainer">
-  
-    <!-- Json Files Column -->
-    <div class="bulkCreateContainerColumn">
-
-      <div
-        *ngIf="!savedJsonConfigurationItems || (savedJsonConfigurationItems && savedJsonConfigurationItems.length === 0); else jsonFilesDefinedRef"
-        class="formLabel">
-          No JSON Files are defined
-      </div>
-
-      <ng-template #jsonFilesDefinedRef>
-
-        <div>
-
-          <span class="formLabel">
-            JSON Files
-          </span>
-
-          <div style="float: right;">
-
-            <span
-              (click)="defaultJsonDialog_selectedJsonId = undefined"
-              class="selectAllControl">
-                Select None
-            </span>
-
-          </div>
-
-        </div>
-
-        <p-listbox
-          *ngIf="savedJsonConfigurationItems"
-          [options]="savedJsonConfigurationItems"
-          [(ngModel)]="defaultJsonDialog_selectedJsonId"
-          [style]="{'width':'100%'}"
-          [multiple]="false"
-          [checkbox]="true"
-          [filter]="false"
-          [showToggleAll]="false">
-        </p-listbox>
-
-      </ng-template>
-
-    </div>
-
-
-    <!-- JSON Groups Column -->
-    <div class="bulkCreateContainerColumn">
-
-      <div
-        *ngIf="!jsonGroupConfigurationsItems || (jsonGroupConfigurationsItems && jsonGroupConfigurationsItems.length === 0); else jsonGroupsDefinedRef"
-        class="formLabel">
-          No JSON Groups are defined
-      </div>
-
-      <ng-template #jsonGroupsDefinedRef>
-
-        <div>
-
-          <span class="formLabel">
-            JSON Groups
-          </span>
-
-          <div style="float: right;">
-
-            <span
-              (click)="defaultJsonDialog_selectedJsonGroupId = undefined"
-              class="selectAllControl">
-                Select None
-            </span>
-
-          </div>
-
-        </div>
-
-        <p-listbox
-          *ngIf="jsonGroupConfigurationsItems"
-          [options]="jsonGroupConfigurationsItems"
-          [(ngModel)]="defaultJsonDialog_selectedJsonGroupId"
-          [style]="{'width':'100%'}"
-          [multiple]="false"
-          [checkbox]="true"
-          [filter]="false"
-          [showToggleAll]="false">
-        </p-listbox>
-
-      </ng-template>
-
-    </div>
-
-    <!-- JSON Group Members Column -->
     <div
-      *ngIf="defaultJsonDialog_selectedJsonGroupId && jsonGroupConfigurations[defaultJsonDialog_selectedJsonGroupId]"
-      class="bulkCreateContainerColumn">
+      *ngIf="jsonGroupConfigurationsItems.length !== 0"
+      class="bulkCreateContainer">
+    
+        <!-- Json Files Column -->
+        <div class="bulkCreateContainerColumn">
 
-      <div style="margin-bottom: 1em;">
-        
-        <span class="formLabel">
-          Group Members
-        </span>
+          <div
+            *ngIf="!savedJsonConfigurationItems || (savedJsonConfigurationItems && savedJsonConfigurationItems.length === 0); else jsonFilesDefinedRef"
+            class="formLabel">
+              No JSON Files are defined
+          </div>
 
-      </div>
+          <ng-template #jsonFilesDefinedRef>
 
-      <div
-        *ngFor="let jsonFileId of jsonGroupConfigurations[defaultJsonDialog_selectedJsonGroupId].jsonFileIds"
-        style="color: black;">
-          
-          {{savedJsonConfigurationsObj[jsonFileId].name}}
+            <div>
 
-      </div>
+              <span class="formLabel">
+                JSON Files
+              </span>
+
+              <div style="float: right;">
+
+                <span
+                  (click)="defaultJsonDialog_selectedJsonId = undefined"
+                  class="selectAllControl">
+                    Select None
+                </span>
+
+              </div>
+
+            </div>
+
+            <p-listbox
+              *ngIf="savedJsonConfigurationItems"
+              [options]="savedJsonConfigurationItems"
+              [(ngModel)]="defaultJsonDialog_selectedJsonId"
+              [style]="{'width':'100%'}"
+              [multiple]="false"
+              [checkbox]="true"
+              [filter]="false"
+              [showToggleAll]="false">
+            </p-listbox>
+
+          </ng-template>
+
+        </div>
+
+
+        <!-- JSON Groups Column -->
+        <div class="bulkCreateContainerColumn">
+
+          <div
+            *ngIf="!jsonGroupConfigurationsItems || (jsonGroupConfigurationsItems && jsonGroupConfigurationsItems.length === 0); else jsonGroupsDefinedRef"
+            class="formLabel">
+              No JSON Groups are defined
+          </div>
+
+          <ng-template #jsonGroupsDefinedRef>
+
+            <div>
+
+              <span class="formLabel">
+                JSON Groups
+              </span>
+
+              <div style="float: right;">
+
+                <span
+                  (click)="defaultJsonDialog_selectedJsonGroupId = undefined"
+                  class="selectAllControl">
+                    Select None
+                </span>
+
+              </div>
+
+            </div>
+
+            <p-listbox
+              *ngIf="jsonGroupConfigurationsItems"
+              [options]="jsonGroupConfigurationsItems"
+              [(ngModel)]="defaultJsonDialog_selectedJsonGroupId"
+              [style]="{'width':'100%'}"
+              [multiple]="false"
+              [checkbox]="true"
+              [filter]="false"
+              [showToggleAll]="false">
+            </p-listbox>
+
+          </ng-template>
+
+        </div>
+
+        <!-- JSON Group Members Column -->
+        <div
+          *ngIf="defaultJsonDialog_selectedJsonGroupId && jsonGroupConfigurations[defaultJsonDialog_selectedJsonGroupId]"
+          class="bulkCreateContainerColumn">
+
+          <div style="margin-bottom: 1em;">
+            
+            <span class="formLabel">
+              Group Members
+            </span>
+
+          </div>
+
+          <div
+            *ngFor="let jsonFileId of jsonGroupConfigurations[defaultJsonDialog_selectedJsonGroupId].jsonFileIds"
+            style="color: black;">
+              {{savedJsonConfigurationsObj[jsonFileId].name}}
+          </div>
+
+        </div>
 
     </div>
 
-  </div>
 
+    <!-- Accept / Cancel Buttons -->
+    <div style="margin-top: .5em; float: right;">
 
-  <!-- Accept / Cancel Buttons -->
-  <div style="margin-top: .5em; float: right;">
+      <p-button
+        label="Accept Changes"
+        (onClick)="onJsonDefaultsAccepted()">
+      </p-button>
 
-    <p-button
-      label="Accept Changes"
-      (onClick)="onJsonDefaultsAccepted()">
-    </p-button>
+      <p-button
+        label="Cancel"
+        (onClick)="onJsonDefaultsCanceled()">
+      </p-button>
 
-    <p-button
-      label="Cancel"
-      (onClick)="onJsonDefaultsCanceled()">
-    </p-button>
-
-  </div>
+    </div>
 
 </p-dialog>
 
@@ -835,7 +867,11 @@
   [style]="{width: '300px'}"
   styleClass="renameIncidentConfigDialog">
 
-    <div style="margin-bottom: .5em;" class="formLabel">New Incident Config Name</div>
+    <div
+      style="margin-bottom: .5em;"
+      class="formLabel">
+      New Incident Config Name
+    </div>
 
     <input
       pInputText
@@ -844,7 +880,9 @@
       [(ngModel)]="renameIncidentConfigName"
       class="inputDisplay"/>
 
-    <div style="margin-top: .5em;">{{renameIncidentConfigAcceptButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+    <div style="margin-top: .5em;">
+      {{renameIncidentConfigAcceptButtonDisabled ? 'This name is already in use' : '&nbsp;'}}
+    </div>
 
     <div style="margin-top: .5em; float: right;">
 
@@ -882,7 +920,9 @@
       [(ngModel)]="renameJsonFileName"
       class="inputDisplay"/>
 
-    <div style="margin-top: .5em;">{{renameJsonFileAcceptButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+    <div style="margin-top: .5em;">
+      {{renameJsonFileAcceptButtonDisabled ? 'This name is already in use' : '&nbsp;'}}
+    </div>
 
     <div style="margin-top: .5em; float: right;">
 

@@ -22,6 +22,7 @@ const SchemaVersion = 1;
 
 // Directories
 const configDir = '../etc';
+const foundConfigDir =  fs.existsSync(configDir);
 const defsDir = `./definitions`; // contains static user definitions
 const sampleIncidentsDir = `${configDir}/incidents`; // not used in prod
 const staticDir = '../../dist/xsoar-incident-creator'; // where to find pre-built Angular client files
@@ -625,12 +626,21 @@ app.post(apiPath + '/demistoEndpoint', async (req, res) => {
       checkForRequiredFields(requiredFields, body);
     }
     catch(fieldName) {
-      res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
-      return;
+      return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
     }
 
     const {url, apiKey, trustAny, proxy} = body;
     const id = uuidv4();
+
+    const urlRegex = new RegExp(/^https?:\/\/\S+$/);
+    const badUrlRegex = new RegExp(/^https?:\/\/\S+?\//);
+
+    if (!urlRegex.test(url)) {
+      return returnError(`Error creating XSOAR endpoint: '${url}' is not a valid URL`, res, 400);
+    }
+    if (badUrlRegex.test(url)) {
+      return returnError(`Error creating XSOAR endpoint: '${url}' must not end with a '/' or a URI`, res, 400);
+    }
 
     // remove any junk data
     const config = {
@@ -655,7 +665,7 @@ app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
     // saves XSOAR API config
 
     const body = req.body;
-    const requiredFields = ['id', 'url', 'trustAny']; // 'apiKey' properyty may be omitted so that the apiKey can be fetched from existing config using 'id' property
+    const requiredFields = ['id', 'url', 'trustAny']; // 'apiKey' property may be omitted so that the apiKey can be fetched from existing config using 'id' property
 
     try {
       checkForRequiredFields(requiredFields, body);
@@ -666,6 +676,16 @@ app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
 
     const {id, url, trustAny, proxy} = body;
     const apiKey = body.hasOwnProperty('apiKey') ? body.apiKey : getDemistoApiConfig(id).apiKey;
+
+    const urlRegex = new RegExp(/^https?:\/\/\S+$/);
+    const badUrlRegex = new RegExp(/^https?:\/\/\S+?\//);
+
+    if (!urlRegex.test(url)) {
+      return returnError(`Error creating XSOAR endpoint: '${url}' is not a valid URL`, res, 400);
+    }
+    if (badUrlRegex.test(url)) {
+      return returnError(`Error creating XSOAR endpoint: '${url}' must not end with a '/' or a URI`, res, 400);
+    }
     
     // remove any junk data
     const config = {
@@ -1875,6 +1895,11 @@ app.post(apiPath + '/attachment/push', async (req, res) => {
 function loadIncidentCreatorSettings() {
   const defaultSettings = require('./default-settings');
   const tmpSettings = {};
+
+  if (!foundConfigDir) {
+    console.log(`Config dir '${configDir}' was not found.  This probably means we're running in developmnent mode.  Creating it.`);
+    fs.mkdirSync(configDir);
+  }
   
   if (!foundSettingsFile) {
     // Did not find the app configuration file.  Write default settings to the app settings file

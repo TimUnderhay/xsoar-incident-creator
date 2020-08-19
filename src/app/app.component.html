@@ -13,7 +13,9 @@
 
   <!--<div style="margin-top: 1em; margin-right: 1em; float: right;">Logged in as: <span style="font-weight: bold;"> {{loggedInUser.username}}</span></div>-->
 
-  <div style="margin-top: 0; margin-bottom: 1em;">This app creates Cortex XSOAR incidents from JSON data.  The data can be either incident JSON imported from XSOAR or mapped from 3rd-party JSON sources.  The fields to be imported are selectable and editable.  These can be saved in configurations for easy retrieval.</div>
+  <div style="margin-top: 0; margin-bottom: 1em;">
+    This app creates Cortex XSOAR incidents from JSON data.  The data can be either incident JSON imported from XSOAR or mapped from 3rd-party JSON sources.  The fields to be imported are selectable and editable.  These can be saved in configurations for easy retrieval.
+  </div>
   
   <ng-container *ngIf="!loggedInUser; else loggedIn">
 
@@ -30,7 +32,9 @@
     <!-- XSOAR Servers-->
     <p-card header="XSOAR Servers">
 
-      <h3 style="margin-top: .5em; text-decoration: underline; color: white;">{{demistoEndpoints && currentDemistoEndpointId ? demistoEndpoints[currentDemistoEndpointId].url : 'No XSOAR servers are defined'}}</h3>
+      <h3 style="margin-top: .5em; text-decoration: underline; color: white;">
+        {{demistoEndpoints && currentDemistoEndpointId ? demistoEndpoints[currentDemistoEndpointId].url : 'No XSOAR servers are defined'}}
+      </h3>
 
       <div style="margin-top: 1em;">
 
@@ -278,21 +282,33 @@
 
       <div style="margin-top: 1em;">
 
-        <span class="formLabel">Current XSOAR Server: </span>
+        <span class="formLabel">
+          Current XSOAR Server: 
+        </span>
 
-            <span class="formLabel" style="text-decoration: underline; color: black;">{{currentDemistoEndpointId ? demistoEndpoints[currentDemistoEndpointId].url : 'No server is selected'}}</span>
+        <span
+          class="formLabel"
+          style="text-decoration: underline; color: black;">
+            {{currentDemistoEndpointId ? demistoEndpoints[currentDemistoEndpointId].url : 'No server is selected'}}
+        </span>
 
       </div>
 
       <div style="margin-top: 1em;">
 
-        <span *ngIf="demistoEndpointsLen === 0; else demistoEndpointsSection" style="font-weight: bold;">No XSOAR servers are defined</span>
+        <span
+          *ngIf="demistoEndpointsLen === 0; else demistoEndpointsSection"
+          style="font-weight: bold;">
+            No XSOAR servers are defined
+        </span>
 
       </div>
 
       <ng-template #demistoEndpointsSection>
 
-        <div class="formLabel">Select a server</div>
+        <div class="formLabel">
+          Select a server
+        </div>
 
         <p-listbox
           [options]="demistoEndpointsItems"
@@ -334,7 +350,9 @@
     styleClass="deleteConfigDialog"
     (onHide)="onDeleteDemistoEndpointHidden()">
 
-      <div class="formLabel">Please confirm deletion of XSOAR server "{{demistoEndpoints[demistoEndpointIdToDelete].url}}"</div>
+      <div class="formLabel">
+        Please confirm deletion of XSOAR server "{{demistoEndpoints[demistoEndpointIdToDelete].url}}"
+      </div>
 
       <div style="margin-top: .5em; float: right;">
 
@@ -381,11 +399,14 @@
           <label for="url">XSOAR Base URL</label>
 
         </span>
+
       </div>
 
 
       <div style="margin-top: 1.5em;">
+
         <span class="ui-float-label">
+
           <input
             pInputText
             type="password"
@@ -397,13 +418,18 @@
             autocomplete="off"
             class="inputDisplay"
             standalone>
+
           <label for="apiKey">API Key</label>
+
         </span>
+
       </div>
 
 
       <div style="margin-top: 1.5em;">
+
         <span class="ui-float-label">
+
           <input
             pInputText
             type="url"
@@ -415,17 +441,25 @@
             autocomplete="off"
             class="inputDisplay"
             standalone>
+
           <label for="proxy">HTTP Proxy</label>
+
         </span>
+
       </div>
 
       <div style="margin-top: 1.5em;">
-        <span class="formLabel">Trust Any Certificate&nbsp;&nbsp;</span>
+
+        <span class="formLabel">
+          Trust Any Certificate&nbsp;&nbsp;
+        </span>
+
         <p-inputSwitch
           name="trustAny"
           [(ngModel)]="newDemistoServerTrustAny"
           [style]="{'vertical-align' : 'middle' }">
         </p-inputSwitch>
+
       </div>
 
       <div style="margin-top: .5em; font-weight: bold; color: black;">
@@ -482,7 +516,9 @@
     [contentStyle]="{'overflow':'visible'}"
     styleClass="openDialog">
 
-      <div class="formLabel">Configuration to open</div>
+      <div class="formLabel">
+        Configuration to open
+      </div>
 
       <p-listbox
         [options]="savedIncidentConfigItems"
@@ -557,129 +593,143 @@
     styleClass="bulkCreateDialog">
 
 
-      <div *ngIf="bulkCreateSelections" class="bulkCreateContainer">
+      <div
+        *ngIf="bulkCreateSelections"
+        class="bulkCreateContainer">
 
-        <div class="bulkCreateContainerColumn">
+          <div class="bulkCreateContainerColumn">
 
-          <div class="formLabel">Select configurations to push to XSOAR</div>
+            <div class="formLabel">
+              Select configurations to push to XSOAR
+            </div>
 
-          <p-listbox
-            [options]="savedIncidentConfigItems"
-            [(ngModel)]="selectedBulkCreateIncidentConfig"
-            [style]="{'width':'100%'}"
-            [multiple]="false"
-            [checkbox]="false"
-            [filter]="true">
-          </p-listbox>
+            <p-listbox
+              [options]="savedIncidentConfigItems"
+              [(ngModel)]="selectedBulkCreateIncidentConfig"
+              [style]="{'width':'100%'}"
+              [multiple]="false"
+              [checkbox]="false"
+              [filter]="true">
+            </p-listbox>
 
-        </div>
-
-        <div
-          *ngIf="selectedBulkCreateIncidentConfig && demistoEndpointsItems"
-          class="bulkCreateContainerColumn">
-
-          <div class="formLabel">
-            Select XSOAR servers to push to
           </div>
-
-          <p-listbox
-            [options]="demistoEndpointsItems"
-            [(ngModel)]="bulkCreateSelections[selectedBulkCreateIncidentConfig].endpoints"
-            [style]="{'width':'100%'}"
-            [multiple]="true"
-            [checkbox]="true"
-            [filter]="true"
-            [disabled]="!selectedBulkCreateIncidentConfig"
-            (onChange)="buildBulkConfigurationsToPushItems()">
-          </p-listbox>
-
-        </div>
-
-        <vertical-center
-          *ngIf="selectedBulkCreateIncidentConfig && !savedIncidentConfigurations[selectedBulkCreateIncidentConfig].requiresJson; else jsonRequired">
-            No JSON is required for the selected incident config
-        </vertical-center>
-        
-
-        <ng-template #jsonRequired>
 
           <div
-            *ngIf="selectedBulkCreateIncidentConfig && jsonFileAndGroupConfigurationsItems"
+            *ngIf="selectedBulkCreateIncidentConfig && demistoEndpointsItems"
             class="bulkCreateContainerColumn">
 
-              <div class="formLabel">Select JSON configs or groups</div>
+            <div class="formLabel">
+              Select XSOAR servers to push to
+            </div>
 
-              <p-listbox
-                [options]="jsonFileAndGroupConfigurationsItems"
-                [(ngModel)]="bulkCreateSelections[selectedBulkCreateIncidentConfig].jsonSelections"
-                [style]="{'width':'100%'}"
-                [multiple]="true"
-                [checkbox]="true"
-                [filter]="true"
-                [disabled]="!selectedBulkCreateIncidentConfig"
-                (onChange)="buildBulkConfigurationsToPushItems()">
-              </p-listbox>
+            <p-listbox
+              [options]="demistoEndpointsItems"
+              [(ngModel)]="bulkCreateSelections[selectedBulkCreateIncidentConfig].endpoints"
+              [style]="{'width':'100%'}"
+              [multiple]="true"
+              [checkbox]="true"
+              [filter]="true"
+              [disabled]="!selectedBulkCreateIncidentConfig"
+              (onChange)="buildBulkConfigurationsToPushItems()">
+            </p-listbox>
 
           </div>
 
-        </ng-template>
+          <vertical-center
+            *ngIf="selectedBulkCreateIncidentConfig && !savedIncidentConfigurations[selectedBulkCreateIncidentConfig].requiresJson; else jsonRequired">
+              No JSON is required for the selected incident config
+          </vertical-center>
+          
+
+          <ng-template #jsonRequired>
+
+            <div
+              *ngIf="selectedBulkCreateIncidentConfig && jsonFileAndGroupConfigurationsItems"
+              class="bulkCreateContainerColumn">
+
+                <div class="formLabel">
+                  Select JSON configs or groups
+                </div>
+
+                <p-listbox
+                  [options]="jsonFileAndGroupConfigurationsItems"
+                  [(ngModel)]="bulkCreateSelections[selectedBulkCreateIncidentConfig].jsonSelections"
+                  [style]="{'width':'100%'}"
+                  [multiple]="true"
+                  [checkbox]="true"
+                  [filter]="true"
+                  [disabled]="!selectedBulkCreateIncidentConfig"
+                  (onChange)="buildBulkConfigurationsToPushItems()">
+                </p-listbox>
+
+            </div>
+
+          </ng-template>
 
       </div>
 
-      <div *ngIf="bulkConfigurationsToPush" style="margin-top: 2em;">
+      <div
+        *ngIf="bulkConfigurationsToPush"
+        style="margin-top: 2em;">
         
-        <span
-          style="color: black;"
-          class="dialogLabel">
-            Incidents that will be pushed:
-        </span>
+          <span
+            style="color: black;"
+            class="dialogLabel">
+              Incidents that will be pushed:
+          </span>
 
-        <div
-          class="bulkIncidentsToPush"
-          style="margin-top: 1em; margin-left: 2.5em;">
+          <div
+            class="bulkIncidentsToPush"
+            style="margin-top: 1em; margin-left: 2.5em;">
 
-          <div *ngFor="let item of bulkConfigurationsToPush">
-            
-            <span class="dialogLabel">
-              {{savedIncidentConfigurations[item.incidentConfigId].name}}
-            </span> :
-
-            <div *ngIf="item.jsonFileNames" style="margin-left: 3em;">
+            <div *ngFor="let item of bulkConfigurationsToPush">
               
-              <span
-                class="dialogLabel">
+              <span class="dialogLabel">
+                {{savedIncidentConfigurations[item.incidentConfigId].name}}
+              </span> :
+
+              <div *ngIf="item.jsonFileNames" style="margin-left: 3em;">
+                
+                <span class="dialogLabel">
                   JSON Configs: 
-              </span>
+                </span>
+                
+                <span>
+                  {{item.jsonFileNames}}
+                </span>
               
-              <span>{{item.jsonFileNames}}</span>
-            
-            </div>
+              </div>
 
-            <div *ngIf="item.jsonGroupIds" style="margin-left: 3em;">
+              <div
+                *ngIf="item.jsonGroupIds"
+                style="margin-left: 3em;">
+                
+                  <span class="dialogLabel">
+                    JSON Groups: 
+                  </span>
+                  
+                  <span>
+                    {{item.jsonGroupNames}}
+                  </span>
               
-              <span
-                class="dialogLabel">
-                  JSON Groups: 
-              </span>
-              
-              <span>{{item.jsonGroupNames}}</span>
-            
-            </div>
+              </div>
 
-            <div style="margin-left: 3em;">
-              
-              <span
-                class="dialogLabel">
+              <div style="margin-left: 3em;">
+                
+                <span class="dialogLabel">
                   Endpoints: 
-              </span>
+                </span>
+                
+                <span>
+                  {{item.endpointNames}}
+                </span>
               
-              <span>{{item.endpointNames}}</span>
-            
+              </div>
+
             </div>
 
           </div>
 
-        </div>
       </div>
 
       <div style="margin-top: .5em; float: right;">
@@ -712,22 +762,46 @@
       <div class="bulkCreateResults">
         
         <!-- Header -->
-        <div class="bulkCreateResultsGridHeader">Config Name</div>
-        <div class="bulkCreateResultsGridHeader">XSOAR Server</div>
-        <div class="bulkCreateResultsGridHeader">JSON File</div>
-        <div class="bulkCreateResultsGridHeader">Result</div>
-        <div class="bulkCreateResultsGridHeader">Incident ID</div>
-        <div class="bulkCreateResultsGridHeader">Incident JSON</div>
-        <div class="bulkCreateResultsGridHeader">Comments</div>
+        <div class="bulkCreateResultsGridHeader">
+          Config Name
+        </div>
+        
+        <div class="bulkCreateResultsGridHeader">
+          XSOAR Server
+        </div>
+
+        <div class="bulkCreateResultsGridHeader">
+          JSON File
+        </div>
+        
+        <div class="bulkCreateResultsGridHeader">
+          Result
+        </div>
+        
+        <div class="bulkCreateResultsGridHeader">
+          Incident ID
+        </div>
+        
+        <div class="bulkCreateResultsGridHeader">
+          Incident JSON
+        </div>
+        
+        <div class="bulkCreateResultsGridHeader">
+          Comments
+        </div>
         
         <!-- Rows -->
         <ng-container *ngFor="let result of bulkCreateResults">
 
           <!-- Incident Configuration Name -->
-          <div>{{savedIncidentConfigurations[result.configId].name}}</div>
+          <div>
+            {{savedIncidentConfigurations[result.configId].name}}
+          </div>
 
           <!-- Server Name -->
-          <div>{{demistoEndpoints[result.serverId].url}}</div>
+          <div>
+            {{demistoEndpoints[result.serverId].url}}
+          </div>
 
           <!-- JSON File -->
           <div>
@@ -735,7 +809,9 @@
           </div>
 
           <!-- Success / Failure -->
-          <div>{{result.success ? 'Success' : 'Failure'}}</div>
+          <div>
+            {{result.success ? 'Success' : 'Failure'}}
+          </div>
 
           <!-- Incident ID and Link -->
           <div>
@@ -783,7 +859,10 @@
 
       <div style="margin-top: 1em; float: right;">
 
-        <p-button label="OK" (onClick)="showBulkResultsDialog = false"></p-button>
+        <p-button
+          label="OK"
+          (onClick)="showBulkResultsDialog = false">
+        </p-button>
 
       </div>
 
@@ -805,7 +884,11 @@
 
           <div class="bulkCreateContainerColumn">
 
-            <div class="formLabel" style="margin-bottom: .5em;">Incident number to import</div>
+            <div
+              class="formLabel"
+              style="margin-bottom: .5em;">
+                Incident number to import
+            </div>
 
             <input pInputText
               name="demistoIncidentToLoad"
@@ -820,7 +903,11 @@
 
           <div class="bulkCreateContainerColumn">
 
-            <div class="formLabel" style="margin-bottom: .5em;">Select an XSOAR server</div>
+            <div
+              class="formLabel"
+              style="margin-bottom: .5em;">
+                Select an XSOAR server
+            </div>
 
             <p-listbox
               name="demistoEndpointToLoadFrom"
@@ -845,9 +932,13 @@
             [disabled]="importFromDemistoAcceptDisabled">
           </p-button>
 
-          <p-button label="Cancel" (onClick)="onLoadFromDemistoCancelled()"></p-button>
+          <p-button
+            label="Cancel"
+            (onClick)="onLoadFromDemistoCancelled()">
+          </p-button>
 
         </div>
+
       </form>
 
   </p-dialog>
@@ -897,70 +988,75 @@
       </div>
 
 
-      <div *ngIf="jsonGroupConfigurationsItems.length !== 0" class="bulkCreateContainer">
+      <div
+        *ngIf="jsonGroupConfigurationsItems.length !== 0"
+        class="bulkCreateContainer">
 
-        <div class="bulkCreateContainerColumn">
+          <div class="bulkCreateContainerColumn">
 
-          <div *ngIf="jsonGroupConfigurationsItems.length !== 0" class="formLabel">Select a JSON group to configure</div>
+            <div
+              *ngIf="jsonGroupConfigurationsItems.length !== 0"
+              class="formLabel">
+                Select a JSON group to configure
+            </div>
 
-          <p-listbox
-            [options]="jsonGroupConfigurationsItems"
-            [(ngModel)]="jsonGroupDialog_jsonGroupSelection"
-            [style]="{'width':'100%'}"
-            [multiple]="false"
-            [checkbox]="false"
-            [filter]="false">
-          </p-listbox>
+            <p-listbox
+              [options]="jsonGroupConfigurationsItems"
+              [(ngModel)]="jsonGroupDialog_jsonGroupSelection"
+              [style]="{'width':'100%'}"
+              [multiple]="false"
+              [checkbox]="false"
+              [filter]="false">
+            </p-listbox>
 
-        </div>
-
-        <div class="bulkCreateContainerColumn">
-
-          <div
-            *ngIf="!jsonGroupDialog_jsonGroupSelection || jsonGroupDialog_jsonGroupSelection === ''"
-            class="formLabel">
-              Select a JSON Group
           </div>
 
-          <div
-            *ngIf="!['', undefined].includes(jsonGroupDialog_jsonGroupSelection)">
+          <div class="bulkCreateContainerColumn">
 
-            <span class="formLabel">
-              JSON Configurations
-            </span>
-            
-            <div style="float: right;">
+            <div
+              *ngIf="!jsonGroupDialog_jsonGroupSelection || jsonGroupDialog_jsonGroupSelection === ''"
+              class="formLabel">
+                Select a JSON Group
+            </div>
 
-              <span
-                (click)="onSelectAllJsonConfigurations()"
-                class="selectAllControl">
-                  Select All
+            <div *ngIf="!['', undefined].includes(jsonGroupDialog_jsonGroupSelection)">
+
+              <span class="formLabel">
+                JSON Configurations
               </span>
-  
-              | 
               
-              <span
-              (click)="onUnselectAllJsonConfigurations()"
-                class="selectAllControl">
-                None
-              </span>
+              <div style="float: right;">
+
+                <span
+                  (click)="onSelectAllJsonConfigurations()"
+                  class="selectAllControl">
+                    Select All
+                </span>
+
+                | 
+                
+                <span
+                (click)="onUnselectAllJsonConfigurations()"
+                  class="selectAllControl">
+                  None
+                </span>
+
+              </div>
 
             </div>
 
+            <p-listbox
+              *ngIf="jsonGroupDialog_jsonGroupSelection"
+              [options]="savedJsonConfigurationItems"
+              [(ngModel)]="jsonGroupDialog_jsonFileSelections[jsonGroupDialog_jsonGroupSelection]"
+              [style]="{'width':'100%'}"
+              [multiple]="true"
+              [checkbox]="true"
+              [filter]="false"
+              [showToggleAll]="false">
+            </p-listbox>
+
           </div>
-
-          <p-listbox
-            *ngIf="jsonGroupDialog_jsonGroupSelection"
-            [options]="savedJsonConfigurationItems"
-            [(ngModel)]="jsonGroupDialog_jsonFileSelections[jsonGroupDialog_jsonGroupSelection]"
-            [style]="{'width':'100%'}"
-            [multiple]="true"
-            [checkbox]="true"
-            [filter]="false"
-            [showToggleAll]="false">
-          </p-listbox>
-
-        </div>
 
       </div>
 
@@ -999,13 +1095,22 @@
         [(ngModel)]="newJsonGroupConfigName"
         class="inputDisplay"/>
 
-      <div style="margin-top: .5em;">{{newJsonGroupAcceptButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+      <div style="margin-top: .5em;">
+        {{newJsonGroupAcceptButtonDisabled ? 'This name is already in use' : '&nbsp;'}}
+      </div>
 
       <div style="margin-top: .5em; float: right;">
 
-        <p-button label="Save" (onClick)="onNewJsonGroupAccepted()" [disabled]="newJsonGroupAcceptButtonDisabled"></p-button>
+        <p-button
+          label="Save"
+          (onClick)="onNewJsonGroupAccepted()"
+          [disabled]="newJsonGroupAcceptButtonDisabled">
+        </p-button>
 
-        <p-button label="Cancel" (onClick)="showNewJsonGroupDialog = false"></p-button>
+        <p-button
+          label="Cancel"
+          (onClick)="showNewJsonGroupDialog = false">
+        </p-button>
 
       </div>
 
@@ -1021,7 +1126,11 @@
     [style]="{width: '300px'}"
     styleClass="renameJsonGroupConfigDialog">
 
-      <div style="margin-bottom: .5em;" class="formLabel">New JSON Group Name</div>
+      <div
+        style="margin-bottom: .5em;"
+        class="formLabel">
+          New JSON Group Name
+      </div>
 
       <input
         pInputText
@@ -1030,7 +1139,9 @@
         [(ngModel)]="renameJsonGroupConfigName"
         class="inputDisplay"/>
 
-      <div style="margin-top: .5em;">{{renameJsonGroupAcceptButtonDisabled ? 'This name is already in use' : '&nbsp;'}}</div>
+      <div style="margin-top: .5em;">
+        {{renameJsonGroupAcceptButtonDisabled ? 'This name is already in use' : '&nbsp;'}}
+      </div>
 
       <div style="margin-top: .5em; float: right;">
 
@@ -1199,9 +1310,7 @@
         </div>
   
         <div style="font-weight: bold; font-size: 1.1em;">
-          
           {{newFileAttachmentSize}} bytes
-  
         </div>
 
       </ng-container>
@@ -1214,9 +1323,7 @@
         </div>
   
         <div style="font-weight: bold; font-size: 1.1em;">
-          
           {{newFileAttachmentType}}
-  
         </div>
 
       </ng-container>
@@ -1319,9 +1426,7 @@
         </div>
   
         <div style="font-weight: bold; font-size: 1.1em;">
-          
           {{editFileAttachmentSize}} bytes
-  
         </div>
 
       </ng-container>
@@ -1334,9 +1439,7 @@
         </div>
   
         <div style="font-weight: bold; font-size: 1.1em;">
-          
           {{editFileAttachmentType}}
-  
         </div>
 
       </ng-container>
@@ -1451,9 +1554,7 @@
       <div
         *ngIf="!validIncidentMappingFile"
         style="margin-top: 1em; color: red;">
-        
           The uploaded file is not a valid incident mapping configuration.
-      
       </div>
 
       <div style="margin-top: .5em; float: right;">

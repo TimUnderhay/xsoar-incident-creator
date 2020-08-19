@@ -130,9 +130,16 @@ export class AppComponent implements OnInit {
     const proxyUrlError = this.newDemistoServerProxy === '' || this.newDemistoServerProxy.match(/^https?:\/\/\S+$/) ? false : true;
     const proxyUrlErrorMessage = `The proxy URL must be valid`;
 
+    const urlRequiresTruncationError = this.newDemistoServerUrl.match(/^https?:\/\/\S+?\/.*$/) ? true : false;
+    const urlRequiresTruncationErrorMessage = 'The URL must not contain any trailing slashes or path (i.e. \'/\' or \'/someURI\')';
+
     if (this.newDemistoServerDialogMode === 'new') {
       if (nameExists) {
         this.newDemistoServerSaveDisabledError = nameExistsErrorMessage;
+        return true;
+      }
+      if (urlRequiresTruncationError) {
+        this.newDemistoServerSaveDisabledError = urlRequiresTruncationErrorMessage;
         return true;
       }
       if (urlError) {
@@ -147,6 +154,11 @@ export class AppComponent implements OnInit {
     }
 
     // edit mode
+    if (urlRequiresTruncationError) {
+      this.newDemistoServerSaveDisabledError = urlRequiresTruncationErrorMessage;
+      return true;
+    }
+
     if (urlError) {
       this.newDemistoServerSaveDisabledError = urlErrorMessage;
       return true;
@@ -167,6 +179,9 @@ export class AppComponent implements OnInit {
 
   newDemistoServerDialogMode: DemistoServerEditMode = 'new';
   get newEditTestButtonDisabled(): boolean {
+    if (this.newDemistoServerUrl.match(/^https?:\/\/\S+?\/.*$/)) {
+      return true;
+    }
     if (this.newDemistoServerDialogMode === 'new') {
       return !this.newDemistoServerUrl || !this.newDemistoServerApiKey;
     }
