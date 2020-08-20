@@ -1,6 +1,6 @@
 {
   "name": "xsoar-incident-creator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "scripts": {
     "start": "cd src && node server.js",
     "start-dev": "cd src && node server.js --dev"
