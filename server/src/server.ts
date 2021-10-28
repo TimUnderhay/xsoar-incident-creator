@@ -1,18 +1,44 @@
 'use strict';
+import SourceMapSupport from 'source-map-support';
+import * as os from 'os';
+import * as util from 'util';
+import * as fs from 'fs';
+import { exec as ExecSync } from 'child_process';
+import mvsync from 'mv';
+import { AppSettings, AppSettingsRecord } from 'types/app-settings';
+import { DefaultSettings } from './default-settings';
+import NodeRSA from 'node-rsa';
+import { v4 as uuidv4 } from 'uuid';
+import express, { Request, Response, NextFunction } from 'express';
+// import request from 'request-promise-native';
+import multer from 'multer';
+import proxy from 'express-http-proxy';
+import httpProxy from 'http-proxy';
+import https from 'https';
+import * as Errors from './types/errors';
+import { DemistoEndpoint, DemistoEndpoints, SavedDemistoEndpoint } from 'types/demisto-endpoint';
+import { IncidentConfig, IncidentConfigs, IncidentFieldConfig, IncidentFieldsConfig } from 'types/incident-config';
+import { FileAttachmentConfigs, FileAttachmentConfig } from 'types/file-attachment';
+import { JsonGroup, JsonGroups } from 'types/json-group';
+import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from 'types/fetched-incident-field';
+import Axios, { AxiosRequestConfig, AxiosResponse, AxiosPromise } from 'axios';
+import { users } from './definitions/users';
+import * as utils from './utils';
+import { Console } from 'console';
+
+SourceMapSupport.install();
+const exec = util.promisify(ExecSync);
+const mv = util.promisify(mvsync);
+const streamToBlob = require('stream-to-blob');
 
 
 ////////////////////// Config and Imports //////////////////////
 
-const os = require('os');
-const util = require('util');
-const exec = util.promisify(require('child_process').exec);
-const mv = util.promisify(require('mv'));
-const fs = require('fs');
 
 try {
   var Version = JSON.parse(fs.readFileSync('../package.json', { encoding: 'utf8' })).version;
 }
-catch (error) {
+catch (error: any) {
   var Version = JSON.parse(fs.readFileSync('../../package.json', { encoding: 'utf8' })).version;
 }
 const BuildNumber = JSON.parse(fs.readFileSync('../build.json', { encoding: 'utf8' })).buildNumber;
@@ -20,82 +46,64 @@ console.log(`XSOAR Incident Creator server version ${Version}${BuildNumber === 0
 
 const SchemaVersion = 1;
 
-// Directories
+// Files / Directories
 const configDir = '../etc';
-const foundConfigDir =  fs.existsSync(configDir);
+const settingsFile = `settings.json`;
 const defsDir = `./definitions`; // contains static user definitions
 const sampleIncidentsDir = `${configDir}/incidents`; // not used in prod
 const staticDir = '../../dist/xsoar-incident-creator'; // where to find pre-built Angular client files
 
-// Default Settings
-var appSettings = {};
-const settingsFile = `${configDir}/settings.json`;
-const foundSettingsFile =  fs.existsSync(settingsFile);
-loadIncidentCreatorSettings();
+// Settings
+let appSettings = loadIncidentCreatorSettings(configDir, settingsFile);
 
 // Config parameters
-const listenPort = appSettings.listenPort;
-const listenAddress = appSettings.listenAddress;
-const proxyDest = appSettings.developmentProxyDestination; // used in client development mode
 const apiPath = '/api';
 
 // XSOAR API Config
-var demistoApiConfigs = {};
-var defaultDemistoApiId; // the ID of the default demistoApiConfig
+let demistoEndpointConfigs: DemistoEndpoints = {};
+let defaultDemistoEndpointId: string | undefined; // the ID of the default demistoApiConfig
 
-const foundDist = fs.existsSync(staticDir); // check for presence of pre-built angular client directory
-
+// Files
 const apiCfgFile = `${configDir}/servers.json`;
-const foundDemistoApiConfig = fs.existsSync(apiCfgFile); // check for presence of API configuration file
-
 const incidentsFile = `${configDir}/incidents.json`;
-const foundIncidentsFile = fs.existsSync(incidentsFile);
-
 const freeJsonFile = `${configDir}/json.json`;
-const foundFreeJsonFile = fs.existsSync(freeJsonFile);
-
 const jsonGroupsFile = `${configDir}/json-groups.json`;
-const foundJsonGroupsFile = fs.existsSync(jsonGroupsFile);
-
 const attachmentsFile = `${configDir}/attachments.json`;
-const foundAttachmentsFile = fs.existsSync(attachmentsFile);
 const attachmentsDir = `${configDir}/attachments`; // contains arbitrary file attachments of any file type
 const uploadsDir = `../uploads`; // we don't want this in /etc
 
 // Certificates
 const sslDir = `${configDir}/certs`;
 const certFile = `${sslDir}/cert.pem`;
-var sslCert;
+let sslCert;
 const privKeyFile = `${sslDir}/cert.key`;
-var privKey;
+let privKey: string;
 const internalPubKeyFile = `${sslDir}/internal.pem`;
-var internalPubKey;
+let internalPubKey: string;
 const internalKeyFile = `${sslDir}/internal.key`;
 
 // encryption
-var encryptor;
-
-// UUID
-const uuidv4 = require('uuid/v4');
+let encryptor: NodeRSA;
 
 // Incidents Config
-var incidentsConfig = {};
-var incident_fields = {};
+let incidentsConfig: IncidentConfigs = {};
+let incident_fields: FetchedIncidentFieldDefinitions = {};
 
 // Freeform JSON Config
-var freeJsonConfig = {};
+let freeJsonConfig: Record<any, any> = {};
 
 // JSON Groups Config
-var jsonGroupsConfig = {};
+let jsonGroupsConfig: JsonGroups = {};
 
 // Attachments Config
-var attachmentsConfig = {};
+let attachmentsConfig: FileAttachmentConfigs = {};
 
 
 
 // Load Sample Users
-const users = require(defsDir + '/users');
-function randomElement(list) {
+// const users = require(defsDir + '/users');
+const randomElement = <T>(list: T[]): T => {
+  console.log('randomElement()');
   // randomly return any array element
   let num = Math.floor(Math.random() * list.length);
   return list[num];
@@ -104,24 +112,18 @@ function randomElement(list) {
 // Parse args
 const devMode = process.argv.includes('--dev');
 
-// REST client
-const request = require('request-promise-native');
-
 // Express
-const express = require('express');
 const app = express();
-var server;
-const bodyParser = require('body-parser');
-app.use(bodyParser.json({ limit: appSettings.jsonBodyUploadLimit }));
-app.use(bodyParser.urlencoded({ extended: true, limit: appSettings.urlEncodedBodyUploadLimit }));
+app.use(express.json({ limit: appSettings.jsonBodyUploadLimit}));
+app.use(express.urlencoded({ extended: true, limit: appSettings.urlEncodedBodyUploadLimit }));
+let server: https.Server;
 
 // Multipart form data handler
-const multer  = require('multer');
 const multipartUploadHandler = multer({ dest: `${uploadsDir}/` });
 
 
 // Logging
-function logConnection(req, res, next) {
+const logConnection = (req: Request, res: Response, next: NextFunction) => {
   // logs new client connections to the console
   let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
   if (req.url.startsWith(apiPath) ) {
@@ -134,28 +136,13 @@ app.use(logConnection);
 
 ////////////////////// Support Functions //////////////////////
 
-function validateJsonGroup(jsonFileIds) {
-  if (!isArray(jsonFileIds)) {
-    throw `jsonFileIds is not an array`;
-  }
-  for (const value of jsonFileIds) {
-    const valueType = typeof value;
-    if (valueType !== 'string') {
-      throw `jsonFileIds contains non-string values`;
-    }
-  }
-}
-
-function isArray(value) {
-  if (typeof value === 'object' && Array.isArray(value)) {
-    return true;
-  }
-  return false;
-}
 
 
 
-function saveFreeJsonConfig() {
+
+
+
+const saveFreeJsonConfig = (): Promise<void> => {
   const savedConfig = {
     schema: SchemaVersion,
     jsonConfigs: Object.values(freeJsonConfig)
@@ -165,7 +152,7 @@ function saveFreeJsonConfig() {
 
 
 
-function saveJsonGroupsConfig() {
+const saveJsonGroupsConfig = (): Promise<void> => {
   const savedConfig = {
     schema: SchemaVersion,
     jsonGroups: Object.values(jsonGroupsConfig)
@@ -175,93 +162,22 @@ function saveJsonGroupsConfig() {
 
 
 
-function checkForRequiredFields(fields, body) {
-  for (const fieldName of fields) {
-    if (!(fieldName in body)) {
-      throw `${fieldName}`;
-    }
-  }
-}
-
-
-
-function checkBodyForKeys(keys, body) {
-  let success = true;
-  for (let i = 0; i < keys.length; i++) {
-    let key = keys[i];
-
-    if (! key in body) {
-      console.error(`Client body was missing key "${key}"`);
-      success = false;
-    }
-  }
-  return success;
-}
-
-
-
-function keysToLower(obj) {
-  let key;
-  let keys = Object.keys(obj);
-  let n = keys.length;
-  let newobj = {};
-  while (n--) {
-    key = keys[n];
-    newobj[key.toLowerCase()] = obj[key];
-  }
-  return newobj;
-}
-
-
-
-function removeNullValues(obj) {
-  let key;
-  let keys = Object.keys(obj);
-  let n = keys.length;
-  let newobj = {};
-  while (n--) {
-    key = keys[n];
-    if (obj[key] !== null ) {
-      newobj[key.toLowerCase()] = obj[key];
-    }
-  }
-  return newobj;
-}
-
-
-
-function removeEmptyValues(obj) {
-  let key;
-  let keys = Object.keys(obj);
-  let n = keys.length;
-  let newobj = {};
-  while (n--) {
-    key = keys[n];
-    if (obj[key] !== '' ) {
-      newobj[key.toLowerCase()] = obj[key];
-    }
-  }
-  return newobj;
-}
-
-
-
-function saveApiConfig() {
-  const savedConfig = {
+const saveApiConfig = async (): Promise<void> => {
+  const apiConfig: SavedDemistoEndpoint = {
     schema: SchemaVersion,
     endpointConfig: {
-      servers: Object.values(demistoApiConfigs)
+      servers: Object.values(demistoEndpointConfigs)
     }
   };
-  if (defaultDemistoApiId) {
-    savedConfig.endpointConfig['default'] = defaultDemistoApiId;
+  if (defaultDemistoEndpointId) {
+    apiConfig.endpointConfig.default = defaultDemistoEndpointId;
   }
-  return fs.promises.writeFile(apiCfgFile, JSON.stringify(savedConfig, null, 2), { encoding: 'utf8', mode: 0o660} );
+  return fs.promises.writeFile(apiCfgFile, JSON.stringify(apiConfig, null, 2), { encoding: 'utf8', mode: 0o660} );
 }
 
 
 
-function saveAttachmentsConfig() {
+const saveAttachmentsConfig = async (): Promise<void> => {
   const savedConfig = {
     schema: SchemaVersion,
     attachments: Object.values(attachmentsConfig)
@@ -271,13 +187,13 @@ function saveAttachmentsConfig() {
 
 
 
-function deleteFileAttachment(filename) {
+const deleteFileAttachment = async (filename: string): Promise<void> => {
   return fs.promises.unlink(`${attachmentsDir}/${filename}`);
 }
 
 
 
-async function removeAttachmentFromIncidents(attachmentId) {
+const removeAttachmentFromIncidents = async(attachmentId: string): Promise<void> => {
   let save = false;
   for (const incident of Object.values(incidentsConfig)) {
     // loop through saved incidents
@@ -287,14 +203,18 @@ async function removeAttachmentFromIncidents(attachmentId) {
 
       if ((field.fieldType === 'attachments' || field.shortName === 'attachment') && 'attachmentConfig' in field) {
 
-        for (let i = field.attachmentConfig.length - 1; i >= 0; i--) {
-          // loop backwards through attachmentConfig
-          const attachment = field.attachmentConfig[i];
-          if (attachment.id === attachmentId) {
-            field.attachmentConfig.splice(i, 1);
-            save = true;
-            break;
+        if (field.attachmentConfig) {
+          
+          for (let i = field.attachmentConfig.length - 1; i >= 0; i--) {
+            // loop backwards through attachmentConfig
+            const attachment = field.attachmentConfig[i];
+            if (attachment.id === attachmentId) {
+              field.attachmentConfig.splice(i, 1);
+              save = true;
+              break;
+            }
           }
+
         }
       }
     }
@@ -306,49 +226,52 @@ async function removeAttachmentFromIncidents(attachmentId) {
 
 
 
-function uploadAttachmentToDemisto(serverId, incidentId, incidentFieldName, attachmentId, filename, last, mediaFile = undefined, comment = undefined) {
+const uploadAttachmentToDemisto = async (serverId: string, incidentId: number, incidentFieldName: string, attachmentId: string, filename: string, last: number, mediaFile?: string, comment?: string): Promise<AxiosResponse> => {
 
   const originalAttachment = attachmentsConfig[attachmentId];
   const diskFilename = `${attachmentsDir}/${attachmentId}`;
 
-  const demistoServerConfig = getDemistoApiConfig(serverId);
+  const demistoEndpointConfig = getDemistoEndpointConfig(serverId);
   
-  const formData = {
-    id: incidentId,
+  
+  const formDataObj: Record<string, string | Blob> = {
+    id: `${incidentId}`,
     field: incidentFieldName,
-    file: fs.createReadStream(diskFilename),
+    file: await streamToBlob(fs.createReadStream(diskFilename)),
     fileName: filename,
     last: `${last}`
   };
   if (mediaFile) {
-    formData.showMediaFile = `${mediaFile}`;
+    formDataObj.showMediaFile = `${mediaFile}`;
   }
   if (comment) {
-    formData.fileComment = comment;
+    formDataObj.fileComment = comment;
   }
 
   // console.log('uploadAttachmentToDemisto(): formData:', formData);
   
-  const options = {
-    url: `${demistoServerConfig.url}/incident/upload/${incidentId}`,
+  const options: AxiosRequestConfig = {
+    url: `${demistoEndpointConfig.url}/incident/upload/${incidentId}`,
     method: 'POST',
     headers: {
-      Authorization: decrypt(demistoServerConfig.apiKey),
+      'Content-Type': 'multipart/form-data',
+      Authorization: decrypt(demistoEndpointConfig.apiKey),
       Accept: 'application/json'
     },
-    rejectUnauthorized: !demistoServerConfig.trustAny,
-    resolveWithFullResponse: true,
-    formData,
-    json: true,
-    timeout: 2000
+    httpsAgent: utils.getAxiosHTTPSAgent(demistoEndpointConfig.trustAny),
+    // resolveWithFullResponse: true,
+    // json: true,
+    timeout: 2000,
+    data: utils.getFormDataFromObject(formDataObj),
   }
-  return request( addHttpProxy(options, serverId) );  // request returns a promise
+  // return request( addHttpProxy(options, serverId) );  // request returns a promise
+  return Axios( addHttpProxy(options, serverId) );
 }
 
 
 
-async function testApi(url, apiKey, trustAny, proxy) {
-  const options = {
+const testApi = async (url: string, apiKey: string, trustAny: boolean, proxy?: string) => {
+  let options: AxiosRequestConfig = {
     url: url + '/user',
     method: 'GET',
     headers: {
@@ -356,21 +279,20 @@ async function testApi(url, apiKey, trustAny, proxy) {
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    rejectUnauthorized: !trustAny,
-    resolveWithFullResponse: true,
-    json: true,
+    httpsAgent: utils.getAxiosHTTPSAgent(trustAny),
     timeout: 2000
   }
   if (proxy) {
-    options.proxy = proxy;
+    options = utils.addAxiosProxy(options, proxy);
   }
   try {
-    const result = await request( options );
+    // const result = await request( options );
+    const result = await Axios(options);
     return { success: true, result }
   }
-  catch(error) {
+  catch(error: any) {
     // console.error(error);
-    const res = {
+    const res: any = {
       success: false
     };
     if ('response' in error && error.response !== undefined && 'statusMessage' in error.response) {
@@ -388,20 +310,29 @@ async function testApi(url, apiKey, trustAny, proxy) {
 
 
 
-function getDemistoApiConfig(serverId) {
-  return demistoApiConfigs[serverId];
+const getDemistoEndpointConfig = (serverId: string): DemistoEndpoint => {
+  return demistoEndpointConfigs[serverId];
 }
 
 
 
-async function getIncidentFields(serverId) {
+const addHttpProxy = (requestOptions: AxiosRequestConfig, serverId: string): AxiosRequestConfig => {
+  const demistoServerConfig = getDemistoEndpointConfig(serverId);
+  if (demistoServerConfig.proxy !== undefined) {
+    return utils.addAxiosProxy(requestOptions, demistoServerConfig.proxy);
+  }
+  return requestOptions;
+}
+
+
+
+const fetchIncidentFields = async (serverId: string): Promise<FetchedIncidentField[] | undefined> => {
   // This method will get incident field definitions from a XSOAR server
-  const demistoServerConfig = getDemistoApiConfig(serverId);
+  const demistoServerConfig = getDemistoEndpointConfig(serverId);
 
   console.log(`Fetching incident fields from '${demistoServerConfig.url}'`);
 
-  let result;
-  const options = {
+  const options: AxiosRequestConfig = {
     url: demistoServerConfig.url + '/incidentfields',
     method: 'GET',
     headers: {
@@ -409,30 +340,24 @@ async function getIncidentFields(serverId) {
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    rejectUnauthorized: !demistoServerConfig.trustAny,
-    resolveWithFullResponse: true,
-    json: true
+    // rejectUnauthorized: !demistoServerConfig.trustAny,
+    httpsAgent: utils.getAxiosHTTPSAgent(demistoServerConfig.trustAny)
   }
 
   try {
     // send request to XSOAR
-    result = await request( addHttpProxy(options, serverId) );
+    // result = await request( addHttpProxy(options, serverId) );
+    const result = await (Axios( addHttpProxy(options, serverId) ) as AxiosPromise<FetchedIncidentField[]>);
 
     // 'result' contains non-incident fields, as well, so let's make a version containing only incident fields
-    let fields = result.body.reduce( (result, field) => {
-      // console.log(field)
-      if ('id' in field && field.id.startsWith('incident_')) {
-        result.push(field)
-      };
-      return result;
-    }, []);
+    const fields = result.data.filter(field => 'id' in field && field.id.startsWith('incident_'));
 
     // console.log(fields);
 
     console.log(`Successfully fetched incident fields from '${demistoServerConfig.url}'`);
     return fields;
   }
-  catch (error) {
+  catch (error: any) {
     if ('message' in error) {
       console.error('Caught error fetching XSOAR fields configuration:', error.message);
       return;
@@ -443,15 +368,15 @@ async function getIncidentFields(serverId) {
 
 
 
-async function getIncidentTypes(serverId) {
+const getIncidentTypes = async (serverId: string) => {
 // This method will get incident type definitions from an XSOAR server
 
-  const demistoServerConfig = getDemistoApiConfig(serverId);
+  const demistoServerConfig = getDemistoEndpointConfig(serverId);
 
   console.log(`Fetching incident types from '${demistoServerConfig.url}'`);
 
   let result;
-  let options = {
+  let options: AxiosRequestConfig = {
     url: demistoServerConfig.url + '/incidenttype',
     method: 'GET',
     headers: {
@@ -459,21 +384,21 @@ async function getIncidentTypes(serverId) {
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    rejectUnauthorized: !demistoServerConfig.trustAny,
-    resolveWithFullResponse: true,
-    json: true
+    // rejectUnauthorized: !demistoServerConfig.trustAny,
+    httpsAgent: utils.getAxiosHTTPSAgent(demistoServerConfig.trustAny)
   }
 
   try {
     // send request to XSOAR
-    result = await request( addHttpProxy(options, serverId) );
+    // result = await request( addHttpProxy(options, serverId) );
+    result = await Axios( addHttpProxy(options, serverId) );
 
     // console.log(fields);
 
     console.log(`Successfully fetched incident types from '${demistoServerConfig.url}'`);
-    return result.body;
+    return result.data;
   }
-  catch (error) {
+  catch (error: any) {
     if ('message' in error) {
       console.error('Caught error fetching XSOAR types configuration:', error.message);
       return;
@@ -484,8 +409,8 @@ async function getIncidentTypes(serverId) {
 
 
 
-function saveIncidentsConfig() {
-  calculateRequiresJson();
+const saveIncidentsConfig = () => {
+  incidentsConfig = utils.calculateRequiresJson(incidentsConfig);
   const savedConfig = {
     schema: SchemaVersion,
     incidentConfigs: Object.values(incidentsConfig)
@@ -495,7 +420,7 @@ function saveIncidentsConfig() {
 
 
 
-function returnError(error, res, statusCode=500, body=undefined ) {
+const returnError = (error: any, res: Response, statusCode = 500, body: any = undefined ): void => {
   console.error(error);
   if (!body) {
     body = {success: false, error};
@@ -505,58 +430,23 @@ function returnError(error, res, statusCode=500, body=undefined ) {
 
 
 
-function dos2unix(str) {
-  return str.replace(/\r\n/g, '\n');
-}
-
-
-
-function decrypt(str, encoding = 'utf8') {
+const decrypt = (str: string, encoding: NodeRSA.Encoding = 'utf8'): string => {
   return encryptor.decrypt(str, encoding);
 }
 
 
 
-function encrypt(str, encoding = 'utf8') {
+const encrypt = (str: string, encoding: any = 'utf8') => {
   return encryptor.encrypt(str, encoding);
 }
 
 
 
-function calculateRequiresJson() {
-  for (const incidentConfig of Object.values(incidentsConfig)) {
-    let requiresJson = false;
-    for (const field of Object.values(incidentConfig.chosenFields)) {
-      if (field.mappingMethod === 'jmespath' && field.jmesPath !== '' && !field.permitNullValue) {
-        requiresJson = true;
-        break;
-      }
-    }
-    incidentConfig.requiresJson = requiresJson;
-  }
-}
 
 
 
-function sanitiseObjectFromValidKeyList(validKeys, obj) {
-  const newObj = {};
-  for (const key of validKeys) {
-    if (key in obj) {
-      newObj[key] = obj[key];
-    }
-  }
-  return newObj;
-}
 
 
-
-function addHttpProxy(requestOptions, serverId) {
-  const demistoServerConfig = getDemistoApiConfig(serverId);
-  if (demistoServerConfig.hasOwnProperty('proxy')) {
-    requestOptions.proxy = demistoServerConfig.proxy;
-  }
-  return requestOptions;
-}
 
 
 
@@ -584,7 +474,7 @@ app.get(apiPath + '/sampleIncident', async (req, res) => {
     // read file
     data = await fs.promises.readFile(filePath, { encoding: 'utf8' });
   }
-  catch (error) {
+  catch (error: any) {
     return returnError(`Error whilst parsing file ${fileName}: ${error}`, res);
   }
 
@@ -594,7 +484,7 @@ app.get(apiPath + '/sampleIncident', async (req, res) => {
     res.status(200).json(parsedData);
     return;
   }
-  catch (error) {
+  catch (error: any) {
     return returnError(`Caught error parsing ${filePath}: ${error}`, res);
   }
 
@@ -606,11 +496,11 @@ app.get(apiPath + '/sampleIncident', async (req, res) => {
 
 app.get(apiPath + '/demistoEndpoint', async (req, res) => {
   // return all demisto API configs to the client, minus their apiKeys
-  const tmpDemistoApiConfigs = JSON.parse(JSON.stringify(demistoApiConfigs)); // poor man's deep copy
-  Object.values(tmpDemistoApiConfigs).forEach( apiConfig => {
-    delete apiConfig.apiKey;
+  const tmpDemistoEndpointConfigs = JSON.parse(JSON.stringify(demistoEndpointConfigs)) as DemistoEndpoints; // poor man's deep copy
+  Object.values(tmpDemistoEndpointConfigs).forEach( apiConfig => {
+    delete (apiConfig as any).apiKey;
   });
-  res.status(200).json(tmpDemistoApiConfigs);
+  res.status(200).json(tmpDemistoEndpointConfigs);
 });
 
 
@@ -623,7 +513,7 @@ app.post(apiPath + '/demistoEndpoint', async (req, res) => {
     const requiredFields = ['url', 'apiKey', 'trustAny'];
 
     try {
-      checkForRequiredFields(requiredFields, body);
+      utils.checkForRequiredFields(requiredFields, body);
     }
     catch(fieldName) {
       return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
@@ -643,7 +533,7 @@ app.post(apiPath + '/demistoEndpoint', async (req, res) => {
     }
 
     // remove any junk data
-    const config = {
+    const config: DemistoEndpoint = {
       id,
       url,
       apiKey,
@@ -654,7 +544,7 @@ app.post(apiPath + '/demistoEndpoint', async (req, res) => {
       config.proxy = proxy;
     }
 
-    demistoApiConfigs[id] = config;
+    demistoEndpointConfigs[id] = config;
     await saveApiConfig();
     res.status(201).json({success: true, id});
 });
@@ -668,14 +558,14 @@ app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
     const requiredFields = ['id', 'url', 'trustAny']; // 'apiKey' property may be omitted so that the apiKey can be fetched from existing config using 'id' property
 
     try {
-      checkForRequiredFields(requiredFields, body);
+      utils.checkForRequiredFields(requiredFields, body);
     }
     catch(fieldName) {
       return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
     }
 
     const {id, url, trustAny, proxy} = body;
-    const apiKey = body.hasOwnProperty('apiKey') ? body.apiKey : getDemistoApiConfig(id).apiKey;
+    const apiKey = body.hasOwnProperty('apiKey') ? body.apiKey : getDemistoEndpointConfig(id).apiKey;
 
     const urlRegex = new RegExp(/^https?:\/\/\S+$/);
     const badUrlRegex = new RegExp(/^https?:\/\/\S+?\//);
@@ -688,7 +578,7 @@ app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
     }
     
     // remove any junk data
-    const config = {
+    const config: DemistoEndpoint = {
       id,
       url,
       apiKey,
@@ -699,7 +589,7 @@ app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
       config.proxy = proxy;
     }
 
-    demistoApiConfigs[id] = config;
+    demistoEndpointConfigs[id] = config;
 
     await saveApiConfig();
     res.status(200).json({success: true});
@@ -710,17 +600,17 @@ app.post(apiPath + '/demistoEndpoint/update', async (req, res) => {
 app.delete(apiPath + '/demistoEndpoint/:serverId', async (req, res) => {
   // deletes a XSOAR server from the API config
   const serverId = decodeURIComponent(req.params.serverId);
-  if (demistoApiConfigs.hasOwnProperty(serverId)) {
-    delete demistoApiConfigs[serverId];
-    if (!demistoApiConfigs.hasOwnProperty(defaultDemistoApiId)) {
+  if (demistoEndpointConfigs.hasOwnProperty(serverId)) {
+    delete demistoEndpointConfigs[serverId];
+    if (defaultDemistoEndpointId && !demistoEndpointConfigs.hasOwnProperty(defaultDemistoEndpointId)) {
       // make sure default api is still defined.  If not, unset it
-      defaultDemistoApiId = undefined;
+      defaultDemistoEndpointId = undefined;
     }
     await saveApiConfig();
     res.status(200).json({success: true});
   }
   else {
-    return returnError(`XSOAR server '${serverID}' was not found`, res);
+    return returnError(`XSOAR server '${serverId}' was not found`, res);
   }
 });
 
@@ -735,7 +625,7 @@ app.post(apiPath + '/demistoEndpoint/test/adhoc', async (req, res) => {
   // console.log('body:', body);
 
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     const error = `Invalid request: Required field '${fieldName}' was missing`;
@@ -749,14 +639,14 @@ app.post(apiPath + '/demistoEndpoint/test/adhoc', async (req, res) => {
   }
 
   const {url, trustAny, proxy} = body;
-  const apiKey = body.hasOwnProperty('id') ? getDemistoApiConfig(body.id).apiKey : body.apiKey;
+  const apiKey = body.hasOwnProperty('id') ? getDemistoEndpointConfig(body.id).apiKey : body.apiKey;
 
   let testResult;
   try {
     testResult = await testApi(url, decrypt(apiKey), trustAny, proxy);
     // console.debug('testResult:', testResult);
   }
-  catch(error) {
+  catch(error: any) {
     return returnError(`Error testing XSOAR URL: ${url}: ${error}`, res);
   }
 
@@ -792,13 +682,13 @@ app.get(apiPath + '/demistoEndpoint/test/:serverId', async (req, res) => {
   // Does not save settings.  Another call will handle that.
 
   const serverId = decodeURIComponent(req.params.serverId);
-  const {url, apiKey, trustAny, proxy} = getDemistoApiConfig(serverId);
+  const {url, apiKey, trustAny, proxy} = getDemistoEndpointConfig(serverId);
   let testResult;
 
   try {
     testResult = await testApi(url, decrypt(apiKey), trustAny, proxy);
   }
-  catch(error) {
+  catch(error: any) {
     return returnError(`Error testing XSOAR URL: ${url}: ${error}`, res);
   }
 
@@ -843,8 +733,8 @@ app.post(apiPath + '/demistoEndpoint/default', async (req, res) => {
     return returnError(`serverId not found in request body`, res);
   }
 
-  if (demistoApiConfigs.hasOwnProperty(serverId)) {
-    defaultDemistoApiId = serverId;
+  if (demistoEndpointConfigs.hasOwnProperty(serverId)) {
+    defaultDemistoEndpointId = serverId;
     res.status(200).json({success: true});
     await saveApiConfig();
   }
@@ -857,8 +747,8 @@ app.post(apiPath + '/demistoEndpoint/default', async (req, res) => {
 
 app.get(apiPath + '/demistoEndpoint/default', async (req, res) => {
   // fetch the default XSOAR API endpoint
-  if (defaultDemistoApiId) {
-    res.status(200).json({defined: true, serverId: defaultDemistoApiId});
+  if (defaultDemistoEndpointId) {
+    res.status(200).json({defined: true, serverId: defaultDemistoEndpointId});
   }
   else {
     res.status(200).json({defined: false});
@@ -870,8 +760,10 @@ app.get(apiPath + '/demistoEndpoint/default', async (req, res) => {
 app.get(apiPath + '/incidentFields/:serverId', async (req, res) => {
   // Retrieves incident fields from XSOAR
   const serverId = decodeURIComponent(req.params.serverId);
-  const fields = await getIncidentFields(serverId);
-  incident_fields[serverId] = fields;
+  const fields = await fetchIncidentFields(serverId) || [];
+  if (fields) {
+    incident_fields[serverId] = fields;
+  }
   res.status(200).json( {id: serverId, incident_fields: fields} );
 } );
 
@@ -896,15 +788,15 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
   let serverId;
   try {
     serverId = body.serverId;
-    demistoServerConfig = getDemistoApiConfig(serverId);
+    demistoServerConfig = getDemistoEndpointConfig(serverId);
   }
-  catch {
+  catch (error: any) {
     return returnError(`'serverId' field not present in body`, res, 500, { success: false, statusCode: 500, error });
   }
 
   // console.debug(body);
 
-  const options = {
+  const options: AxiosRequestConfig = {
     url: demistoServerConfig.url + '/incident',
     method: 'POST',
     headers: {
@@ -912,18 +804,16 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    rejectUnauthorized: !demistoServerConfig.trustAny,
-    resolveWithFullResponse: true,
-    json: true,
-    body
+    httpsAgent: utils.getAxiosHTTPSAgent(demistoServerConfig.trustAny),
+    data: body
   };
   
   let result;
   try {
     // send request to XSOAR
-    result = await request( addHttpProxy(options, serverId) );
+    result = await Axios(options);
   }
-  catch (error) {
+  catch (error: any) {
     if ( error && 'response' in error && error.response && 'statusCode' in error.response && error.statusCode !== null) {
       return returnError(
         `Caught error opening XSOAR incident: code ${error.response.status}: ${error.response.statusMessage}`,
@@ -962,9 +852,9 @@ app.post(apiPath + '/createDemistoIncident', async (req, res) => {
     }
   }
 
-  const incidentId = result.body.id;
+  const incidentId = result.data.id;
   // send results to client
-  res.status(201).json( { id: incidentId, success: true, statusCode: result.statusCode, statusMessage: result.statusMessage } );
+  res.status(201).json( { id: incidentId, success: true, statusCode: result.status, statusMessage: result.statusText } );
   // console.debug(result);
   console.log(`User ${currentUser} created XSOAR incident with id ${incidentId}`);
 } );
@@ -979,7 +869,7 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
 
   const requiredFields = ['serverId', 'json'];
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
@@ -991,16 +881,15 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
   let serverId;
   try {
     serverId = body.serverId;
-    demistoServerConfig = getDemistoApiConfig(serverId);
+    demistoServerConfig = getDemistoEndpointConfig(serverId);
   }
-  catch(error) {
-    return returnError('message' in error ? error.message : errror, res, 500, { success: false, statusCode: 500, error });
+  catch(error: any) {
+    return returnError('message' in error ? error.message : error, res, 500, { success: false, statusCode: 500, error });
   }
 
   // console.debug(body);
 
-  let result;
-  let options = {
+  let options: AxiosRequestConfig = {
     url: demistoServerConfig.url + '/incident/json',
     method: 'POST',
     headers: {
@@ -1008,18 +897,19 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    rejectUnauthorized: !demistoServerConfig.trustAny,
-    resolveWithFullResponse: true,
-    json: true,
-    body: json
+    // rejectUnauthorized: !demistoServerConfig.trustAny,
+    httpsAgent: utils.getAxiosHTTPSAgent(demistoServerConfig.trustAny),
+    data: json
   };
-
+  
+  let result;
   try {
     // send request to XSOAR
-    result = await request( addHttpProxy(options, serverId) );
+    // result = await request( addHttpProxy(options, serverId) );
+    result = await Axios( addHttpProxy(options, serverId) );
     // console.log('result:', result);
   }
-  catch (error) {
+  catch (error: any) {
     if ( error && 'response' in error && error.response && 'statusCode' in error.response && error.statusCode !== null) {
       return returnError(`Caught error opening XSOAR incident: code ${error.response.status}: ${error.response.statusMessage}`, res, 500, { success: false, statusCode: error.statusCode, statusMessage: error.response.statusMessage });
     }
@@ -1034,16 +924,16 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
 
   // console.log('result body:', result.body);
 
-  if (result.body) {
-    const incidentId = result.body.id;
+  if (result.data) {
+    const incidentId = result.data.id;
     // send results to client
     // console.debug(res);
     console.log(`User ${currentUser} created XSOAR incident with id ${incidentId}`);
     res.status(201).json( {
       id: incidentId,
       success: true,
-      statusCode: result.statusCode,
-      statusMessage: result.statusMessage
+      statusCode: result.status,
+      statusMessage: result.statusText
     } );
   }
 
@@ -1052,7 +942,7 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
     const error = `XSOAR did not create an incident based off of the request.  It could be caused by pre-processing rules dropping the incident`
     res.status(200).json( {
       success: false,
-      statusCode: result.statusCode,
+      statusCode: result.status,
       statusMessage: error
     } );
   }
@@ -1068,7 +958,7 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
   const requiredFields = ['incidentId', 'version'];
 
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
@@ -1082,9 +972,9 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
   let serverId;
   try {
     serverId = req.body.serverId;
-    demistoServerConfig = getDemistoApiConfig(serverId);
+    demistoServerConfig = getDemistoEndpointConfig(serverId);
   }
-  catch {
+  catch (error: any) {
     return returnError(`'serverId' field not present in body`, res, 500, { success: false, statusCode: 500, error });
   }
 
@@ -1093,8 +983,7 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
     version
   };
 
-  let result;
-  const options = {
+  const options: AxiosRequestConfig = {
     url: demistoServerConfig.url + '/incident/investigate',
     method: 'POST',
     headers: {
@@ -1102,17 +991,19 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    rejectUnauthorized: !demistoServerConfig.trustAny,
-    resolveWithFullResponse: true,
-    json: true,
-    body: requestBody
+    // rejectUnauthorized: !demistoServerConfig.trustAny,
+    httpsAgent: utils.getAxiosHTTPSAgent(demistoServerConfig.trustAny),
+    data: requestBody
   };
+  
+  let result;
   try {
     // send request to XSOAR
-    result = await request( addHttpProxy(options, serverId) );
+    // result = await request( addHttpProxy(options, serverId) );
+    result = await Axios( addHttpProxy(options, serverId) );
     res.status(201).json({success: true});
   }
-  catch (error) {
+  catch (error: any) {
     if ('error' in error && error.error.error.startsWith('Investigation already exists for incident')) {
       return res.status(200).json({success: true});
     }
@@ -1134,9 +1025,9 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
     let serverId;
     try {
       serverId = req.body.serverId;
-      demistoServerConfig = getDemistoApiConfig(serverId);
+      demistoServerConfig = getDemistoEndpointConfig(serverId);
     }
-    catch {
+    catch (error: any) {
       return returnError(`'serverId' field not present in body`, res, 500, { success: false, statusCode: 500, error });
     }
 
@@ -1150,7 +1041,7 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
     };
 
     let result;
-    let options = {
+    let options: AxiosRequestConfig = {
       url: demistoServerConfig.url + '/incidents/search',
       method: 'POST',
       headers: {
@@ -1158,16 +1049,18 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
         Accept: 'application/json',
         'Content-Type': 'application/json'
       },
-      rejectUnauthorized: !demistoServerConfig.trustAny,
-      resolveWithFullResponse: true,
-      json: true,
-      body: body
+      // rejectUnauthorized: !demistoServerConfig.trustAny,
+      httpsAgent: utils.getAxiosHTTPSAgent(demistoServerConfig.trustAny),
+      // resolveWithFullResponse: true,
+      // json: true,
+      data: body
     };
 
     // send request to XSOAR
-    result = await request( addHttpProxy(options, serverId) );
+    // result = await request( addHttpProxy(options, serverId) );
+    result = await Axios( addHttpProxy(options, serverId) );
 
-    if ('body' in result && 'total' in result.body && result.body.total === 0) {
+    if ('data' in result && 'total' in result.data && result.data.total === 0) {
       return res.status(200).json({
         success: false,
         error: `Query returned 0 results`
@@ -1176,12 +1069,12 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
     else {
       return res.status(200).json({
         success: true,
-        incident: result.body.data[0]
+        incident: result.data.data[0]
       });
     }
     // console.log('result:', result.body);
   }
-  catch (error) {
+  catch (error: any) {
     if ('message' in error) {
       return res.status(200).json({success: false, error: error.message});
     }
@@ -1201,7 +1094,7 @@ app.post(apiPath + '/json', async (req, res) => {
   const requiredFields = ['name', 'json'];
 
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
@@ -1236,7 +1129,7 @@ app.post(apiPath + '/json/update', async (req, res) => {
   const requiredFields = ['id', 'name', 'json'];
 
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
@@ -1345,7 +1238,7 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
   const requiredFields = ['name', 'chosenFields', 'createInvestigation', 'incidentType'];
 
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
@@ -1364,7 +1257,7 @@ app.post(apiPath + '/incidentConfig', async (req, res) => {
   }
 
   // remove any invalid fields
-  const entry = {
+  const entry: IncidentConfig = {
     name,
     id,
     incidentType,
@@ -1394,7 +1287,7 @@ app.post(apiPath + '/incidentConfig/update', async (req, res) => {
   const requiredFields = ['id', 'name', 'chosenFields', 'createInvestigation', 'incidentType'];
 
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing from request body`});
@@ -1403,7 +1296,7 @@ app.post(apiPath + '/incidentConfig/update', async (req, res) => {
   const {id, name} = body;
 
   // remove any invalid fields
-  const updatedIncidentConfig = {
+  const updatedIncidentConfig: IncidentConfig = {
     name,
     id,
     incidentType: body.incidentType,
@@ -1442,7 +1335,7 @@ app.post(apiPath + '/incidentConfig/defaultJson', async (req, res) => {
   const requiredFields = ['incidentConfigId', 'jsonId'];
 
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     const error = `Invalid request: Required field '${fieldName}' was missing`;
@@ -1482,7 +1375,7 @@ app.post(apiPath + '/incidentConfig/defaultJsonGroup', async (req, res) => {
   const requiredFields = ['incidentConfigId', 'jsonGroupId'];
 
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     const error = `Invalid request: Required field '${fieldName}' was missing`;
@@ -1567,7 +1460,7 @@ app.post(apiPath + '/jsonGroup', async (req, res) => {
   const requiredFields = ['name', 'jsonFileIds'];
 
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
@@ -1577,14 +1470,14 @@ app.post(apiPath + '/jsonGroup', async (req, res) => {
   const {name, jsonFileIds} = body;
 
   try {
-    validateJsonGroup(jsonFileIds);
+    utils.validateJsonGroup(jsonFileIds);
   }
-  catch(error) {
+  catch(error: any) {
     return res.status(400).json({error: `Invalid request: ${error}`});
   }
 
   // check for existing config name
-  const foundName = false;
+  let foundName = false;
   for (const config of Object.values(jsonGroupsConfig)) {
     if (config.name === name) {
       foundName = true;
@@ -1616,7 +1509,7 @@ app.post(apiPath + '/jsonGroup/update', async (req, res) => {
   const requiredFields = ['id', 'name', 'jsonFileIds'];
 
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     return res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
@@ -1625,9 +1518,9 @@ app.post(apiPath + '/jsonGroup/update', async (req, res) => {
   const {id, name, jsonFileIds} = body;
 
   try {
-    validateJsonGroup(jsonFileIds);
+    utils.validateJsonGroup(jsonFileIds);
   }
-  catch(error) {
+  catch(error: any) {
     res.status(400).json({error: `Invalid request: ${error}`});
     return;
   }
@@ -1724,7 +1617,7 @@ app.post(apiPath + '/attachment', multipartUploadHandler.single('attachment'), a
   /*const requiredFields = ['name'];
 
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
@@ -1733,6 +1626,10 @@ app.post(apiPath + '/attachment', multipartUploadHandler.single('attachment'), a
 
   const fileObject = req.file;
   // console.log('fileObject:', fileObject);
+
+  if (!fileObject) {
+    return res.status(400).send('Bad Request');
+  }
 
   const multerPath = fileObject.path;
   const filename = fileObject.originalname;
@@ -1759,7 +1656,7 @@ app.post(apiPath + '/attachment', multipartUploadHandler.single('attachment'), a
   try {
     await mv(multerPath, `${attachmentsDir}/${diskfilename}`);
 
-    const attachmentConfig = {
+    const attachmentConfig: FileAttachmentConfig = {
       id,
       filename,
       size,
@@ -1777,7 +1674,7 @@ app.post(apiPath + '/attachment', multipartUploadHandler.single('attachment'), a
     return res.status(201).json({success: true, id}); // send 'created';
   }
 
-  catch (error) {
+  catch (error: any) {
     console.error('Caught error saving file attachment:', error);
     return res.status(500).json({error});
   }
@@ -1812,7 +1709,7 @@ app.post(apiPath + '/attachment/update', async (req, res) => {
 
   const requiredFields = ['id', 'filename'];
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
@@ -1832,7 +1729,7 @@ app.post(apiPath + '/attachment/update', async (req, res) => {
 
   const validFields = requiredFields.concat(['comment', 'mediaFile']);
 
-  const sanitisedConfig = sanitiseObjectFromValidKeyList(validFields, newConfig);
+  const sanitisedConfig = utils.sanitiseObjectFromValidKeyList(validFields, newConfig);
 
   sanitisedConfig.size = oldConfig.size;
   sanitisedConfig.detectedType = oldConfig.detectedType;
@@ -1852,7 +1749,7 @@ app.post(apiPath + '/attachment/push', async (req, res) => {
 
   const requiredFields = ['attachmentId', 'incidentFieldName', 'serverId', 'filename', 'last'];
   try {
-    checkForRequiredFields(requiredFields, body);
+    utils.checkForRequiredFields(requiredFields, body);
   }
   catch(fieldName) {
     res.status(400).json({error: `Invalid request: Required field '${fieldName}' was missing`});
@@ -1874,9 +1771,9 @@ app.post(apiPath + '/attachment/push', async (req, res) => {
     const comment = 'comment' in attachment ? attachment.comment : undefined;
 
     result = await uploadAttachmentToDemisto(attachment.serverId, attachment.incidentId, attachment.incidentFieldName, attachment.attachmentId, attachment.filename, attachment.last, mediaFile, comment);
-    return res.status(201).json({success: true, version: result.body.version});
+    return res.status(201).json({success: true, version: result.data.version});
   }
-  catch (error) {
+  catch (error: any) {
     console.error(error);
     return res.status(200).json({success: false, error});
   }
@@ -1892,73 +1789,85 @@ app.post(apiPath + '/attachment/push', async (req, res) => {
 
 ///// STARTUP UTILITY FUNCTIONS /////
 
-function loadIncidentCreatorSettings() {
-  const defaultSettings = require('./default-settings');
-  const tmpSettings = {};
-
+function loadIncidentCreatorSettings (configDir: string, settingsFile: string): AppSettings {
+  console.log('loadIncidentCreatorSettings()');
+  const tmpSettings: any = {};
+  const foundConfigDir =  fs.existsSync(configDir);
+  
   if (!foundConfigDir) {
     console.log(`Config dir '${configDir}' was not found.  This probably means we're running in developmnent mode.  Creating it.`);
     fs.mkdirSync(configDir);
   }
   
+  const foundSettingsFile =  fs.existsSync(`${configDir}/${settingsFile}`);
   if (!foundSettingsFile) {
     // Did not find the app configuration file.  Write default settings to the app settings file
     console.log('No settings file was found.  Loading and writing defaults');
-    fs.writeFileSync(settingsFile, JSON.stringify(defaultSettings, null, 2), { encoding: 'utf8', mode: 0o660});
+    fs.writeFileSync(settingsFile, JSON.stringify(DefaultSettings, null, 2), { encoding: 'utf8', mode: 0o660});
   }
 
   try {
     const loadedSettings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
-    for (const key of Object.keys(defaultSettings)) {
-      tmpSettings[key] = loadedSettings.hasOwnProperty(key) ? loadedSettings[key] : defaultSettings[key];
+    for (const key of Object.keys(DefaultSettings as AppSettings)) {
+      tmpSettings[key] = loadedSettings.hasOwnProperty(key) ? loadedSettings[key] : DefaultSettings[key as keyof AppSettings];
     }
   }
-  catch (error) {
-    for (const key of Object.keys(defaultSettings)) {
-      const value = defaultSettings[key];
+  catch (error: any) {
+    for (const key of Object.keys(DefaultSettings)) {
+      const value = DefaultSettings[key as keyof AppSettings];
       tmpSettings[key] = value;
     }
   }
 
-  appSettings = tmpSettings;
+  return tmpSettings as AppSettings;
 }
 
 
 
-async function loadDemistoApiConfigs() {
+const loadDemistoEndpointConfigs = async (): Promise<DemistoEndpoints> => {
+  console.log('loadDemistoEndpointConfigs()');
   // Read XSOAR API configs
+  let tmpDemistoEndpointConfigs: DemistoEndpoints = {};
+  const foundDemistoApiConfig = fs.existsSync(apiCfgFile); // check for presence of API configuration file
   if (!foundDemistoApiConfig) {
     console.log('No XSOAR API configuration file was found');
   }
   else {
-    const loadedConfig = JSON.parse(fs.readFileSync(apiCfgFile, 'utf8'));
+    const loadedConfig = JSON.parse(fs.readFileSync(apiCfgFile, 'utf8')) as SavedDemistoEndpoint;
+    // console.log('loadedConfig:', utils.prettyJsonStringify(loadedConfig));
     const schema = loadedConfig.schema;
     // console.log(parsedApiConfig);
     const endpointConfig = loadedConfig.endpointConfig;
 
     for (const apiConfig of endpointConfig.servers) {
-      demistoApiConfigs[apiConfig.id] = apiConfig;
+      if (apiConfig.id) {
+        tmpDemistoEndpointConfigs[apiConfig.id] = apiConfig;
+      }
     }
+
+    // console.log('tmpDemistoEndpointConfigs:', utils.prettyJsonStringify(tmpDemistoEndpointConfigs));
 
     // identify the default demisto api config
-    let demistoServerConfig;
-    if (endpointConfig.hasOwnProperty('default')) {
-      defaultDemistoApiId = endpointConfig.default;
-      demistoServerConfig = getDemistoApiConfig(defaultDemistoApiId);
-      console.log(`The default API config is '${demistoServerConfig.url}'`);
+    let demistoServerConfig: DemistoEndpoint | undefined;
+    if (endpointConfig.default !== undefined) {
+      defaultDemistoEndpointId = endpointConfig.default;
+      demistoServerConfig = tmpDemistoEndpointConfigs[defaultDemistoEndpointId];
+      if (demistoServerConfig) {
+        // console.log('demistoServerConfig:', demistoServerConfig);
+        console.log(`The default API URL is '${demistoServerConfig.url}'`);
+      }
     }
-
 
     if (demistoServerConfig && demistoServerConfig.hasOwnProperty('url') && demistoServerConfig.hasOwnProperty('apiKey') && demistoServerConfig.hasOwnProperty('trustAny')) {
       console.log('Testing default XSOAR API server API communication');
 
       // test API communication
       let testResult;
+      const {url, apiKey, trustAny, proxy} = demistoServerConfig;
       try {
-        const {url, apiKey, trustAny, proxy} = demistoServerConfig;
         testResult = await testApi(url, decrypt(apiKey), trustAny, proxy);
       }
-      catch (error) {
+      catch (error: any) {
         if ('message' in error && error.message.startsWith('Error during decryption')) {
           console.log(`Decryption failed.  This probably means you installed new certificates.  Please delete ${apiCfgFile} and try again.`)
         }
@@ -1968,48 +1877,62 @@ async function loadDemistoApiConfigs() {
         process.exit(1);
       }
 
+      if (!defaultDemistoEndpointId) {
+        return {};
+      }
+
       if (testResult.success) {
         console.log(`Logged into XSOAR as user '${testResult.result.body.username}'`);
         console.log('XSOAR API is initialised');
 
         // fetch incident fields
-        incident_fields = await getIncidentFields(defaultDemistoApiId);
+        if (demistoServerConfig.id) {
+          incident_fields[demistoServerConfig.id] = await fetchIncidentFields(defaultDemistoEndpointId) || [];
+        }
       }
       else {
-        console.error(`XSOAR API initialisation failed with URL ${defaultDemistoApiId} with trustAny = ${demistoApiConfigs[defaultDemistoApiId].trustAny}.`);
+        console.error(`XSOAR API initialisation failed with URL ${url} with trustAny = ${tmpDemistoEndpointConfigs[defaultDemistoEndpointId].trustAny}.`);
       }
     }
   }
+  return tmpDemistoEndpointConfigs;
 }
 
 
 
-function loadIncidentsConfig() {
+const loadIncidentsConfig = (): IncidentConfigs => {
+  console.log('loadIncidentsConfig()');
   // Read Field Configs
+  let tmpIncidentsConfig: IncidentConfigs = {};
+  const foundIncidentsFile = fs.existsSync(incidentsFile);
   if (!foundIncidentsFile) {
     console.log(`Incidents configuration file ${incidentsFile} was not found`);
-    incidentsConfig = {};
   }
   else {
     try {
       const loadedIncidentsConfig = JSON.parse(fs.readFileSync(incidentsFile, 'utf8'));
       const schema = loadedIncidentsConfig.schema;
       for (const config of loadedIncidentsConfig.incidentConfigs) {
-        incidentsConfig[config.id] = config;
+        tmpIncidentsConfig[config.id] = config;
       }
     }
-    catch (error) {
+    catch (error: any) {
       console.error(`Error parsing ${incidentsFile}:`, error);
-      incidentsConfig = {};
+      tmpIncidentsConfig = {};
     }
   }
-  calculateRequiresJson();
+  tmpIncidentsConfig = utils.calculateRequiresJson(tmpIncidentsConfig);
+  return tmpIncidentsConfig;
 }
 
 
 
-function loadFreeJsonConfig() {
+const loadFreeJsonConfig = (): Record<any, any> => {
+  console.log('loadFreeJsonConfig()');
   // Read Freeform JSON Configs
+  let freeJsonConfig: Record<any, any> = {};
+
+  const foundFreeJsonFile = fs.existsSync(freeJsonFile);
   if (!foundFreeJsonFile) {
     console.log(`Freeform JSON configuration file ${freeJsonFile} was not found`);
     freeJsonConfig = {};
@@ -2022,25 +1945,27 @@ function loadFreeJsonConfig() {
         freeJsonConfig[config.id] = config;
       }
     }
-    catch (error) {
+    catch (error: any) {
       console.error(`Error parsing ${freeJsonFile}:`, error);
       freeJsonConfig = {};
     }
   }
+  return freeJsonConfig;
 }
 
 
 
 
-function loadJsonGroupsConfig() {
+const loadJsonGroupsConfig = (): JsonGroups => {
+  console.log('loadJsonGroupsConfig()');
   // Read JSON Config Groups
-  jsonGroupsConfig = {};
+  const tmpJsonGroupsConfig: JsonGroups = {};
+  const foundJsonGroupsFile = fs.existsSync(jsonGroupsFile);
   if (!foundJsonGroupsFile) {
     console.log(`JSON Groups configuration file ${jsonGroupsFile} was not found`);
   }
   else {
     try {
-      const tmpJsonGroupsConfig = {};
       const loadedConfig = JSON.parse(fs.readFileSync(jsonGroupsFile, 'utf8'));
       const schema = loadedConfig.schema;
       for (const config of loadedConfig.jsonGroups) {
@@ -2048,17 +1973,20 @@ function loadJsonGroupsConfig() {
       }
       jsonGroupsConfig = tmpJsonGroupsConfig;
     }
-    catch (error) {
+    catch (error: any) {
       console.error(`Error parsing ${jsonGroupsFile}:`, error);
     }
   }
+  return tmpJsonGroupsConfig;
 }
 
 
 
-function loadAttachmentsConfig() {
+const loadAttachmentsConfig = (): FileAttachmentConfigs => {
+  console.log('loadAttachmentsConfig()');
   // Read Attachments Config
-  attachmentsConfig = {};
+  const tmpAttachmentsConfig: FileAttachmentConfigs = {};
+  const foundAttachmentsFile = fs.existsSync(attachmentsFile);
   if (!foundAttachmentsFile) {
     console.log(`File attachments configuration file ${attachmentsFile} was not found`);
   }
@@ -2067,18 +1995,20 @@ function loadAttachmentsConfig() {
       const loadedConfig = JSON.parse(fs.readFileSync(attachmentsFile, 'utf8'));
       const schema = loadedConfig.schema;
       for (const config of loadedConfig.attachments) {
-        attachmentsConfig[config.id] = config;
+        tmpAttachmentsConfig[config.id] = config;
       }
     }
-    catch (error) {
+    catch (error: any) {
       console.error(`Error parsing ${attachmentsFile}:`, error);
     }
   }
+  return tmpAttachmentsConfig;
 }
 
 
 
-function genInternalCerts() {
+const genInternalCerts = () => {
+  console.log('genInternalCerts()');
   console.log('Generating internal certificate');
   const selfsigned = require('selfsigned');
   const attrs = [
@@ -2122,13 +2052,14 @@ function genInternalCerts() {
   };
   const pems = selfsigned.generate(attrs, options);
   // console.log(pems);
-  fs.writeFileSync(internalPubKeyFile, dos2unix(pems.public), { encoding: 'utf8', mode: 0o660 });
-  fs.writeFileSync(internalKeyFile, dos2unix(pems.private), { encoding: 'utf8', mode: 0o660 });
+  fs.writeFileSync(internalPubKeyFile, utils.dos2unix(pems.public), { encoding: 'utf8', mode: 0o660 });
+  fs.writeFileSync(internalKeyFile, utils.dos2unix(pems.private), { encoding: 'utf8', mode: 0o660 });
 }
 
 
 
-function genSSLCerts() {
+const genSSLCerts = () => {
+  console.log('genSSLCerts()');
   console.log('Generating SSL certificate');
   const selfsigned = require('selfsigned');
   const attrs = [
@@ -2193,13 +2124,14 @@ function genSSLCerts() {
   };
   const pems = selfsigned.generate(attrs, options);
   // console.log(pems);
-  fs.writeFileSync(certFile, dos2unix(pems.cert), { encoding: 'utf8', mode: 0o660 });
-  fs.writeFileSync(privKeyFile, dos2unix(pems.private), { encoding: 'utf8', mode: 0o660 });
+  fs.writeFileSync(certFile, utils.dos2unix(pems.cert), { encoding: 'utf8', mode: 0o660 });
+  fs.writeFileSync(privKeyFile, utils.dos2unix(pems.private), { encoding: 'utf8', mode: 0o660 });
 }
 
 
 
-function initSSL() {
+const initSSL = async (privKeyFile: string, certFile: string): Promise<https.Server> => {
+  console.log('initSSL()');
 
   // SSL Certs
   const privkeyExists = fs.existsSync(privKeyFile);
@@ -2209,16 +2141,16 @@ function initSSL() {
   }
   else if (!privkeyExists) {
     console.error(`SSL private key file ${privKeyFile} not found`);
-    return false;
+    throw new Errors.FileNotFoundError();
   }
   else if (!certExists) {
     console.error(`SSL certificate file ${certFile} not found`);
-    return false;
+    throw new Errors.FileNotFoundError();
   }
 
   sslCert = fs.readFileSync(certFile, { encoding: 'utf8' });
   privKey = fs.readFileSync(privKeyFile, { encoding: 'utf8' });
-  server = require('https').createServer({
+  const server = https.createServer({
     key: privKey,
     cert: sslCert,
   }, app);
@@ -2232,26 +2164,26 @@ function initSSL() {
   }
   else if (!internalKeyExists) {
     console.error(`Internal private key file ${internalKeyFile} not found`);
-    return false;
+    throw new Errors.FileNotFoundError();
   }
   else if (!internalCertExists) {
     console.error(`Internal certificate file ${internalPubKeyFile} not found`);
-    return false;
+    throw new Errors.FileNotFoundError();
   }
 
   internalPubKey = fs.readFileSync(internalPubKeyFile, { encoding: 'utf8' });
   const internalPrivKey = fs.readFileSync(internalKeyFile, { encoding: 'utf8' });
 
-  const NodeRSA = require('node-rsa');
   encryptor = new NodeRSA( internalPrivKey );
   encryptor.setOptions({encryptionScheme: 'pkcs1'});
 
-  return true;
+  return server;
 }
 
 
 
-function checkAndCreateDirs() {
+const checkAndCreateDirs = () => {
+  console.log('checkAndCreateDirs()');
   if (!fs.existsSync(sslDir)){
     fs.mkdirSync(sslDir);
   }
@@ -2268,21 +2200,22 @@ function checkAndCreateDirs() {
 ///// FINISH STARTUP //////
 
 (async function() {
-
   checkAndCreateDirs();
 
-  if ( !initSSL() ) {
+  server = await initSSL(privKeyFile, certFile).catch( error => {
     const exitCode = 1;
     console.error(`SSL initialisation failed.  Exiting with code ${exitCode}`);
     process.exit(exitCode);
-  }
+  });
+  
 
-  await loadDemistoApiConfigs();
+  demistoEndpointConfigs = await loadDemistoEndpointConfigs();
+  incidentsConfig = loadIncidentsConfig();
+  freeJsonConfig = loadFreeJsonConfig();
+  jsonGroupsConfig = loadJsonGroupsConfig();
+  attachmentsConfig = loadAttachmentsConfig();
 
-  loadIncidentsConfig();
-  loadFreeJsonConfig();
-  loadJsonGroupsConfig();
-  loadAttachmentsConfig();
+  const foundDist = fs.existsSync(staticDir); // check for presence of pre-built angular client directory
 
   if (foundDist && !devMode) {
     // Serve compiled Angular files statically
@@ -2292,18 +2225,19 @@ function checkAndCreateDirs() {
 
   else {
     // Proxy client connections to the 'ng serve' instance
-    console.log(`Enabling client development mode -- proxying Angular development server at ${proxyDest}`);
+    console.log(`Enabling client development mode -- proxying Angular development server at ${appSettings.developmentProxyDestination}`);
 
-    var proxy = require('express-http-proxy'); // express-http-proxy supports being tied to defined express routes
-    app.use('/', proxy(proxyDest));
+    // var proxy = require('express-http-proxy'); // express-http-proxy supports being tied to defined express routes
+    if (appSettings.developmentProxyDestination) {
+      app.use('/', proxy(appSettings.developmentProxyDestination));
+    }
 
     // proxy websockets to enable live reload - must use separate proxy lib
-    var httpProxy = require('http-proxy');
     var wsProxy = httpProxy.createProxyServer({ ws: true });
     server.on('upgrade', function (req, socket, head) {
-      wsProxy.ws(req, socket, head, { target: proxyDest });
+      wsProxy.ws(req, socket, head, { target: appSettings.developmentProxyDestination });
     });
   }
 
-  server.listen(listenPort, listenAddress, () => console.log(`Listening for client connections at https://${listenAddress}:${listenPort}`)); // listen for client connections
+  server.listen(appSettings.listenPort, appSettings.listenAddress, () => console.log(`Listening for client connections at https://${appSettings.listenAddress}:${appSettings.listenPort}`)); // listen for client connections
 })();

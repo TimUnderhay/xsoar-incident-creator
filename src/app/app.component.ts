@@ -1,8 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { FetcherService } from './fetcher-service';
-import { DemistoEndpoints } from './types/demisto-endpoint';
 import { User } from './types/user';
-import { DemistoEndpointTestResult, DemistoEndpointTestResults } from './types/demisto-endpoint';
+import { DemistoEndpoint, DemistoEndpoints, DemistoEndpointTestResult, DemistoEndpointTestResults, DemistoTestEndpoint } from './types/demisto-endpoint';
 import { SelectItem, ConfirmationService } from 'primeng/api';
 import { IncidentFieldUI, DateConfig } from './types/incident-field';
 import { FetchedIncidentType } from './types/fetched-incident-type';
@@ -20,12 +19,15 @@ import { FileAttachmentConfig, FileAttachmentConfigs, FileToPush } from './types
 import { FileUpload } from 'primeng/fileupload';
 import { JSONConfigRef, JSONConfigRefs } from './types/json-config';
 import { DemistoIncidentImportResult } from './types/demisto-incident-import-result';
-import { version } from '../../package.json';
-import { buildNumber } from '../../build.json';
+import packageJSON from '../../package.json';
+import buildJSON from '../../build.json';
 import dayjs from 'dayjs';
 import utc from 'node_modules/dayjs/plugin/utc';
 dayjs.extend(utc);
 declare var jmespath: any;
+
+const {version} = packageJSON;
+const { buildNumber } = buildJSON;
 
 type DemistoServerEditMode = 'edit' | 'new';
 
@@ -612,15 +614,15 @@ export class AppComponent implements OnInit {
     let testResult: string;
     const useServerId = this.newDemistoServerDialogMode === 'edit' && this.newDemistoServerApiKey === '';
     try {
-      const options = {url, trustAny};
+      const options: DemistoTestEndpoint = {url, trustAny};
       if (useServerId) {
-        options['id'] = this.selectedDemistoEndpointId;
+        options.id = this.selectedDemistoEndpointId;
       }
       else {
-        options['apiKey'] = apiKey;
+        options.apiKey = apiKey;
       }
       if (proxy !== '') {
-        options['proxy'] = proxy;
+        options.proxy = proxy;
       }
       const result = await this.fetcherService.testDemistoEndpointAdhoc(options);
 

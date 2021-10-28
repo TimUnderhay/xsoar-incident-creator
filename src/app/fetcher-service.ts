@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpHeaders, HttpClient } from '@angular/common/http';
 import { User } from './types/user';
-import { DefaultDemistoEndpoint, DemistoEndpointTestResult } from './types/demisto-endpoint';
+import { DefaultDemistoEndpoint, DemistoEndpointTestResult, DemistoTestEndpoint } from './types/demisto-endpoint';
 import { FetchedIncidentField } from './types/fetched-incident-field';
 import { FetchedIncidentType } from './types/fetched-incident-type';
 import { IncidentConfig, IncidentConfigs, IncidentJsonFileConfig, IncidentJsonGroupConfig, IncidentCreationConfig } from './types/incident-config';
@@ -97,8 +97,8 @@ export class FetcherService {
 
 
 
-  encrypt(str): string {
-    return this.encryptor.encrypt(str);
+  encrypt(str: string): string {
+    return this.encryptor.encrypt(str) as string;
   }
 
   /// END INITIALISATION / ENCRYPTION ///
@@ -118,7 +118,7 @@ export class FetcherService {
 
 
 
-  testDemistoEndpointAdhoc(serverParams: DemistoEndpoint): Promise<DemistoEndpointTestResult> {
+  testDemistoEndpointAdhoc(serverParams: DemistoTestEndpoint): Promise<DemistoEndpointTestResult> {
     if ('apiKey' in serverParams) {
       serverParams.apiKey = this.encrypt(serverParams.apiKey);
     }
