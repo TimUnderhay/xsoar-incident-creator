@@ -5,26 +5,24 @@ import * as util from 'util';
 import * as fs from 'fs';
 import { exec as ExecSync } from 'child_process';
 import mvsync from 'mv';
-import { AppSettings, AppSettingsRecord } from 'types/app-settings';
+import { AppSettings } from 'types/app-settings';
 import { DefaultSettings } from './default-settings';
 import NodeRSA from 'node-rsa';
 import { v4 as uuidv4 } from 'uuid';
 import express, { Request, Response, NextFunction } from 'express';
-// import request from 'request-promise-native';
 import multer from 'multer';
 import proxy from 'express-http-proxy';
 import httpProxy from 'http-proxy';
 import https from 'https';
 import * as Errors from './types/errors';
 import { DemistoEndpoint, DemistoEndpoints, SavedDemistoEndpoint } from 'types/demisto-endpoint';
-import { IncidentConfig, IncidentConfigs, IncidentFieldConfig, IncidentFieldsConfig } from 'types/incident-config';
+import { IncidentConfig, IncidentConfigs } from 'types/incident-config';
 import { FileAttachmentConfigs, FileAttachmentConfig } from 'types/file-attachment';
-import { JsonGroup, JsonGroups } from 'types/json-group';
+import { JsonGroups } from 'types/json-group';
 import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from 'types/fetched-incident-field';
 import Axios, { AxiosRequestConfig, AxiosResponse, AxiosPromise } from 'axios';
 import { users } from './definitions/users';
 import * as utils from './utils';
-import { Console } from 'console';
 
 SourceMapSupport.install();
 const exec = util.promisify(ExecSync);
@@ -143,6 +141,7 @@ app.use(logConnection);
 
 
 const saveFreeJsonConfig = (): Promise<void> => {
+  console.log('saveFreeJsonConfig()');
   const savedConfig = {
     schema: SchemaVersion,
     jsonConfigs: Object.values(freeJsonConfig)
@@ -153,6 +152,7 @@ const saveFreeJsonConfig = (): Promise<void> => {
 
 
 const saveJsonGroupsConfig = (): Promise<void> => {
+  console.log('saveJsonGroupsConfig()');
   const savedConfig = {
     schema: SchemaVersion,
     jsonGroups: Object.values(jsonGroupsConfig)
@@ -163,6 +163,7 @@ const saveJsonGroupsConfig = (): Promise<void> => {
 
 
 const saveApiConfig = async (): Promise<void> => {
+  console.log('saveApiConfig()');
   const apiConfig: SavedDemistoEndpoint = {
     schema: SchemaVersion,
     endpointConfig: {
@@ -178,6 +179,7 @@ const saveApiConfig = async (): Promise<void> => {
 
 
 const saveAttachmentsConfig = async (): Promise<void> => {
+  console.log('saveAttachmentsConfig()');
   const savedConfig = {
     schema: SchemaVersion,
     attachments: Object.values(attachmentsConfig)
@@ -188,12 +190,14 @@ const saveAttachmentsConfig = async (): Promise<void> => {
 
 
 const deleteFileAttachment = async (filename: string): Promise<void> => {
+  console.log('deleteFileAttachment()');
   return fs.promises.unlink(`${attachmentsDir}/${filename}`);
 }
 
 
 
 const removeAttachmentFromIncidents = async(attachmentId: string): Promise<void> => {
+  console.log('removeAttachmentFromIncidents()');
   let save = false;
   for (const incident of Object.values(incidentsConfig)) {
     // loop through saved incidents
@@ -227,12 +231,15 @@ const removeAttachmentFromIncidents = async(attachmentId: string): Promise<void>
 
 
 const uploadAttachmentToDemisto = async (serverId: string, incidentId: number, incidentFieldName: string, attachmentId: string, filename: string, last: number, mediaFile?: string, comment?: string): Promise<AxiosResponse> => {
+  console.log('uploadAttachmentToDemisto()');
 
   const originalAttachment = attachmentsConfig[attachmentId];
   const diskFilename = `${attachmentsDir}/${attachmentId}`;
 
   const demistoEndpointConfig = getDemistoEndpointConfig(serverId);
-  
+  if (!demistoEndpointConfig) {
+    throw new Errors.EndpointNotFoundError();
+  }  
   
   const formDataObj: Record<string, string | Blob> = {
     id: `${incidentId}`,
@@ -259,18 +266,16 @@ const uploadAttachmentToDemisto = async (serverId: string, incidentId: number, i
       Accept: 'application/json'
     },
     httpsAgent: utils.getAxiosHTTPSAgent(demistoEndpointConfig.trustAny),
-    // resolveWithFullResponse: true,
-    // json: true,
     timeout: 2000,
     data: utils.getFormDataFromObject(formDataObj),
   }
-  // return request( addHttpProxy(options, serverId) );  // request returns a promise
   return Axios( addHttpProxy(options, serverId) );
 }
 
 
 
 const testApi = async (url: string, apiKey: string, trustAny: boolean, proxy?: string) => {
+  console.log('testApi()');
   let options: AxiosRequestConfig = {
     url: url + '/user',
     method: 'GET',
@@ -286,7 +291,6 @@ const testApi = async (url: string, apiKey: string, trustAny: boolean, proxy?: s
     options = utils.addAxiosProxy(options, proxy);
   }
   try {
-    // const result = await request( options );
     const result = await Axios(options);
     return { success: true, result }
   }
@@ -311,50 +315,58 @@ const testApi = async (url: string, apiKey: string, trustAny: boolean, proxy?: s
 
 
 const getDemistoEndpointConfig = (serverId: string): DemistoEndpoint => {
-  return demistoEndpointConfigs[serverId];
+  console.log('getDemistoEndpointConfig()');
+  const endpointConfig = demistoEndpointConfigs[serverId];
+  if (!endpointConfig) {
+    throw new Errors.EndpointNotFoundError();
+  }
+  return endpointConfig;
 }
 
 
 
-const addHttpProxy = (requestOptions: AxiosRequestConfig, serverId: string): AxiosRequestConfig => {
-  const demistoServerConfig = getDemistoEndpointConfig(serverId);
-  if (demistoServerConfig.proxy !== undefined) {
-    return utils.addAxiosProxy(requestOptions, demistoServerConfig.proxy);
+const addHttpProxy = (requestOptions: AxiosRequestConfig, serverId: string, demistoEndpointConfig?: DemistoEndpoint): AxiosRequestConfig => {
+  if (!demistoEndpointConfig) {
+    demistoEndpointConfig = getDemistoEndpointConfig(serverId);
+  }
+  if (demistoEndpointConfig?.proxy !== undefined) {
+    return utils.addAxiosProxy(requestOptions, demistoEndpointConfig.proxy);
   }
   return requestOptions;
 }
 
 
 
-const fetchIncidentFields = async (serverId: string): Promise<FetchedIncidentField[] | undefined> => {
+const fetchIncidentFields = async (serverId: string, demistoEndpointConfig?: DemistoEndpoint): Promise<FetchedIncidentField[] | undefined> => {
+  console.log('fetchIncidentFields()');
   // This method will get incident field definitions from a XSOAR server
-  const demistoServerConfig = getDemistoEndpointConfig(serverId);
+  if (!demistoEndpointConfig) {
+    demistoEndpointConfig = getDemistoEndpointConfig(serverId);
+  }
 
-  console.log(`Fetching incident fields from '${demistoServerConfig.url}'`);
+  console.log(`Fetching incident fields from endpoint '${demistoEndpointConfig.url}'`);
 
   const options: AxiosRequestConfig = {
-    url: demistoServerConfig.url + '/incidentfields',
+    url: demistoEndpointConfig.url + '/incidentfields',
     method: 'GET',
     headers: {
-      Authorization: decrypt(demistoServerConfig.apiKey),
+      Authorization: decrypt(demistoEndpointConfig.apiKey),
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    // rejectUnauthorized: !demistoServerConfig.trustAny,
-    httpsAgent: utils.getAxiosHTTPSAgent(demistoServerConfig.trustAny)
+    httpsAgent: utils.getAxiosHTTPSAgent(demistoEndpointConfig.trustAny)
   }
 
   try {
     // send request to XSOAR
-    // result = await request( addHttpProxy(options, serverId) );
-    const result = await (Axios( addHttpProxy(options, serverId) ) as AxiosPromise<FetchedIncidentField[]>);
+    const result = await (Axios( addHttpProxy(options, serverId, demistoEndpointConfig) ) as AxiosPromise<FetchedIncidentField[]>);
 
     // 'result' contains non-incident fields, as well, so let's make a version containing only incident fields
     const fields = result.data.filter(field => 'id' in field && field.id.startsWith('incident_'));
 
     // console.log(fields);
 
-    console.log(`Successfully fetched incident fields from '${demistoServerConfig.url}'`);
+    console.log(`Successfully fetched incident fields from '${demistoEndpointConfig.url}'`);
     return fields;
   }
   catch (error: any) {
@@ -384,13 +396,11 @@ const getIncidentTypes = async (serverId: string) => {
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    // rejectUnauthorized: !demistoServerConfig.trustAny,
     httpsAgent: utils.getAxiosHTTPSAgent(demistoServerConfig.trustAny)
   }
 
   try {
     // send request to XSOAR
-    // result = await request( addHttpProxy(options, serverId) );
     result = await Axios( addHttpProxy(options, serverId) );
 
     // console.log(fields);
@@ -670,7 +680,7 @@ app.post(apiPath + '/demistoEndpoint/test/adhoc', async (req, res) => {
     }
   }
 
-  console.log(`Logged into XSOAR as user '${testResult.result.body.username}'`);
+  console.log(`Logged into XSOAR as user '${testResult.result.data.username}'`);
   console.log(`Successfully tested XSOAR URL '${url}'`);
   return res.status(200).json( { success: true, statusCode: 200 } );
 });
@@ -714,7 +724,7 @@ app.get(apiPath + '/demistoEndpoint/test/:serverId', async (req, res) => {
     return;
   }
 
-  console.log(`Logged into XSOAR as user '${testResult.result.body.username}'`);
+  console.log(`Logged into XSOAR as user '${testResult.result.data.username}'`);
   console.log(`Successfully tested XSOAR URL '${url}'`);
   return res.status(200).json( { success: true, statusCode: 200 } );
   
@@ -897,7 +907,6 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    // rejectUnauthorized: !demistoServerConfig.trustAny,
     httpsAgent: utils.getAxiosHTTPSAgent(demistoServerConfig.trustAny),
     data: json
   };
@@ -905,7 +914,6 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
   let result;
   try {
     // send request to XSOAR
-    // result = await request( addHttpProxy(options, serverId) );
     result = await Axios( addHttpProxy(options, serverId) );
     // console.log('result:', result);
   }
@@ -922,7 +930,7 @@ app.post(apiPath + '/createDemistoIncidentFromJson', async (req, res) => {
     return;
   }
 
-  // console.log('result body:', result.body);
+  // console.log('result body:', result.data);
 
   if (result.data) {
     const incidentId = result.data.id;
@@ -991,7 +999,6 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    // rejectUnauthorized: !demistoServerConfig.trustAny,
     httpsAgent: utils.getAxiosHTTPSAgent(demistoServerConfig.trustAny),
     data: requestBody
   };
@@ -999,7 +1006,6 @@ app.post(apiPath + '/createInvestigation', async (req, res) => {
   let result;
   try {
     // send request to XSOAR
-    // result = await request( addHttpProxy(options, serverId) );
     result = await Axios( addHttpProxy(options, serverId) );
     res.status(201).json({success: true});
   }
@@ -1049,15 +1055,11 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
         Accept: 'application/json',
         'Content-Type': 'application/json'
       },
-      // rejectUnauthorized: !demistoServerConfig.trustAny,
       httpsAgent: utils.getAxiosHTTPSAgent(demistoServerConfig.trustAny),
-      // resolveWithFullResponse: true,
-      // json: true,
       data: body
     };
 
     // send request to XSOAR
-    // result = await request( addHttpProxy(options, serverId) );
     result = await Axios( addHttpProxy(options, serverId) );
 
     if ('data' in result && 'total' in result.data && result.data.total === 0) {
@@ -1072,7 +1074,7 @@ app.post(apiPath + '/demistoIncidentImport', async (req, res) => {
         incident: result.data.data[0]
       });
     }
-    // console.log('result:', result.body);
+    // console.log('result:', result.data);
   }
   catch (error: any) {
     if ('message' in error) {
@@ -1882,12 +1884,12 @@ const loadDemistoEndpointConfigs = async (): Promise<DemistoEndpoints> => {
       }
 
       if (testResult.success) {
-        console.log(`Logged into XSOAR as user '${testResult.result.body.username}'`);
+        console.log(`Logged into XSOAR as user '${testResult.result.data.username}'`);
         console.log('XSOAR API is initialised');
 
         // fetch incident fields
         if (demistoServerConfig.id) {
-          incident_fields[demistoServerConfig.id] = await fetchIncidentFields(defaultDemistoEndpointId) || [];
+          incident_fields[demistoServerConfig.id] = await fetchIncidentFields(defaultDemistoEndpointId, demistoServerConfig) || [];
         }
       }
       else {
@@ -2210,6 +2212,7 @@ const checkAndCreateDirs = () => {
   
 
   demistoEndpointConfigs = await loadDemistoEndpointConfigs();
+  // console.log('demistoEndpointConfigs:', utils.prettyJsonStringify(demistoEndpointConfigs));
   incidentsConfig = loadIncidentsConfig();
   freeJsonConfig = loadFreeJsonConfig();
   jsonGroupsConfig = loadJsonGroupsConfig();

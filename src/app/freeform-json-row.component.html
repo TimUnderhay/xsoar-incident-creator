@@ -205,6 +205,7 @@
       <div
         class="pi pi-times enabledIcon"
         [class.disabledIcon]="deleteFieldDisabled"
+        [class.clickable]="!deleteFieldDisabled"
         style="margin-left: .1em; font-size: 2em;"
         (click)="onDeleteFieldClicked()"
         [pTooltip]="deleteFieldDisabled ? undefined : 'Delete field'"
@@ -404,7 +405,7 @@
         <div></div>
 
         <div
-          class="pi pi-times enabledIcon"
+          class="pi pi-times enabledIcon clickable"
           style="font-size: 2em; cursor: pointer;"
           (click)="onDeleteFieldClicked()"
           pTooltip="Delete field"
@@ -874,14 +875,14 @@
         <div class="fieldLabel" style="font-weight: bolder;">
 
           <span
-            class="pi pi-times enabledIcon"
+            class="pi pi-times enabledIcon clickable"
             (click)="onRemoveAttachmentClicked(item.id)"
             pTooltip="Remove attachment"
             showDelay="750">
           </span>
 
           <span
-            class="pi pi-pencil enabledIcon"
+            class="pi pi-pencil enabledIcon clickable"
             (click)="onConfigureFileAttachmentClicked(item)"
             pTooltip="Remove attachment"
             showDelay="750">

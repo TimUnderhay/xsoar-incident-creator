@@ -55,7 +55,7 @@
         <div
           *ngIf="segment.expandable && segment.hasChildren"
           (click)="expansionArrowClickHandler($event, segment)"
-          class="toggler pi"
+          class="toggler pi clickable"
           [class.pi-chevron-right]="!segment.expanded"
           [class.pi-chevron-down]="segment.expanded"
           [style.left.rem]="segment.spacerValue - .8">
@@ -64,7 +64,8 @@
         <!-- key name -->
         <span
           class="segment-key"
-          [style.color]="segment.type === 'object' || segment.type === 'array' ? 'white' : undefined"
+          [class.clickable]="['object', 'array'].includes(segment.type)"
+          [style.color]="['object', 'array'].includes(segment.type) ? 'white' : undefined"
           (click)="keyClickHandler(segment)">
             {{segment.key}}
         </span>

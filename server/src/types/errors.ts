@@ -10,3 +10,9 @@ export class FileNotFoundError extends BaseError {
     super('FileNotFoundError', msg);
   }
 }
+
+export class EndpointNotFoundError extends BaseError {
+  constructor(msg?: any) {
+    super('EndpointNotFoundError', msg);
+  }
+}

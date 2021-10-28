@@ -439,4 +439,8 @@ body p-fileupload {
   }
 }
 
+.clickable {
+  cursor: pointer;
+}
+
 @import './app/ngx-json-viewer/ngx-json-viewer.component.scss';

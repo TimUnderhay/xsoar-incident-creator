@@ -1,26 +1,6 @@
-import * as os from 'os';
-import * as util from 'util';
-import * as fs from 'fs';
-import { exec as ExecSync } from 'child_process';
-import mvsync from 'mv';
-import { AppSettings, AppSettingsRecord } from 'types/app-settings';
-import { DefaultSettings } from './default-settings';
-import NodeRSA from 'node-rsa';
-import { v4 as uuidv4 } from 'uuid';
-import express, { Request, Response, NextFunction } from 'express';
-// import request from 'request-promise-native';
-import multer from 'multer';
-import proxy from 'express-http-proxy';
-import httpProxy from 'http-proxy';
 import https from 'https';
-import * as Errors from './types/errors';
-import { DemistoEndpoint, DemistoEndpoints, SavedDemistoEndpoint } from 'types/demisto-endpoint';
-import { IncidentConfig, IncidentConfigs, IncidentFieldConfig, IncidentFieldsConfig } from 'types/incident-config';
-import { FileAttachmentConfigs, FileAttachmentConfig } from 'types/file-attachment';
-import { JsonGroup, JsonGroups } from 'types/json-group';
-import { FetchedIncidentField, FetchedIncidentFieldDefinitions } from 'types/fetched-incident-field';
-import Axios, { AxiosRequestConfig, AxiosResponse, AxiosPromise } from 'axios';
-import { users } from './definitions/users';
+import { IncidentConfigs } from 'types/incident-config';
+import { AxiosRequestConfig } from 'axios';
 
 export const isArray = (value: unknown): boolean => {
   if (typeof value === 'object' && Array.isArray(value)) {
