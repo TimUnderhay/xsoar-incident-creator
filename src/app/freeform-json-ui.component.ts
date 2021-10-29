@@ -449,7 +449,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     this.displayAddIncidentFieldDialog = true;
     // focus input element
     setTimeout( () => {
-      (document.getElementsByClassName('addIncidentFieldListbox')[0].getElementsByClassName('ui-inputtext')[0] as HTMLInputElement).focus();
+      (document.getElementsByClassName('addIncidentFieldListbox')[0].getElementsByClassName('p-inputtext')[0] as HTMLInputElement).focus();
     }, 200 );
   }
 
@@ -1553,7 +1553,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     setTimeout( () => {
       // focus input element
       // cannot use ViewChild due to way modal is inserted into the DOM
-      (document.getElementsByClassName('openJsonDialog')[0].getElementsByClassName('ui-inputtext')[1] as HTMLInputElement).focus();
+      (document.getElementsByClassName('openJsonDialog')[0].getElementsByClassName('p-inputtext')[1] as HTMLInputElement).focus();
     }, 200);
   }
 
@@ -1681,7 +1681,7 @@ export class FreeformJsonUIComponent implements OnInit, OnChanges, OnDestroy {
     setTimeout( () => {
       // focus input element
       // cannot use ViewChild due to way modal is inserted into the DOM
-      (document.getElementsByClassName('deleteConfigDialog')[0].getElementsByClassName('ui-inputtext')[1] as HTMLInputElement).focus();
+      (document.getElementsByClassName('deleteConfigDialog')[0].getElementsByClassName('p-inputtext')[1] as HTMLInputElement).focus();
     }, 200);
   }
 

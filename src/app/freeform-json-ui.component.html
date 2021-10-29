@@ -148,7 +148,7 @@
           label="Create Incident"
           (onClick)="onCreateIncident()"
           [disabled]="(!json && requiresJson) || enabledFieldsCount === 0"
-          styleClass="ui-button-warning">
+          styleClass="p-button-warning">
         </p-button>
 
       </div>
@@ -343,7 +343,7 @@
             label="Create Incident"
             (click)="onCreateIncidentFromRawJsonClicked()"
             [disabled]="!json || !demistoEndpointsItems || (demistoEndpointsItems && demistoEndpointsItems.length === 0)"
-            class="ui-button-warning">
+            class="p-button-warning">
           </button>
 
         </div>

@@ -3,7 +3,7 @@ lockfileVersion: 5.3
 specifiers:
   '@angular-devkit/build-angular': ~12.2.11
   '@angular/animations': ~12.2.11
-  '@angular/cdk': ^9.2.0
+  '@angular/cdk': ^12.0.0
   '@angular/cli': ~12.2.11
   '@angular/common': ~12.2.11
   '@angular/compiler': ~12.2.11
@@ -31,8 +31,8 @@ specifiers:
   karma-jasmine-html-reporter: ^1.5.0
   ng-click-outside: ^6.0.0
   ng2-ace-editor: ^0.3.9
-  primeicons: ^2.0.0
-  primeng: ^9.0.6
+  primeicons: 4.1.0
+  primeng: ^12.0.0
   protractor: ~7.0.0
   rxjs: ~6.5.4
   ts-node: ^8.3.0
@@ -44,7 +44,7 @@ specifiers:
 
 dependencies:
   '@angular/animations': 12.2.11_@angular+core@12.2.11
-  '@angular/cdk': 9.2.4_6075fd44f72081fb4e4b9b536d552c38
+  '@angular/cdk': 12.2.12_9248cb9ffdcdbd429b5fc24134fa6ae0
   '@angular/common': 12.2.11_@angular+core@12.2.11+rxjs@6.5.5
   '@angular/compiler': 12.2.11
   '@angular/core': 12.2.11_rxjs@6.5.5+zone.js@0.11.4
@@ -58,8 +58,8 @@ dependencies:
   jsencrypt: 3.2.1
   ng-click-outside: 6.0.0_68ee5dea1fe1751e428d8a0ba8f75122
   ng2-ace-editor: 0.3.9_@angular+core@12.2.11
-  primeicons: 2.0.0
-  primeng: 9.1.3_de1e5c1ff5680ac56e05ba94981a2109
+  primeicons: 4.1.0
+  primeng: 12.2.1_de1e5c1ff5680ac56e05ba94981a2109
   rxjs: 6.5.5
   tslib: 2.3.1
   uuid: 8.3.2
@@ -281,15 +281,16 @@ packages:
       tslib: 2.3.1
     dev: false
 
-  /@angular/cdk/9.2.4_6075fd44f72081fb4e4b9b536d552c38:
-    resolution: {integrity: sha512-iw2+qHMXHYVC6K/fttHeNHIieSKiTEodVutZoOEcBu9rmRTGbLB26V/CRsfIRmA1RBk+uFYWc6UQZnMC3RdnJQ==}
+  /@angular/cdk/12.2.12_9248cb9ffdcdbd429b5fc24134fa6ae0:
+    resolution: {integrity: sha512-AK+74JZP95BDj9OJ1YUaRqPXkgs+oadTk7z+8omu1RcvDoUivouKxgODCQX5jI7rZeQIlnV49hEgBne07hYk4A==}
     peerDependencies:
-      '@angular/common': ^9.0.0 || ^10.0.0-0
-      '@angular/core': ^9.0.0 || ^10.0.0-0
-      tslib: ^1.9.0
+      '@angular/common': ^12.0.0 || ^13.0.0-0
+      '@angular/core': ^12.0.0 || ^13.0.0-0
+      rxjs: ^6.5.3 || ^7.0.0
     dependencies:
       '@angular/common': 12.2.11_@angular+core@12.2.11+rxjs@6.5.5
       '@angular/core': 12.2.11_rxjs@6.5.5+zone.js@0.11.4
+      rxjs: 6.5.5
       tslib: 2.3.1
     optionalDependencies:
       parse5: 5.1.1
@@ -7271,23 +7272,24 @@ packages:
     engines: {node: '>=6'}
     dev: true
 
-  /primeicons/2.0.0:
-    resolution: {integrity: sha512-GJTCeMSQU8UU1GqbsaDrg/IH+b/vSinJQl52NVpdJ7sShYLZA8Eq6jLF48Ye3N/dQloGrE07i7XsZvxQ9pNbqg==}
+  /primeicons/4.1.0:
+    resolution: {integrity: sha512-uEv2pSPk1zQCfaB2VgnUfnUxxlGryYi+5rbdxmZBBt5v9S/pscIQYS5YDLxsQZ7D9jn5c76+Tx5wX/2J1nK6sA==}
     dev: false
 
-  /primeng/9.1.3_de1e5c1ff5680ac56e05ba94981a2109:
-    resolution: {integrity: sha512-5+XGWrLNYToMIXR/r+sMcGAgz/rSYjo6Ms8rygV5uuLmHNB+mXpaRxMCajKSnmVFLZPeyATtVRm9RcA4Y/VizQ==}
+  /primeng/12.2.1_de1e5c1ff5680ac56e05ba94981a2109:
+    resolution: {integrity: sha512-2Nr/ASCq7SsLutFm/mBjudqCr31pO596qDs8zA6VcNMw0FmXjM85YqeHWB8hc4hlDzky4BHAuIKphvT4ykA+xw==}
     peerDependencies:
-      '@angular/common': ^7.0.0 || ^8.0.0 || ^9.0.0
-      '@angular/core': ^7.0.0 || ^8.0.0 || ^9.0.0
-      '@angular/forms': ^7.0.0 || ^8.0.0 || ^9.0.0
+      '@angular/common': ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0
+      '@angular/core': ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0
+      '@angular/forms': ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0
       rxjs: ^6.0.0
-      zone.js: ^0.10.2
+      zone.js: ^0.10.2 || ^0.11.0
     dependencies:
       '@angular/common': 12.2.11_@angular+core@12.2.11+rxjs@6.5.5
       '@angular/core': 12.2.11_rxjs@6.5.5+zone.js@0.11.4
       '@angular/forms': 12.2.11_e126b8931d22a03f8b34e257c39b7efb
       rxjs: 6.5.5
+      tslib: 2.3.1
       zone.js: 0.11.4
     dev: false
 

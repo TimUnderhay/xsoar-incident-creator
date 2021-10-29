@@ -1,5 +1,5 @@
 @import '~primeicons/primeicons.css';
-@import '~primeng/resources/themes/nova-light/theme.css';
+@import '~primeng/resources/themes/nova/theme.css';
 @import '~primeng/resources/primeng.min.css';
 
 @font-face {
@@ -104,30 +104,30 @@ body {
   color: red($color: #000000);
 }
 
-body .ui-button {
+body .p-button {
   margin-right: .5em;
 }
 
 /* Form Labels */
 
-body .ui-card {
+body .p-card {
   margin-bottom: 1em;
   background-color: rgb(0, 15, 26) !important;
 }
 
-body .ui-card-title {
+body .p-card-title {
   color: rgb(118, 139, 161);
 }
 
-body .ui-card-subtitle {
+body .p-card-subtitle {
   color: rgb(126, 126, 126);
 }
 
-body .ui-radiobutton-label {
+body .p-radiobutton-label {
   color: #afb4b7;
 }
 
-body .ui-dialog-content {
+body .p-dialog-content {
   height: 95%;
 }
 
@@ -313,7 +313,7 @@ textarea[read-only].jsonTextAreaDisplay {
 /*input:-internal-autofill-selected {
   background-color: ;
 }*/
-body .ui-inputtext {
+body .p-inputtext {
   background-color: rgb(27, 39, 49);
   color: rgb(175, 180, 183);
   outline-style: none;
@@ -335,11 +335,11 @@ vertical-center {
 
 /* AD Listbox */
 
-body .ui-listbox .ui-listbox-list {
+body .p-listbox .p-listbox-list {
   // background-color: rgba(255, 255, 255, 0.1);
   background-color: rgb(27, 39, 49);
 
-  .ui-listbox-item {
+  .p-listbox-item {
     color: rgb(175, 180, 183);
   }
 }
@@ -347,11 +347,11 @@ body .ui-listbox .ui-listbox-list {
 
 
 /* p-dropdown */
-body .ui-dropdown { //.ui-dropdown-list
+body .p-dropdown { //.p-dropdown-list
   // background-color: rgba(255, 255, 255, 0.1);
   background-color: rgb(27, 39, 49);
 
-  .ui-dropdown-item {
+  .p-dropdown-item {
     color: rgb(175, 180, 183);
   }
 }
@@ -429,7 +429,7 @@ body p-fileupload {
 }
 
 .createInvestigationDisabled {
-  .ui-button {
+  .p-button {
     background-color: #dadada;
     border-bottom-color: #dadada;
     border-left-color: #dadada;
